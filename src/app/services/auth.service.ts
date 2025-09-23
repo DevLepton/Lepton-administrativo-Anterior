@@ -11,7 +11,7 @@ export class AuthService {
 
   private apiUrl = 'http://localhost:3003/users'; // URL de la API para autenticación
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   private checkAuthentication(): boolean {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -35,7 +35,18 @@ export class AuthService {
   logout(): void {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem('isAuthenticated', 'false');
+      localStorage.removeItem('token');
     }
     this.authenticated.next(false);
   }
+
+  isLoggedIn(): boolean {
+    return !!localStorage.getItem('token');
+  }
+
+  getUserRole(): string | null {
+    return localStorage.getItem('user_role');
+  }
+
+
 }

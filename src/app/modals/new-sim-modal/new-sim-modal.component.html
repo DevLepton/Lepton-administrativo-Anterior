@@ -1,0 +1,107 @@
+<div class="backdrop" *ngIf="show" (click)="close()"></div>
+
+<div class="modal" *ngIf="show">
+  <header class="modal__header">
+    <h3>Nuevo SIM</h3>
+    <button mat-icon-button (click)="close()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="modal__body compact">
+    <div class="grid">
+
+      <!-- ICCID -->
+      <mat-form-field appearance="outline">
+        <mat-label>ICCID</mat-label>
+        <input matInput formControlName="iccid" placeholder="123456789..." />
+        <mat-error *ngIf="form.get('iccid')?.hasError('required')">ICCID es requerido</mat-error>
+        <mat-error *ngIf="form.get('iccid')?.hasError('minlength')">Debe contener 20 dígitos</mat-error>
+      </mat-form-field>
+
+      <!-- Modelo -->
+      <mat-form-field appearance="outline">
+        <mat-label>Modelo</mat-label>
+        <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="2 3 ff / 4ff" />
+        <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
+          <mat-option *ngFor="let opt of filteredModels$ | async" [value]="opt">
+            {{ opt }}
+          </mat-option>
+        </mat-autocomplete>
+        <mat-error *ngIf="form.get('model')?.hasError('required')">
+          Modelo es requerido
+        </mat-error>
+      </mat-form-field>
+
+      <!-- Compañía -->
+      <mat-form-field appearance="outline">
+        <mat-label>Compañía</mat-label>
+        <input matInput formControlName="company" [matAutocomplete]="companyAuto"
+          placeholder="Telcel / AT&T / Movistar" />
+        <mat-autocomplete #companyAuto="matAutocomplete" autoActiveFirstOption>
+          <mat-option *ngFor="let opt of filteredCompanies$ | async" [value]="opt">
+            {{ opt }}
+          </mat-option>
+        </mat-autocomplete>
+        <mat-error *ngIf="form.get('company')?.hasError('required')">Compañía es requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Estatus -->
+      <mat-form-field appearance="outline">
+        <mat-label>Estatus</mat-label>
+        <!-- Debe coincidir EXACTO con el enum del schema -->
+        <mat-select formControlName="status">
+          <mat-option value="En inventario">En inventario</mat-option>
+          <mat-option value="En configuración">En configuración</mat-option>
+          <mat-option value="Instalado">Instalado</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+      </mat-form-field>
+
+      <!-- Fecha de compra -->
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de compra</mat-label>
+        <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
+        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
+        <mat-datepicker #pd></mat-datepicker>
+        <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Fecha de ingreso -->
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de ingreso</mat-label>
+        <input matInput [matDatepicker]="ed" formControlName="entryDate" />
+        <mat-datepicker-toggle matSuffix [for]="ed"></mat-datepicker-toggle>
+        <mat-datepicker #ed></mat-datepicker>
+        <mat-error *ngIf="form.get('entryDate')?.hasError('required')">Requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Fecha de instalación (opcional) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de instalación (opcional)</mat-label>
+        <input matInput [matDatepicker]="idp" formControlName="installationDate" />
+        <mat-datepicker-toggle matSuffix [for]="idp"></mat-datepicker-toggle>
+        <mat-datepicker #idp></mat-datepicker>
+      </mat-form-field>
+
+      <!-- Cliente (opcional) -->
+      <mat-form-field appearance="outline">
+        <mat-label>Cliente (opcional)</mat-label>
+        <input matInput formControlName="client" placeholder="Nombre del cliente" />
+      </mat-form-field>
+
+      <!-- Comentarios (opcional) -->
+      <mat-form-field appearance="outline" class="col-span-2">
+        <mat-label>Comentarios (opcional)</mat-label>
+        <textarea matInput formControlName="comments" rows="3" placeholder="Notas adicionales..."></textarea>
+      </mat-form-field>
+    </div>
+
+    <footer class="modal__footer">
+      <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+      <button type="submit" mat-flat-button color="primary" [disabled]="form.invalid || loading">
+        {{ loading ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </footer>
+  </form>
+</div>

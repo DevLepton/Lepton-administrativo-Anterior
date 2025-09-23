@@ -40,7 +40,7 @@ export class DashboardComponent implements OnInit {
   }; // Estados de ordenamiento por columna
   selectedCliente: Cliente | null = null; // Cliente seleccionado para opciones adicionales
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadClientes(); // Cargar clientes al inicializar el componente
@@ -50,12 +50,12 @@ export class DashboardComponent implements OnInit {
    * Cargar los clientes desde la API y aplicar filtros iniciales.
    */
   loadClientes(): void {
-    this.apiService.getClientes().subscribe(
-      (response: any) => {
+    this.apiService.getClientes().subscribe({
+      next: (response: any) => {
         this.clientes = Array.isArray(response.data) ? response.data : [];
         this.applyFilters(); // Aplicar filtros iniciales
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al cargar clientes:', error);
         this.toast.error({
           detail: 'Error',
@@ -63,7 +63,7 @@ export class DashboardComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
 
   /**

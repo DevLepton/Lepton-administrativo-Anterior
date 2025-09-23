@@ -149,8 +149,8 @@ export class EditClientesModalComponent implements OnInit {
   
     codigoPostalControl?.valueChanges.subscribe((codigoPostal) => {
       if (codigoPostal && /^[0-9]{5}$/.test(codigoPostal)) {
-        this.apiService.getColoniasByCodigoPostalFromGoogle(codigoPostal).subscribe(
-          (response) => {
+        this.apiService.getColoniasByCodigoPostalFromGoogle(codigoPostal).subscribe({
+          next: (response) => {
             console.log('Respuesta completa de la API:', response);
   
             let coloniasEncontradas = response.results.flatMap((result: any) =>
@@ -181,11 +181,11 @@ export class EditClientesModalComponent implements OnInit {
               },
             });
           },
-          (error) => {
+          error: (error) => {
             console.error('Error al obtener colonias:', error);
             this.colonias = [];
           }
-        );
+      });
       } else {
         this.colonias = [];
         this.clienteForm.get('domicilio')?.patchValue({

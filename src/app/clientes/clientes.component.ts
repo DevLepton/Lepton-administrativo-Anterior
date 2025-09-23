@@ -51,7 +51,7 @@ export class ClientesComponent implements OnInit {
   currentPage = 1; // Página actual
   showAll = true; // Mostrar todos o paginar
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadClientes(); // Cargar clientes desde la API
@@ -59,13 +59,14 @@ export class ClientesComponent implements OnInit {
 
   // Cargar clientes desde la API
   loadClientes(): void {
-    this.apiService.getClientes().subscribe(
-      (response: any) => {
-        this.clientes = Array.isArray(response.data) ? response.data : [];
-        this.filteredClientes = [...this.clientes];
-        this.applyFilters();
-      },
-      (error) => {
+    this.apiService.getClientes().subscribe({
+      next:
+        (response: any) => {
+          this.clientes = Array.isArray(response.data) ? response.data : [];
+          this.filteredClientes = [...this.clientes];
+          this.applyFilters();
+        },
+      error: (error) => {
         console.error('Error al cargar clientes:', error);
         this.toast.error({
           detail: 'Error',
@@ -73,7 +74,7 @@ export class ClientesComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
 
   // Obtener clientes para la página actual
@@ -103,19 +104,18 @@ export class ClientesComponent implements OnInit {
     if (estatus === 'activo') return 'status-activo';
     if (estatus === 'inactivo') return 'status-inactivo';
     return 'status-pendiente'; // Clase para el estatus "pendiente"
-}
+  }
 
-
-applyFilters(): void {
+  applyFilters(): void {
     this.filteredClientes = this.clientes.filter((cliente) => {
-        const matchesStatus = this.selectedStatus ? cliente.estatus === this.selectedStatus : true;
-        const matchesComprobante = this.selectedComprobante
-            ? cliente.datosComerciales.comprobante === this.selectedComprobante
-            : true;
-        return matchesStatus && matchesComprobante;
+      const matchesStatus = this.selectedStatus ? cliente.estatus === this.selectedStatus : true;
+      const matchesComprobante = this.selectedComprobante
+        ? cliente.datosComerciales.comprobante === this.selectedComprobante
+        : true;
+      return matchesStatus && matchesComprobante;
     });
     this.currentPage = 1;
-}
+  }
 
 
   editarCliente(cliente: Cliente): void {
@@ -123,8 +123,8 @@ applyFilters(): void {
   }
 
   actualizarCliente(clienteActualizado: Cliente): void {
-    this.apiService.updateCliente(clienteActualizado.idCliente, clienteActualizado).subscribe(
-      () => {
+    this.apiService.updateCliente(clienteActualizado.idCliente, clienteActualizado).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Cliente actualizado con éxito.',
@@ -132,13 +132,14 @@ applyFilters(): void {
         });
         this.loadClientes(); // Recargar la lista de clientes
       },
-      (error) => {
+      error: (error) => {
         this.toast.error({
           detail: 'Error',
           summary: 'Error al actualizar el cliente.',
           duration: 5000,
         });
       }
+    }
     );
   }
 
@@ -153,8 +154,8 @@ applyFilters(): void {
       confirmButtonText: 'Sí, eliminar',
     }).then((result) => {
       if (result.isConfirmed) {
-        this.apiService.deleteCliente(cliente.idCliente).subscribe(
-          () => {
+        this.apiService.deleteCliente(cliente.idCliente).subscribe({
+          next: () => {
             this.toast.success({
               detail: 'Éxito',
               summary: 'Cliente eliminado con éxito',
@@ -162,14 +163,14 @@ applyFilters(): void {
             });
             this.loadClientes();
           },
-          (error) => {
+          error: (error) => {
             this.toast.error({
               detail: 'Error',
               summary: 'Error al eliminar cliente',
               duration: 5000,
             });
           }
-        );
+        });
       }
     });
   }
@@ -179,8 +180,8 @@ applyFilters(): void {
   }
 
   addNewCliente(newCliente: Cliente): void {
-    this.apiService.createCliente(newCliente).subscribe(
-      () => {
+    this.apiService.createCliente(newCliente).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Cliente registrado con éxito',
@@ -188,13 +189,13 @@ applyFilters(): void {
         });
         this.loadClientes();
       },
-      (error) => {
+      error: (error) => {
         this.toast.error({
           detail: 'Error',
           summary: 'Error al registrar cliente',
           duration: 5000,
         });
       }
-    );
+    });
   }
 }

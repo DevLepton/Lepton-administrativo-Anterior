@@ -27,7 +27,7 @@ interface Cliente {
   styleUrl: './pedidos.component.scss'
 })
 export class PedidosComponent {
-clientes: Cliente[] = []; // Lista de clientes desde la API
+  clientes: Cliente[] = []; // Lista de clientes desde la API
   clientesPendientes: Cliente[] = []; // Clientes pendientes
 
 
@@ -49,7 +49,7 @@ clientes: Cliente[] = []; // Lista de clientes desde la API
 
   selectedCliente: Cliente | null = null; // Cliente seleccionado para modal
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadClientes();
@@ -57,15 +57,15 @@ clientes: Cliente[] = []; // Lista de clientes desde la API
 
   // Cargar clientes desde la API
   loadClientes(): void {
-    this.apiService.getClientes().subscribe(
-      (response: any) => {
+    this.apiService.getClientes().subscribe({
+      next: (response: any) => {
         this.clientes = Array.isArray(response.data) ? response.data : [];
         this.clientesPendientes = this.clientes.filter((c) => c.estatus === 'pendiente');
 
         // Inicializar las tablas filtradas
         this.filteredClientesPendientes = [...this.clientesPendientes];
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al cargar clientes:', error);
         this.toast.error({
           detail: 'Error',
@@ -73,7 +73,7 @@ clientes: Cliente[] = []; // Lista de clientes desde la API
           duration: 5000,
         });
       }
-    );
+    });
   }
 
 
