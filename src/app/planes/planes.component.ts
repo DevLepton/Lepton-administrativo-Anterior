@@ -33,7 +33,7 @@ export class PlanesComponent implements OnInit {
   currentPage = 1;
   plansPerPage = 10;
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadPlanes();
@@ -41,14 +41,14 @@ export class PlanesComponent implements OnInit {
 
   // Cargar planes desde la API
   loadPlanes(): void {
-    this.apiService.getPlanes().subscribe(
-      (response: any) => {
+    this.apiService.getPlanes().subscribe({
+      next: (response: any) => {
         this.planes = Array.isArray(response.data) ? response.data : [];
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al cargar planes:', error);
       }
-    );
+    });
   }
 
   // Obtener los planes para la página actual
@@ -81,10 +81,10 @@ export class PlanesComponent implements OnInit {
   editarPlan(plan: Plan): void {
     this.editPlanModal.open(plan);
   }
-  
+
   updatePlan(planActualizado: Plan): void {
-    this.apiService.updatePlan(planActualizado.idPlan, planActualizado).subscribe(
-      () => {
+    this.apiService.updatePlan(planActualizado.idPlan, planActualizado).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Plan actualizado con éxito.',
@@ -92,7 +92,7 @@ export class PlanesComponent implements OnInit {
         });
         this.loadPlanes(); // Recargar la lista de planes
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al actualizar el plan:', error);
         this.toast.error({
           detail: 'Error',
@@ -100,13 +100,13 @@ export class PlanesComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
 
   // Añadir un nuevo plan
   addNewPlan(newPlan: Plan): void {
-    this.apiService.createPlan(newPlan).subscribe(
-      (response) => {
+    this.apiService.createPlan(newPlan).subscribe({
+      next: (response) => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Plan registrado con éxito.',
@@ -114,7 +114,7 @@ export class PlanesComponent implements OnInit {
         });
         this.loadPlanes();
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al registrar el plan:', error);
         this.toast.error({
           detail: 'Error',
@@ -122,7 +122,7 @@ export class PlanesComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
 
   // Eliminar un plan
@@ -137,8 +137,8 @@ export class PlanesComponent implements OnInit {
       confirmButtonText: 'Sí, eliminar',
     }).then((result) => {
       if (result.isConfirmed) {
-        this.apiService.deletePlan(plan.idPlan).subscribe(
-          () => {
+        this.apiService.deletePlan(plan.idPlan).subscribe({
+          next: () => {
             this.toast.success({
               detail: 'Éxito',
               summary: 'Plan eliminado con éxito.',
@@ -146,7 +146,7 @@ export class PlanesComponent implements OnInit {
             });
             this.loadPlanes();
           },
-          (error) => {
+          error: (error) => {
             console.error('Error al eliminar el plan:', error);
             this.toast.error({
               detail: 'Error',
@@ -154,7 +154,7 @@ export class PlanesComponent implements OnInit {
               duration: 5000,
             });
           }
-        );
+        });
       }
     });
   }

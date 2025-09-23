@@ -21,7 +21,7 @@ export class LoginComponent implements OnInit {
     private authService: AuthService,
     private router: Router,
     private toast: NgToastService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Inicializa el formulario
@@ -67,22 +67,42 @@ export class LoginComponent implements OnInit {
       };
 
       // Llamada al servicio de autenticación
-      this.authService.login(credentials).subscribe(
-        (response) => {
-          console.log('Inicio de sesión exitoso:', response);
-          localStorage.setItem('token', response.token); // ✅ Guarda el token JWT
-          this.authService.setAuthenticationState(true); // ✅ Esto asegura que se actualice isAuthenticated$
+      this.authService.login(credentials).subscribe({
+        next: (response) => {
+          // console.log('Inicio de sesión exitoso:', response);
+
+          const userRole = response.user.role;
+
+          localStorage.setItem('token', response.token);
+          localStorage.setItem('user_role', userRole);
+
+          this.authService.setAuthenticationState(true);
+
           this.toast.success({
             detail: 'Éxito',
             summary: 'Inicio de sesión exitoso',
             duration: 3000,
           });
 
-          // Emitir evento y redirigir al dashboard
           this.loginSuccess.emit();
-          this.router.navigate(['/dashboard']);
+          if (userRole === 'admin') {
+            this.router.navigate(['/usuarios']);
+          } else if (userRole === 'inventario') {
+            this.router.navigate(['/almacen']);
+          } else if (userRole === 'finanzas') {
+            this.router.navigate(['/dashboard']);
+          } else {
+            // Rol desconocido, cerrar sesión o redirigir a login
+            this.toast.error({
+              detail: 'Error',
+              summary: 'Rol no autorizado',
+              duration: 5000,
+            });
+            localStorage.clear();
+            this.router.navigate(['/login']);
+          }
         },
-        (error) => {
+        error: (error) => {
           console.error('Error al iniciar sesión:', error);
           this.toast.error({
             detail: 'Error',
@@ -93,7 +113,7 @@ export class LoginComponent implements OnInit {
           this.loginForm.controls['username'].setErrors({ invalid: true });
           this.loginForm.controls['password'].setErrors({ invalid: true });
         }
-      );
+      });
     } else {
       this.loginForm.markAllAsTouched(); // Marcar todos los campos como tocados
     }

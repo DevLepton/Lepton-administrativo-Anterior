@@ -39,7 +39,7 @@ export class DispositivosComponent implements OnInit {
   currentPage = 1; // Página actual
   showAll = true; // Controla si se muestran todos los productos o se paginan
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadDispositivos(); // Cargar dispositivos desde la API
@@ -47,17 +47,17 @@ export class DispositivosComponent implements OnInit {
 
   // Cargar dispositivos desde la API
   loadDispositivos(): void {
-    this.apiService.getDispositivos().subscribe(
-      (response: any) => {
+    this.apiService.getDispositivos().subscribe({
+      next: (response: any) => {
         this.dispositivos = Array.isArray(response.data) ? response.data : [];
         this.filteredDispositivos = [...this.dispositivos];
         this.applyFilters(); // Aplicar filtros después de cargar los datos
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al cargar dispositivos:', error);
         this.dispositivos = []; // Inicializar como arreglo vacío en caso de error
       }
-    );
+    });
   }
 
   // Obtener dispositivos para la página actual
@@ -117,8 +117,8 @@ export class DispositivosComponent implements OnInit {
   }
 
   actualizarDispositivo(dispositivoActualizado: any): void {
-    this.apiService.updateDispositivo(dispositivoActualizado.idDis, dispositivoActualizado).subscribe(
-      () => {
+    this.apiService.updateDispositivo(dispositivoActualizado.idDis, dispositivoActualizado).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Dispositivo actualizado con éxito.',
@@ -126,7 +126,7 @@ export class DispositivosComponent implements OnInit {
         });
         this.loadDispositivos(); // Recarga la lista de dispositivos
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al actualizar el dispositivo:', error);
         this.toast.error({
           detail: 'Error',
@@ -134,9 +134,9 @@ export class DispositivosComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
-  
+
 
   eliminarDispositivo(dispositivo: Dispositivo): void {
     Swal.fire({
@@ -149,8 +149,8 @@ export class DispositivosComponent implements OnInit {
       confirmButtonText: "Si, eliminar",
     }).then((result) => {
       if (result.isConfirmed) {
-        this.apiService.deleteDispositivo(dispositivo.idDis).subscribe(
-          () => {
+        this.apiService.deleteDispositivo(dispositivo.idDis).subscribe({
+          next: () => {
             this.toast.success({
               detail: 'Éxito',
               summary: 'Dispositivo eliminado con éxito.',
@@ -158,18 +158,18 @@ export class DispositivosComponent implements OnInit {
             });
             this.loadDispositivos();
           },
-          (error) => {
+          error: (error) => {
             this.toast.error({
               detail: 'Error',
               summary: 'Error al eliminar el dispositivo.',
               duration: 5000,
             });
-           
+
           }
-        );
+        });
       }
     });
-    
+
   }
 
   openModal(): void {
@@ -178,8 +178,8 @@ export class DispositivosComponent implements OnInit {
 
   addNewDispositivo(newDispositivo: any): void {
     console.log("Nuevo dispositivo recibido en el componente principal:", newDispositivo); // Depuración
-    this.apiService.createDispositivo(newDispositivo).subscribe(
-      () => {
+    this.apiService.createDispositivo(newDispositivo).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Dispositivo registrado con éxito.',
@@ -187,7 +187,7 @@ export class DispositivosComponent implements OnInit {
         });
         this.loadDispositivos();
       },
-      (error) => {
+      error: (error) => {
         console.error("Error al registrar el dispositivo:", error); // Depuración
         this.toast.error({
           detail: 'Error',
@@ -195,7 +195,7 @@ export class DispositivosComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
-  
+
 }

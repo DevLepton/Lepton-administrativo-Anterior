@@ -1,0 +1,145 @@
+.backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .45);
+    backdrop-filter: blur(2px);
+    z-index: 1000;
+}
+
+.modal {
+    position: fixed;
+    z-index: 1001;
+    width: 640px;
+    max-width: calc(100% - 2rem);
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: grid;
+    grid-template-rows: auto 1fr;
+    overflow: hidden;
+}
+
+.modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: .9rem 1.2rem;
+    border-bottom: 1px solid #eceff3;
+}
+
+.modal__body {
+    padding: 1rem 1.2rem;
+}
+
+.modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: .5rem;
+    margin-top: 1rem;
+}
+
+.grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: .8rem;
+}
+
+.grid .col-span-2 {
+    grid-column: span 2 / span 2;
+}
+
+label {
+    display: grid;
+    gap: .35rem;
+    font-size: .9rem;
+}
+
+input,
+select {
+    padding: .55rem .7rem;
+    border: 1px solid #d7dce3;
+    border-radius: 8px;
+}
+
+.btn {
+    padding: .55rem .9rem;
+    border-radius: 10px;
+    border: 1px solid transparent;
+    cursor: pointer;
+}
+
+.btn.primary {
+    background: #1769e0;
+    color: #fff;
+}
+
+.btn.ghost {
+    background: #fff;
+    border-color: #d7dce3;
+}
+
+.icon-btn {
+    background: transparent;
+    border: none;
+    font-size: 1.1rem;
+    cursor: pointer;
+}
+
+:host ::ng-deep .compact {
+
+  /* INPUT / SELECT wrapper */
+  .mat-mdc-text-field-wrapper {
+    min-height: 36px;
+    padding: 0 12px;             /* menos padding horizontal */
+  }
+
+
+  /* Altura del input de MDC */
+  .mdc-text-field__input {
+    height: 24px;                /* reduce la “caja” interna */
+    padding: 0 !important;       /* quita padding extra */
+  }
+
+  /* Trigger del select */
+  .mat-mdc-select-trigger {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+  }
+
+  /* Iconos de suffix/prefix centrados verticalmente */
+  .mat-mdc-form-field-icon-suffix,
+  .mat-mdc-form-field-icon-prefix {
+    align-self: center;
+  }
+
+  /* Datepicker toggle no agrande el campo */
+  .mat-mdc-form-field .mat-mdc-form-field-icon-suffix .mat-datepicker-toggle-default-icon {
+    width: 18px; height: 18px;
+  }
+
+  /* Subtexto (errores/hints) más compacto */
+  .mat-mdc-form-field-subscript-wrapper {
+    margin-top: 2px;
+  }
+
+  /* Botones del footer */
+  .mat-mdc-button-base {
+    min-height: 36px;
+    padding: 0 14px;
+  }
+
+  /* Menos espacio entre campos */
+  .grid { gap: .6rem; }
+}
+
+.modal__footer button {
+  border-radius: 10px;
+
+  &:first-child {
+    color: red;
+  }
+}

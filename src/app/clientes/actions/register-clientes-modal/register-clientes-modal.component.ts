@@ -36,13 +36,13 @@ export class RegisterClientesModalComponent implements OnInit {
     { codigo: '625', descripcion: 'Régimen de las Actividades Empresariales con ingresos a través de Plataformas Tecnológicas' },
     { codigo: '626', descripcion: 'Régimen Simplificado de Confianza' },
   ]; // Lista de regímenes fiscales del SAT
-  
+
   isFactura: boolean = false; // Controla si el comprobante es factura
- 
-  
+
+
   @Output() clienteRegistered = new EventEmitter<any>(); // Evento para enviar el cliente registrado
 
-  constructor(private fb: FormBuilder, private apiService: ApiService,  private toast: NgToastService) {}
+  constructor(private fb: FormBuilder, private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     // Configuración del formulario reactivo con los 4 grupos de datos
@@ -103,10 +103,10 @@ export class RegisterClientesModalComponent implements OnInit {
     return this.clienteForm.get('contacto') as FormGroup;
   }
 
-   /**
-   * Valida si el correo ya está registrado antes de avanzar al siguiente paso.
-   */
-   checkEmailBeforeProceeding(stepper: MatStepper): void {
+  /**
+  * Valida si el correo ya está registrado antes de avanzar al siguiente paso.
+  */
+  checkEmailBeforeProceeding(stepper: MatStepper): void {
     const emailControl = this.contactoGroup.get('correo');
     const email = emailControl?.value;
 
@@ -115,8 +115,8 @@ export class RegisterClientesModalComponent implements OnInit {
       return;
     }
 
-    this.apiService.checkEmailExists(email).subscribe(
-      (response) => {
+    this.apiService.checkEmailExists(email).subscribe({
+      next: (response) => {
         if (response.exists) {
           this.emailExistsError = true;
           emailControl.setErrors({ emailExists: true });
@@ -132,7 +132,7 @@ export class RegisterClientesModalComponent implements OnInit {
           stepper.next(); // Avanzar al siguiente paso
         }
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al verificar el correo:', error);
         this.toast.error({
           detail: 'Error',
@@ -140,10 +140,10 @@ export class RegisterClientesModalComponent implements OnInit {
           duration: 5000,
         });
       }
-    );
+    });
   }
-  
-  
+
+
 
 
   /**
@@ -279,14 +279,14 @@ export class RegisterClientesModalComponent implements OnInit {
 
   onCodigoPostalChange(): void {
     const codigoPostalControl = this.clienteForm.get('domicilio.codigoPostal');
-  
+
     codigoPostalControl?.valueChanges.subscribe((codigoPostal) => {
       if (codigoPostal && /^[0-9]{5}$/.test(codigoPostal)) {
-        this.apiService.getColoniasByCodigoPostalFromGoogle(codigoPostal).subscribe(
-          (response) => {
+        this.apiService.getColoniasByCodigoPostalFromGoogle(codigoPostal).subscribe({
+          next: (response) => {
             console.log('Respuesta completa de la API:', response);
             console.log('Estructura completa del resultado:', JSON.stringify(response.results, null, 2)); // Aquí se imprime la estructura
-  
+
             // Usa postcode_localities para colonias si están disponibles
             let coloniasEncontradas = response.results.flatMap((result: any) =>
               result.postcode_localities ||
@@ -294,12 +294,12 @@ export class RegisterClientesModalComponent implements OnInit {
                 component.types.includes('neighborhood') || component.types.includes('sublocality')
               ).map((component: any) => component.long_name)
             );
-  
+
             coloniasEncontradas = Array.from(new Set(coloniasEncontradas)); // Elimina duplicados
             this.colonias = coloniasEncontradas;
-  
+
             console.log('Colonias encontradas:', this.colonias);
-  
+
             if (this.colonias.length === 0) {
               this.toast.warning({
                 detail: 'Advertencia',
@@ -307,25 +307,25 @@ export class RegisterClientesModalComponent implements OnInit {
                 duration: 5000,
               });
             }
-  
+
             // Recorrer los resultados para obtener estado y municipio
             const estadoComponent = response.results[0]?.address_components.find((component: any) =>
               component.types.includes('administrative_area_level_1')
             );
-  
+
             const municipioComponent = response.results[0]?.address_components.find((component: any) =>
               component.types.includes('locality')
             );
-  
+
             const estado = estadoComponent?.long_name || '';
             const municipio = municipioComponent?.long_name || '';
-  
+
             if (!municipio) {
               console.error('El municipio no se encontró en los datos proporcionados por la API.');
             }
-  
+
             console.log('Estado:', estado, 'Municipio:', municipio);
-  
+
             // Actualizar formulario reactivo
             this.clienteForm.patchValue({
               domicilio: {
@@ -335,7 +335,7 @@ export class RegisterClientesModalComponent implements OnInit {
               },
             });
           },
-          (error) => {
+          error: (error) => {
             console.error('Error al obtener colonias:', error);
             this.colonias = []; // Limpia la lista si hay error
             this.toast.error({
@@ -344,7 +344,7 @@ export class RegisterClientesModalComponent implements OnInit {
               duration: 5000,
             });
           }
-        );
+        });
       } else {
         this.colonias = []; // Limpia la lista si el código postal no es válido
         this.clienteForm.get('domicilio')?.patchValue({
@@ -355,12 +355,12 @@ export class RegisterClientesModalComponent implements OnInit {
       }
     });
   }
-  
-  
-  
-  
-  
-  
+
+
+
+
+
+
 
   /**
    * Maneja la acción de guardar los datos del cliente.

@@ -1,4 +1,4 @@
-import { NgModule } from '@angular/core';
+import { LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app-routing.module';
@@ -17,12 +17,14 @@ import { provideAnimationsAsync } from '@angular/platform-browser/animations/asy
 import { HeaderComponent } from './header/header.component';
 import { OverlayModule } from '@angular/cdk/overlay';
 import { CdkMenuModule } from '@angular/cdk/menu';
-import { FormsModule } from '@angular/forms'; // Importa FormsModule aquí
-import { provideHttpClient, withFetch } from '@angular/common/http';
+import { FormsModule } from '@angular/forms';
+import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
 import {NgToastModule} from 'ng-angular-popup';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
 import {MatMenuModule} from '@angular/material/menu';
@@ -44,6 +46,22 @@ import { PedidosComponent } from './pedidos/pedidos.component';
 import { AsignarPedidosModalComponent } from './dashboard/actions/asignar-pedidos-modal/asignar-pedidos-modal.component';
 import { AddDispositivosModalComponent } from './dashboard/actions/asignar-pedidos-modal/add-dispositivos-modal/add-dispositivos-modal.component';
 import { TokenInterceptor } from './auth/token.interceptor';
+import { AccesoDenegadoComponent } from './acceso-denegado/acceso-denegado.component';
+import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redireccion.component';
+import { RegisterUserModalComponent } from './modals/register-user-modal/register-user-modal.component';
+import { EditUserModalComponent } from './modals/edit-user-modal/edit-user-modal.component';
+import { MatDivider } from "@angular/material/divider";
+import { MatProgressBar } from "@angular/material/progress-bar";
+import { AlmacenComponent } from './inventario/almacen/almacen.component';
+import { UsersComponent } from './admin/users/users.component';
+import { ConfirmDeleteUserModalComponent } from './modals/confirm-delete-user-modal/confirm-delete-user-modal.component';
+import { NewSimModalComponent } from './modals/new-sim-modal/new-sim-modal.component';
+import { ViewSimModalComponent } from './modals/view-sim-modal/view-sim-modal.component';
+import { registerLocaleData } from '@angular/common';
+import es from '@angular/common/locales/es';
+import { EditSimModalComponent } from './modals/edit-sim-modal/edit-sim-modal.component';
+
+registerLocaleData(es);
 
 @NgModule({
   declarations: [
@@ -70,6 +88,16 @@ import { TokenInterceptor } from './auth/token.interceptor';
     PedidosComponent,
     AsignarPedidosModalComponent,
     AddDispositivosModalComponent,
+    UsersComponent,
+    AccesoDenegadoComponent,
+    InicioRedireccionComponent,
+    RegisterUserModalComponent,
+    EditUserModalComponent,
+    AlmacenComponent,
+    ConfirmDeleteUserModalComponent,
+    NewSimModalComponent,
+    ViewSimModalComponent,
+    EditSimModalComponent,
   ],
   imports: [
     BrowserModule,
@@ -79,23 +107,29 @@ import { TokenInterceptor } from './auth/token.interceptor';
     OverlayModule,
     CdkMenuModule,
     FormsModule,
-    NgToastModule,  
+    NgToastModule,
     MatSliderModule,
     MatInputModule,
     MatFormFieldModule,
+    MatDatepickerModule,
+    MatNativeDateModule,
     MatSelectModule,
     MatButtonModule,
     MatIconModule,
     MatStepperModule,
     MatTabsModule,
     MatAutocompleteModule,
-    MatMenuModule
-  ],
+    MatMenuModule,
+    MatDivider,
+    MatProgressBar
+],
   providers: [
     provideClientHydration(),
     provideAnimationsAsync(),
-    provideHttpClient(withFetch()),
-    { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true }
+    provideHttpClient(withInterceptorsFromDi()),
+    { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
+    { provide: LOCALE_ID, useValue: 'es' },          // 👈 DatePipe y pipes en español
+    { provide: MAT_DATE_LOCALE, useValue: 'es-MX' },
   ],
   bootstrap: [AppComponent]
 })

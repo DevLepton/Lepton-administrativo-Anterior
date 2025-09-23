@@ -1,0 +1,261 @@
+<mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
+
+
+
+
+  <!-- ================= SIM's ================= -->
+  <mat-tab label="SIM's">
+    <div class="tab-pane">
+      <div class="header">
+        <h2>SIM's</h2>
+        <hr class="divider">
+        <div class="filter-bar">
+          <div class="filter-container">
+            <div class="pagination-container">
+              <button class="filter-btn" (click)="toggleSimsShowAll()">
+                {{ simsShowAll ? 'Paginado' : 'Mostrar todos' }}
+              </button>
+
+              <div class="pagination" *ngIf="!simsShowAll && sims.length > 0 && simsTotalPages > 1">
+                <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage - 1)"
+                  [disabled]="simsCurrentPage === 1">«</button>
+
+                <button *ngFor="let p of [].constructor(simsTotalPages); let i = index" class="pagination-btn"
+                  [class.active]="simsCurrentPage === (i + 1)" (click)="setSimsPage(i + 1)">
+                  {{ i + 1 }}
+                </button>
+
+                <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage + 1)"
+                  [disabled]="simsCurrentPage === simsTotalPages">»</button>
+              </div>
+
+            </div>
+          </div>
+
+          <button class="new-button" (click)="nuevoSim()">
+            <span class="material-icons">sim_card</span> Nuevo SIM
+          </button>
+        </div>
+      </div>
+
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th (click)="sortBy('iccid')" class="th-sort">ICCID <span class="arrow">{{ arrowFor('iccid') }}</span>
+              </th>
+              <th (click)="sortBy('modelo')" class="th-sort">Modelo <span class="arrow">{{ arrowFor('modelo') }}</span>
+              </th>
+              <th (click)="sortBy('compania')" class="th-sort">Compañía <span class="arrow">{{ arrowFor('compania')
+                  }}</span></th>
+              <th (click)="sortBy('estatus')" class="th-sort">Estatus <span class="arrow">{{ arrowFor('estatus')
+                  }}</span></th>
+              <th (click)="sortBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
+                  arrowFor('fechaCompra') }}</span></th>
+              <th (click)="sortBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span class="arrow">{{
+                  arrowFor('fechaIngresoLepton') }}</span></th>
+              <th (click)="sortBy('cliente')" class="th-sort">Cliente <span class="arrow">{{ arrowFor('cliente')
+                  }}</span></th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody *ngIf="!simsLoading; else simsLoadingTpl">
+            <tr *ngFor="let sim of displayedSims; let idx = index">
+              <td>{{ simsShowAll ? (idx + 1) : ((simsCurrentPage - 1) * simsPerPage + idx + 1) }}</td>
+              <td>{{ sim.iccid }}</td>
+              <td>{{ sim.modelo }}</td>
+              <td>{{ sim.compania }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="{
+                      inv:  sim.estatus === 'En inventario',
+                      cfg:  sim.estatus === 'En configuración',
+                      inst: sim.estatus === 'Instalado'
+                    }">
+                  {{ sim.estatus }}
+                </span>
+              </td>
+              <td>{{ sim.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
+              <td>{{ sim.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+              <td>{{ sim.cliente || '—' }}</td>
+              <td class="actions-cell">
+                <button class="icon-button view-button" title="Ver" (click)="verSim(sim)">
+                  <span class="material-icons">visibility</span>
+                </button>
+                <button class="icon-button edit-button" title="Editar" (click)="editarSim(sim)">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="icon-button delete-button" title="Eliminar" (click)="eliminarSim(sim)"
+                  [disabled]="simsDeletingId === sim.id">
+                  <span class="material-icons">
+                    {{ simsDeletingId === sim.id ? 'hourglass_top' : 'delete' }}
+                  </span>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="displayedSims.length === 0">
+              <td colspan="9" style="text-align:center; padding:1rem;">Sin SIM's para mostrar.</td>
+            </tr>
+          </tbody>
+          <ng-template #simsLoadingTpl>
+            <tbody>
+              <tr>
+                <td colspan="9" style="text-align:center; padding:1rem;">Cargando SIM's…</td>
+              </tr>
+            </tbody>
+          </ng-template>
+        </table>
+        <app-new-sim-modal (simCreated)="onSimCreated($event)" [modelOptions]="uniqueSimModels"
+          [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
+        <app-view-sim-modal></app-view-sim-modal>
+        <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
+          [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>
+      </div>
+    </div>
+  </mat-tab>
+
+  <!-- ================= RESUMEN (SOLO KPIs) ================ -->
+  <mat-tab label="Resumen">
+    <div class="tab-pane">
+
+      <div class="grupos">
+        <section class="grupo" *ngFor="let g of inventarioGrupos">
+          <div class="grupo-badge" [ngStyle]="{ '--grupo-color': g.color || '#1f8eeb' }">
+            <span>{{ g.nombre }}</span>
+          </div>
+
+          <div class="modelos-grid">
+            <article class="modelo-card" *ngFor="let it of g.items" [ngClass]="{
+                     'st-ok': computeStatus(it) === 'EN_EXISTENCIA',
+                     'st-empty': computeStatus(it) === 'SIN_EXISTENCIA',
+                     'st-ask': computeStatus(it) === 'SOLICITAR',
+                     'st-low': computeStatus(it) === 'ULTIMOS',
+                     'st-stop': computeStatus(it) === 'NO_USAR'
+                   }">
+
+              <header class="modelo-title">{{ it.modelo }}</header>
+
+              <div class="exist-band">
+                <div class="exist-label">Existencia</div>
+                <div class="exist-value">{{ it.cantidad }}</div>
+              </div>
+
+              <footer class="status-text">{{ statusText(computeStatus(it)) }}</footer>
+            </article>
+          </div>
+        </section>
+      </div>
+
+    </div>
+  </mat-tab>
+
+  <!-- ================= GPS's ================= -->
+  <mat-tab label="GPS's">
+    <div class="tab-pane">
+      <div class="header">
+        <h2>Listado de Dispositivos</h2>
+        <hr class="divider">
+        <h3>Filtrar</h3>
+
+        <div class="filter-bar">
+          <div class="filter-container">
+            <label for="status">Estatus:</label>
+            <select id="status" [(ngModel)]="selectedStatus" (change)="applyFilters()">
+              <option value="">Todos</option>
+              <option value="activo">Activo</option>
+              <option value="inactivo">Inactivo</option>
+              <option value="pendiente">Pendiente</option>
+            </select>
+
+            <label for="comprobante">Tipo de Comprobante:</label>
+            <select id="comprobante" [(ngModel)]="selectedComprobante" (change)="applyFilters()">
+              <option value="">Todos</option>
+              <option value="recibo">Recibo</option>
+              <option value="factura">Factura</option>
+            </select>
+
+            <div class="pagination-container">
+              <button class="filter-btn" (click)="toggleShowAll()">
+                {{ showAll ? 'Paginado' : 'Mostrar todos' }}
+              </button>
+
+              <div class="pagination" *ngIf="!showAll">
+                <button class="pagination-btn" (click)="setPage(currentPage - 1)"
+                  [disabled]="currentPage === 1">«</button>
+                <button *ngFor="let page of [].constructor(totalPages); let i = index" class="pagination-btn"
+                  [class.active]="currentPage === (i + 1)" (click)="setPage(i + 1)">
+                  {{ i + 1 }}
+                </button>
+                <button class="pagination-btn" (click)="setPage(currentPage + 1)"
+                  [disabled]="currentPage === totalPages">»</button>
+              </div>
+            </div>
+          </div>
+
+          <button class="new-button" (click)="openModal()">
+            <span class="material-icons">add</span> Nuevo
+          </button>
+
+          <!-- Modales -->
+          <app-register-clientes-modal (clienteRegistered)="addNewCliente($event)"></app-register-clientes-modal>
+          <app-edit-clientes-modal #editClientesModal
+            (clienteUpdated)="actualizarCliente($event)"></app-edit-clientes-modal>
+        </div>
+      </div>
+
+      <div class="clientes-table-container">
+        <table class="clientes-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Teléfono</th>
+              <th>Correo</th>
+              <th>Comprobante</th>
+              <th>Estatus</th>
+              <th>Opciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let cliente of displayedClientes">
+              <td>{{ cliente.idCliente }}</td>
+              <td>{{ cliente.nombre + ' ' + cliente.aPaterno + ' ' + cliente.aMaterno}}</td>
+              <td>{{ cliente.contacto.telefono }}</td>
+              <td>{{ cliente.contacto.correo }}</td>
+              <td>{{ cliente.datosComerciales.comprobante}}</td>
+              <td>
+                <span class="status-badge" [ngClass]="getStatusClass(cliente.estatus)">
+                  {{ cliente.estatus }}
+                </span>
+              </td>
+              <td>
+                <button class="edit-button" (click)="editarCliente(cliente)">
+                  <span class="material-icons">edit</span>Editar
+                </button>
+                <button class="delete-button" (click)="eliminarCliente(cliente)">
+                  <span class="material-icons">delete</span>Eliminar
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </mat-tab>
+
+  <!-- ================= Accesorios ================= -->
+  <mat-tab label="Accesorios">
+    <div class="tab-pane">
+      <div class="empty-state">
+        <h3>Accesorios</h3>
+        <p>Aquí podrás listar, filtrar y gestionar accesorios.</p>
+        <button class="new-button">
+          <span class="material-icons">extension</span> Agregar Accesorio
+        </button>
+      </div>
+      <!-- TODO: tu tabla de Accesorios -->
+    </div>
+  </mat-tab>
+
+</mat-tab-group>

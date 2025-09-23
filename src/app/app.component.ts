@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { AuthService } from './services/auth.service';
-import { Router } from '@angular/router';
+import { NavigationEnd, Router } from '@angular/router';
 import { NgToastService } from 'ng-angular-popup';
 
 interface SideNavToggle {
@@ -20,7 +20,7 @@ export class AppComponent implements OnInit {
   screenWidth = 0;
   isAuthenticated = false; // Estado de autenticación, inicialmente false
   isLoginRoute = false;
-  constructor(private authService: AuthService, private router: Router,private toast: NgToastService) {}
+  constructor(private authService: AuthService, private router: Router, private toast: NgToastService) { }
 
   ngOnInit(): void {
     // ✅ Verificar si hay token guardado
@@ -35,9 +35,13 @@ export class AppComponent implements OnInit {
     });
 
     // Verificar la ruta actual
-    this.router.events.subscribe(() => {
-      this.isLoginRoute = this.router.url === '/login';
+    this.router.events.subscribe(event => {
+      if (event instanceof NavigationEnd) {
+        this.isAuthenticated = this.authService.isLoggedIn();
+        this.isLoginRoute = this.router.url.includes('/login');
+      }
     });
+
 
   }
   onToggLeSidenav(data: SideNavToggle): void {

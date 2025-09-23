@@ -1,0 +1,75 @@
+.backdrop {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(2px);
+  background: rgba(0, 0, 0, .25);
+  z-index: 1000;
+}
+
+.panel {
+  width: min(560px, 92vw);
+  background: var(--mat-sys-surface, #fff);
+  border-radius: 16px;
+  padding: 1rem 1rem 1.25rem;
+}
+
+.title {
+  margin: .25rem 0 1rem;
+}
+
+.grid {
+  display: flex;
+  flex-direction: column;
+}
+
+.gap-4 {
+  gap: 1rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  padding-top: .5rem;
+}
+
+.cancel-btn {
+  color: red !important;
+  border-color: red !important;
+  transition: all 0.3s ease;
+
+   &:hover {
+    background-color: rgba(255, 0, 0, 0.1) !important;
+    border-color: red !important;
+  }
+
+  // Al hacer clic (estado activo)
+  &:active {
+    background-color: rgba(255, 0, 0, 0.2) !important;
+  }
+
+  // Deshabilitado
+  &:disabled {
+    color: rgba(255, 0, 0, 0.3) !important;
+    border-color: rgba(255, 0, 0, 0.3) !important;
+  }
+}
+
+.submit-btn:disabled {
+  background-color: #ccc !important;
+  color: #666 !important;
+}
+
+.actions button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.mr-1 {
+  margin-right: .25rem;
+}

@@ -26,7 +26,7 @@ export class ServiciosComponent implements OnInit {
   currentPage = 1; // Página actual
   showAll = true; // Controla si se muestran todos los servicios o se paginan
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
     this.loadServicios(); // Cargar servicios desde la API
@@ -34,15 +34,15 @@ export class ServiciosComponent implements OnInit {
 
   // Cargar servicios desde la API
   loadServicios(): void {
-    this.apiService.getServicios().subscribe(
-      (response: any) => {
+    this.apiService.getServicios().subscribe({
+      next: (response: any) => {
         this.servicios = Array.isArray(response.data) ? response.data : [];
       },
-      (error) => {
+      error: (error) => {
         console.error('Error al cargar servicios:', error);
         this.servicios = []; // Inicializar como arreglo vacío en caso de error
       }
-    );
+    });
   }
 
   // Obtener servicios para la página actual
@@ -75,8 +75,8 @@ export class ServiciosComponent implements OnInit {
 
   // Actualizar el servicio después de editar
   actualizarServicio(servicioActualizado: any): void {
-    this.apiService.updateServicio(servicioActualizado.idServ, servicioActualizado).subscribe(
-      () => {
+    this.apiService.updateServicio(servicioActualizado.idServ, servicioActualizado).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Servicio actualizado con éxito.',
@@ -84,16 +84,16 @@ export class ServiciosComponent implements OnInit {
         });
         this.loadServicios(); // Recargar los datos
       },
-      (error) => {
+      error: (error) => {
         this.toast.error({
           detail: 'Error',
           summary: 'Error al actualizar el servicio.',
           duration: 5000,
         });
       }
-    );
+    });
   }
-  
+
 
   eliminarServicio(servicio: Servicio): void {
     Swal.fire({
@@ -106,29 +106,29 @@ export class ServiciosComponent implements OnInit {
       confirmButtonText: "Si, eliminar",
     }).then((result) => {
       if (result.isConfirmed) {
-        this.apiService.deleteServicio(servicio.idServ).subscribe(
-          () => {
+        this.apiService.deleteServicio(servicio.idServ).subscribe({
+          next: () => {
             this.toast.success({
               detail: 'Éxito',
               summary: 'Servicio eliminado con éxito.',
               duration: 5000,
             });
-            
+
             this.loadServicios(); // Recargar la lista de servicios
           },
-          (error) => {
+          error: (error) => {
             this.toast.error({
               detail: 'Error',
               summary: 'Error al eliminar el servicio.',
               duration: 5000,
             });
-           
+
           }
-        );
+        });
       }
     });
 
-    
+
   }
 
   // Abrir el modal de registro
@@ -138,8 +138,8 @@ export class ServiciosComponent implements OnInit {
 
   // Agregar un nuevo servicio
   addNewServicio(newServicio: Servicio): void {
-    this.apiService.createServicio(newServicio).subscribe(
-      () => {
+    this.apiService.createServicio(newServicio).subscribe({
+      next: () => {
         this.toast.success({
           detail: 'Éxito',
           summary: 'Servicio registrado con éxito.',
@@ -148,14 +148,14 @@ export class ServiciosComponent implements OnInit {
 
         this.loadServicios(); // Recargar la lista de servicios
       },
-      (error) => {
+      error: (error) => {
         this.toast.error({
           detail: 'Error',
           summary: 'Error al registrar el servicio.',
           duration: 5000,
         });
-        
+
       }
-    );
+    });
   }
 }

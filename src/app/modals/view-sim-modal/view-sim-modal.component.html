@@ -1,0 +1,29 @@
+<div class="backdrop" *ngIf="show" (click)="close()"></div>
+
+<div class="modal" *ngIf="show">
+  <header class="modal__header">
+    <h3>Detalles del SIM</h3>
+    <button class="icon-btn" (click)="close()" aria-label="Cerrar">✕</button>
+  </header>
+
+  <div class="modal__body compact">
+    <div class="rows">
+      <div class="row"><span>ICCID</span><b>{{ data?.iccid || '—' }}</b></div>
+      <div class="row"><span>Modelo</span><b>{{ data?.modelo || '—' }}</b></div>
+      <div class="row"><span>Compañía</span><b>{{ data?.compania || '—' }}</b></div>
+      <div class="row"><span>Estatus</span><b>{{ data?.estatus || '—' }}</b></div>
+      <div class="row"><span>Fecha de compra</span><b>{{ fmtDate(data?.fechaCompra) }}</b></div>
+      <div class="row"><span>Fecha de ingreso</span><b>{{ fmtDate(data?.fechaIngresoLepton) }}</b></div>
+      <div class="row"><span>Cliente</span><b>{{ data?.cliente || '—' }}</b></div>
+
+      <div class="row col">
+        <span>Comentarios</span>
+        <div class="box">{{ data?.comentarios || '—' }}</div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="modal__footer">
+    <button mat-stroked-button color="primary" type="button" (click)="close()">Cerrar</button>
+  </footer>
+</div>
