@@ -1,0 +1,61 @@
+﻿<div class="modal-backdrop" *ngIf="visible" (click)="close()" #backdrop>
+  <div class="modal" (click)="stop($event)">
+    <div class="modal-header">
+      <h3>Detalles del evento</h3>
+      <button class="icon-btn" (click)="close()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Solo los cuatro datos solicitados -->
+      <div class="grid">
+        <div><span class="k">Operación:</span><strong>{{ data.operation }}</strong></div>
+        <div><span class="k">Colección:</span><strong>{{ data.collectionName }}</strong></div>
+        <div><span class="k">Usuario:</span>
+          <span>{{ data?.user?.userName || data?.user?.email || data?.user?._id || '-' }}</span>
+        </div>
+        <div><span class="k">Fecha:</span>
+          <!-- sin hora -->
+          <span>{{ data.createdAt | date:'dd MMM yyyy' }}</span>
+        </div>
+      </div>
+
+      <!-- Tabla de finalValues (sin _id) -->
+      <h4>Valores finales</h4>
+      <div class="table-wrap">
+        <table class="kv-table">
+          <thead>
+            <tr>
+              <th>Campo</th>
+              <th>Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of finalValuesRows">
+              <td class="cell-key">{{ mapKeyToLabel(row.key) }}</td>
+              <td class="cell-val">
+                <!-- si la clave es fecha, mostrar sin hora -->
+                <ng-container *ngIf="isDateKey(row.key); else notDate">
+                  {{ row.value | date:'dd MMM yyyy':'UTC' }}
+                </ng-container>
+
+                <ng-template #notDate>
+                  <ng-container *ngIf="isObject(row.value); else plain">
+                    <pre class="json">{{ displayValue(row.value) }}</pre>
+                  </ng-container>
+                  <ng-template #plain>{{ displayValue(row.value) }}</ng-template>
+                </ng-template>
+              </td>
+            </tr>
+            <tr *ngIf="finalValuesRows.length === 0">
+              <td colspan="2" class="empty">Sin datos para mostrar.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" (click)="close()">Cerrar</button>
+    </div>
+  </div>
+</div>

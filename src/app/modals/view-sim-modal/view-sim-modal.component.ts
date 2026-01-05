@@ -29,20 +29,20 @@ export class ViewSimModalComponent {
   close() { this.show = false; }
 
   fmtDate(v: any): string {
-  if (!v) return '—';
-  const d = v instanceof Date ? v : new Date(v);
-  if (isNaN(d.getTime())) return '—';
+    if (!v) return '—';
+    const d = v instanceof Date ? v : new Date(v);
+    if (isNaN(d.getTime())) return '—';
 
-  // mes abreviado en español (ej. "13 sept 2025"), fijo en UTC
-  const fmt = new Intl.DateTimeFormat('es', {
-    day: '2-digit',
-    month: 'short',   // usa 'long' si quieres el mes completo
-    year: 'numeric',
-    timeZone: 'UTC'
-  });
+    // mes abreviado en español (ej. "13 sept 2025"), fijo en UTC
+    const fmt = new Intl.DateTimeFormat('es', {
+      day: '2-digit',
+      month: 'short',   // usa 'long' si quieres el mes completo
+      year: 'numeric',
+      timeZone: 'UTC'
+    });
 
-  // En algunos entornos "sept." trae punto final; lo quitamos.
-  return fmt.format(d).replace(/\./g, '');
-}
+    // En algunos entornos "sept." trae punto final; lo quitamos.
+    return fmt.format(d).replace(/\./g, '');
+  }
 
 }

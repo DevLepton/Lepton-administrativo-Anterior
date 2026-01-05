@@ -1,41 +1,14 @@
 import { Component, OnInit, ViewChild } from '@angular/core';
-import { RegisterClientesModalComponent } from '../../clientes/actions/register-clientes-modal/register-clientes-modal.component';
-import { EditClientesModalComponent } from '../../clientes/actions/edit-clientes-modal/edit-clientes-modal.component';
-import { ApiService } from '../../services/api.service';
+import { ApiService, CreateGpsPayload } from '../../services/api.service';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { NewSimModalComponent } from '../../modals/new-sim-modal/new-sim-modal.component';
 import { ViewSimModalComponent } from '../../modals/view-sim-modal/view-sim-modal.component';
 import { EditSimModalComponent } from '../../modals/edit-sim-modal/edit-sim-modal.component';
-
-interface Cliente {
-  idCliente: number;
-  tipoCliente: string;
-  nombre: string;
-  aPaterno: string;
-  aMaterno: string;
-  domicilio: {
-    codigoPostal: string;
-    colonia: string;
-    estado: string;
-    municipio: string;
-    calle: string;
-    numeroExterior: string;
-    numeroInterior?: string;
-  };
-  contacto: {
-    correo: string;
-    telefono: string;
-  };
-  datosComerciales: {
-    comprobante: 'recibo' | 'factura' | string;
-    emisorComprobante: string;
-    diaCorte: number;
-    fechaCorte: Date;
-    fechaPago: Date;
-  };
-  estatus: 'activo' | 'inactivo' | 'pendiente' | string;
-}
+import { catchError, forkJoin, of } from 'rxjs';
+import { NewGpsModalComponent } from '../../modals/new-gps-modal/new-gps-modal.component';
+import { ViewGpsModalComponent } from '../../modals/view-gps-modal/view-gps-modal.component';
+import { EditGpsModalComponent } from '../../modals/edit-gps-modal/edit-gps-modal.component';
 
 // === Interface SIM ===
 interface SimItem {
@@ -43,10 +16,26 @@ interface SimItem {
   iccid: string;
   modelo: string;
   compania: string;
-  estatus: 'activa' | 'inactiva' | 'asignada' | 'stock' | string;
+  estatus: 'En inventario' | 'En configuración' | 'Instalado' | string;
   fechaCompra: string | Date | null;
   fechaIngresoLepton: string | Date | null;
   cliente?: string;
+  comments?: string;
+}
+
+interface GpsItem {
+  id: string;                         // _id de Mongo
+  imei: string;                       // requerido y único
+  sn: string;                         // requerido y único (para no-sim)
+  nombre: string;                     // name
+  marca: string;                      // brand
+  modelo: string;                     // model
+  estatus: 'En inventario' | 'En configuración' | 'Instalado' | string;
+  fechaCompra: string | Date | null;
+  fechaIngresoLepton: string | Date | null;
+  cliente?: string | null;
+  comments?: string | null;
+  installationDate?: string | Date | null;
 }
 
 type InvStatus = 'EN_EXISTENCIA' | 'SIN_EXISTENCIA' | 'SOLICITAR' | 'ULTIMOS' | 'NO_USAR';
@@ -70,22 +59,14 @@ interface InventarioGrupo {
   styleUrl: './almacen.component.scss'
 })
 export class AlmacenComponent implements OnInit {
-  @ViewChild(RegisterClientesModalComponent) registerClientesModal!: RegisterClientesModalComponent;
-  @ViewChild(EditClientesModalComponent) editClientesModal!: EditClientesModalComponent;
+
   @ViewChild(NewSimModalComponent) newSimModal!: NewSimModalComponent;
   @ViewChild(ViewSimModalComponent) viewSimModal!: ViewSimModalComponent;
   @ViewChild(EditSimModalComponent) editSimModal!: EditSimModalComponent;
 
-  // Data
-  clientes: Cliente[] = [];
-  filteredClientes: Cliente[] = [];
-
-  // Filtros / paginado (para la pestaña GPS's)
-  selectedStatus: string = '';
-  selectedComprobante: string = '';
-  clientesPerPage = 10;
-  currentPage = 1;
-  showAll = true;
+  @ViewChild(NewGpsModalComponent) newGpsModal!: NewGpsModalComponent;
+  @ViewChild(ViewGpsModalComponent) viewGpsModal!: ViewGpsModalComponent;
+  @ViewChild(EditGpsModalComponent) editGpsModal!: EditGpsModalComponent;
 
   sims: SimItem[] = [];
   simsLoading = false;
@@ -100,7 +81,8 @@ export class AlmacenComponent implements OnInit {
       estatus: d.status ?? 'stock',   // status -> estatus (para tu UI)
       fechaCompra: d.purchaseDate ?? null,        // purchaseDate -> fechaCompra
       fechaIngresoLepton: d.entryDate ?? null,    // entryDate -> fechaIngresoLepton
-      cliente: d.client ?? ''
+      cliente: d.client ?? '',
+      comments: d.comments ?? ''
     };
   }
 
@@ -199,8 +181,8 @@ export class AlmacenComponent implements OnInit {
   constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
-    this.loadClientes();
     this.loadSims();
+    this.loadGps();
   }
 
   onTabChange(index: number) {
@@ -208,21 +190,6 @@ export class AlmacenComponent implements OnInit {
     if (index === 1 && this.sims.length === 0 && !this.simsLoading) {
       this.loadSims();           // ← opcional: carga perezosa al abrir pestaña SIM's
     }
-  }
-
-  // Cargar clientes
-  loadClientes(): void {
-    this.apiService.getClientes().subscribe({
-      next: (response: any) => {
-        this.clientes = Array.isArray(response.data) ? response.data : [];
-        this.filteredClientes = [...this.clientes];
-        this.applyFilters(); // mantiene coherencia con la pestaña de la tabla
-      },
-      error: (error) => {
-        console.error('Error al cargar clientes:', error);
-        this.toast.error({ detail: 'Error', summary: 'Error al cargar clientes', duration: 5000 });
-      },
-    });
   }
 
   private objectIdEpoch(id: string): number {
@@ -238,7 +205,7 @@ export class AlmacenComponent implements OnInit {
         this.sims = list
           .map((d: any) => this.mapDeviceToSimItem(d))
           .sort((a: any, b: any) => this.objectIdEpoch(b.id) - this.objectIdEpoch(a.id));
-        this.simsInitial = [...this.sims];   // NEW: snapshot del orden inicial
+        this.simsInitial = [...this.sims];
         this.simsCurrentPage = 1;
         this.sortKey = 'no';
         this.sortDir = 'desc';
@@ -251,129 +218,10 @@ export class AlmacenComponent implements OnInit {
     });
   }
 
-
-  // --- KPIs (Resumen) ---
-  get totalClientes(): number {
-    return this.clientes.length;
-  }
-
-  get totalActivos(): number {
-    return this.clientes.filter(c => c.estatus === 'activo').length;
-  }
-
-  get totalInactivos(): number {
-    return this.clientes.filter(c => c.estatus === 'inactivo').length;
-  }
-
-  get totalPendientes(): number {
-    return this.clientes.filter(c => c.estatus === 'pendiente').length;
-  }
-
-  get totalRecibos(): number {
-    return this.clientes.filter(c => c.datosComerciales?.comprobante === 'recibo').length;
-  }
-
-  get totalFacturas(): number {
-    return this.clientes.filter(c => c.datosComerciales?.comprobante === 'factura').length;
-  }
-
-  // % helpers
-  pct(n: number): number {
-    return this.totalClientes ? Math.round((n / this.totalClientes) * 100) : 0;
-  }
-
-  // --- Tabla (GPS's) ---
-  get displayedClientes(): Cliente[] {
-    if (this.showAll) return this.filteredClientes;
-    const startIndex = (this.currentPage - 1) * this.clientesPerPage;
-    return this.filteredClientes.slice(startIndex, startIndex + this.clientesPerPage);
-  }
-
-  get totalPages(): number {
-    return Math.ceil(this.filteredClientes.length / this.clientesPerPage);
-  }
-
-  toggleShowAll(): void {
-    this.showAll = !this.showAll;
-    this.currentPage = 1;
-  }
-
-  setPage(page: number): void {
-    this.currentPage = page;
-  }
-
   getStatusClass(estatus: string): string {
     if (estatus === 'activo') return 'status-activo';
     if (estatus === 'inactivo') return 'status-inactivo';
     return 'status-pendiente';
-  }
-
-  applyFilters(): void {
-    this.filteredClientes = this.clientes.filter((cliente) => {
-      const matchesStatus = this.selectedStatus ? cliente.estatus === this.selectedStatus : true;
-      const matchesComprobante = this.selectedComprobante
-        ? cliente.datosComerciales?.comprobante === this.selectedComprobante
-        : true;
-      return matchesStatus && matchesComprobante;
-    });
-    this.currentPage = 1;
-  }
-
-  // CRUD
-  editarCliente(cliente: Cliente): void {
-    this.editClientesModal.open(cliente);
-  }
-
-  actualizarCliente(clienteActualizado: Cliente): void {
-    this.apiService.updateCliente(clienteActualizado.idCliente, clienteActualizado).subscribe({
-      next: () => {
-        this.toast.success({ detail: 'Éxito', summary: 'Cliente actualizado con éxito.', duration: 5000 });
-        this.loadClientes();
-      },
-      error: () => {
-        this.toast.error({ detail: 'Error', summary: 'Error al actualizar el cliente.', duration: 5000 });
-      }
-    });
-  }
-
-  eliminarCliente(cliente: Cliente): void {
-    Swal.fire({
-      title: '¿Estás seguro de eliminar?',
-      text: 'No podrás revertir esta acción',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#3085d6',
-      cancelButtonColor: '#d33',
-      confirmButtonText: 'Sí, eliminar',
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.apiService.deleteCliente(cliente.idCliente).subscribe({
-          next: () => {
-            this.toast.success({ detail: 'Éxito', summary: 'Cliente eliminado con éxito', duration: 5000 });
-            this.loadClientes();
-          },
-          error: () => {
-            this.toast.error({ detail: 'Error', summary: 'Error al eliminar cliente', duration: 5000 });
-          }
-        });
-      }
-    });
-  }
-
-  openModal(): void {
-    this.registerClientesModal.open();
-  }
-
-  addNewCliente(newCliente: Cliente): void {
-    this.apiService.createCliente(newCliente).subscribe({
-      next: () => {
-        this.toast.success({ detail: 'Éxito', summary: 'Cliente registrado con éxito', duration: 5000 });
-        this.loadClientes();
-      },
-      error: () => {
-        this.toast.error({ detail: 'Error', summary: 'Error al registrar cliente', duration: 5000 });
-      }
-    });
   }
 
   simsPerPage = 10;
@@ -381,14 +229,19 @@ export class AlmacenComponent implements OnInit {
   simsShowAll = true;
 
   get displayedSims(): SimItem[] {
-    if (this.simsShowAll) return this.sims;
+    const src = this.simsFiltered;
+    if (this.simsShowAll) return src;
     const start = (this.simsCurrentPage - 1) * this.simsPerPage;
-    return this.sims.slice(start, start + this.simsPerPage);
+    return src.slice(start, start + this.simsPerPage);
   }
 
   get simsTotalPages(): number {
-    const total = Math.ceil(this.sims.length / this.simsPerPage);
-    return Math.max(1, total); // nunca 0 para que los botones se comporten
+    const total = Math.ceil(this.simsFiltered.length / this.simsPerPage);
+    return Math.max(1, total);
+  }
+
+  onSimFilterChange() {
+    this.simsCurrentPage = 1;
   }
 
   setSimsPage(p: number) {
@@ -432,6 +285,76 @@ export class AlmacenComponent implements OnInit {
     });
   }
 
+  onSimsBulkCreated(list: Array<{
+    type: 'sim';
+    iccid: string;
+    model: string;
+    company: string;
+    status: 'En inventario' | 'En configuración' | 'Instalado';
+    purchaseDate: string;   // 'YYYY-MM-DD'
+    entryDate: string;      // 'YYYY-MM-DD'
+    installationDate?: string | null;
+    client?: string | null;
+    comments?: string | null;
+  }>) {
+    // Validación básica
+    if (!Array.isArray(list) || list.length === 0) {
+      this.toast.warning({ detail: 'Aviso', summary: 'No hay SIMs para registrar.', duration: 3000 });
+      return;
+    }
+
+    // Normaliza payloads (ej. iccid sin espacios)
+    const payloads = list.map(item => ({
+      ...item,
+      iccid: String(item.iccid || '').trim(),
+    }));
+
+    // Construye requests con manejo de error por item
+    const requests = payloads.map(p =>
+      this.apiService.createSim(p).pipe(
+        // No detenemos todo el batch si uno falla
+        catchError(err => of({ __error: err }))
+      )
+    );
+
+    // Ejecuta todas las llamadas y resume resultados
+    forkJoin(requests).subscribe({
+      next: (results: any[]) => {
+        const successes = results.filter(r => !r?.__error).length;
+        const failures = results.length - successes;
+
+        if (successes > 0) {
+          this.toast.success({
+            detail: 'Éxito',
+            summary: `Se registraron ${successes} SIM(s) correctamente.`,
+            duration: 5000
+          });
+        }
+        if (failures > 0) {
+          this.toast.error({
+            detail: 'Error',
+            summary: `No se pudieron registrar ${failures} SIM(s).`,
+            duration: 6000
+          });
+        }
+
+        // Refresca la tabla una sola vez al terminar
+        this.loadSims();
+      },
+      error: () => {
+        // forkJoin solo entra aquí si falla el stream completo (muy raro por el catchError)
+        this.toast.error({
+          detail: 'Error',
+          summary: 'Fallo el registro masivo.',
+          duration: 6000
+        });
+        this.loadSims();
+      }
+    });
+  }
+
+
+
   editarSim(sim: SimItem) {
     const found = this.sims.find(s => s.id === sim.id);
     if (!found) {
@@ -449,7 +372,7 @@ export class AlmacenComponent implements OnInit {
       entryDate: found.fechaIngresoLepton ?? null,
       installationDate: null,          // completa si lo traes en la lista
       client: found.cliente ?? '',
-      comments: null                   // completa si lo traes en la lista
+      comments: found.comments ?? ''                    // completa si lo traes en la lista
     });
   }
 
@@ -531,7 +454,7 @@ export class AlmacenComponent implements OnInit {
       fechaCompra: found.fechaCompra ?? null,
       fechaIngresoLepton: found.fechaIngresoLepton ?? null,
       cliente: found.cliente ?? '',
-      comentarios: '' // coloca aquí si manejas comments en la UI
+      comentarios: found.comments ?? '' // coloca aquí si manejas comments en la UI
     });
   }
 
@@ -550,6 +473,11 @@ export class AlmacenComponent implements OnInit {
 
   get uniqueSimCompanies(): string[] {
     const set = new Set((this.sims ?? []).map(s => s.compania).filter(Boolean) as string[]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  get uniqueSimStatuses(): string[] {
+    const set = new Set((this.sims ?? []).map(s => s.estatus).filter(Boolean) as string[]);
     return Array.from(set).sort((a, b) => a.localeCompare(b));
   }
 
@@ -632,5 +560,400 @@ export class AlmacenComponent implements OnInit {
     return this.sortDir === 'asc' ? '▲' : '▼';
   }
 
+  simsSearch = '';
+  simsFilterCompany = '';
+  simsFilterStatus = '';
+
+  updateSimSearch(v: string) {
+    this.simsSearch = (v ?? '').trim();
+    this.simsCurrentPage = 1;
+  }
+
+  private dayKeyUTC(d: any): number | null {
+    if (!d) return null;
+    const x = new Date(d);
+    if (isNaN(x.getTime())) return null;
+    return Date.UTC(x.getUTCFullYear(), x.getUTCMonth(), x.getUTCDate());
+  }
+
+  private dayKeyFromPickerLocal(d: Date | null): number | null {
+    if (!d) return null;
+    return Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+  }
+
+  // ---- Filtros de fecha (sin cambios visuales) ----
+  purchaseDateFilter: Date | null = null;
+  entryDateFilter: Date | null = null;
+
+  onPurchaseDateChange(d: Date | null) { this.purchaseDateFilter = d; this.simsCurrentPage = 1; }
+  clearPurchaseDate() { this.onPurchaseDateChange(null); }
+  onEntryDateChange(d: Date | null) { this.entryDateFilter = d; this.simsCurrentPage = 1; }
+  clearEntryDate() { this.onEntryDateChange(null); }
+
+
+  // Lista filtrada con base en this.sims + el texto de bÃºsqueda
+  get simsFiltered(): SimItem[] {
+    const q = this.s(this.simsSearch);
+    const fc = this.s(this.simsFilterCompany);
+    const fs = this.s(this.simsFilterStatus);
+
+    // Precalcula claves de día para los filtros de datepicker (UTC)
+    const purchaseKey = this.dayKeyFromPickerLocal(this.purchaseDateFilter);
+    const entryKey = this.dayKeyFromPickerLocal(this.entryDateFilter);
+
+    return (this.sims ?? []).filter(sim => {
+      const okSearch = !q || this.s(sim.iccid).includes(q);
+      const okCompany = !fc || this.s(sim.compania) === fc;
+      const okStatus = !fs || this.s(sim.estatus) === fs;
+
+      // Claves UTC para las fechas del SIM (vengan como string o Date)
+      const simPurchaseKey = this.dayKeyUTC(sim.fechaCompra);
+      const simEntryKey = this.dayKeyUTC(sim.fechaIngresoLepton);
+
+      const okPurchase = !purchaseKey || (simPurchaseKey !== null && simPurchaseKey === purchaseKey);
+      const okEntry = !entryKey || (simEntryKey !== null && simEntryKey === entryKey);
+
+      return okSearch && okCompany && okStatus && okPurchase && okEntry;
+    });
+  }
+
+  // ==== Estado GPS ====
+  gps: GpsItem[] = [];
+  gpsLoading = false;
+  gpsDeletingId: string | null = null;
+
+  // paginado/filtros
+  gpsPerPage = 10;
+  gpsCurrentPage = 1;
+  gpsShowAll = true;
+
+  gpsSearch = '';                 // por IMEI/Serie
+  gpsFilterBrand = '';
+  gpsFilterStatus = '';
+  gpsFilterModel = '';
+  gpsPurchaseDateFilter: Date | null = null;
+  gpsEntryDateFilter: Date | null = null;
+
+  // ordenación
+  private gpsInitial: GpsItem[] = [];
+  gpsSortKey: keyof GpsItem | 'no' = 'no';
+  gpsSortDir: 'asc' | 'desc' = 'desc';
+
+  // ==== Mapeo desde API -> UI ====
+  private mapDeviceToGpsItem(d: any): GpsItem {
+    return {
+      id: String(d._id),
+      imei: d.imei ?? '',
+      sn: d.sn ?? '',
+      nombre: d.name ?? '',
+      marca: d.brand ?? '',
+      modelo: d.model ?? '',
+      estatus: d.status ?? 'En inventario',
+      fechaCompra: d.purchaseDate ?? null,
+      fechaIngresoLepton: d.entryDate ?? null,
+      cliente: d.client ?? null,
+      comments: d.comments ?? null,
+      installationDate: d.installationDate ?? null,
+    };
+  }
+
+  private byIdDesc = (a: GpsItem, b: GpsItem) =>
+    this.objectIdEpoch(b.id) - this.objectIdEpoch(a.id);
+
+  // ==== Carga ====
+  loadGps(): void {
+    this.gpsLoading = true;
+
+    this.apiService.getGps().subscribe({
+      next: (res: { data?: any[] } | any[]) => {
+        // tipa list para que no se propague 'any'
+        const list: any[] = Array.isArray((res as any)?.data)
+          ? (res as any).data
+          : (Array.isArray(res) ? (res as any[]) : []);
+
+        this.gps = list
+          .map((d: any) => this.mapDeviceToGpsItem(d))      // GpsItem[]
+          .sort((a: GpsItem, b: GpsItem) => this.byIdDesc(a, b)); // 👈 tipado
+
+        this.gpsInitial = [...this.gps];
+        this.gpsCurrentPage = 1;
+        this.gpsSortKey = 'no';
+        this.gpsSortDir = 'desc';
+      },
+      error: (err) => {
+        console.error('Error al cargar GPS:', err);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los GPS', duration: 5000 });
+      },
+      complete: () => (this.gpsLoading = false),
+    });
+  }
+
+  // ==== Filtros / búsqueda / paginado (GPS) ====
+  get displayedGps(): GpsItem[] {
+    const src = this.gpsFiltered;
+    if (this.gpsShowAll) return src;
+    const start = (this.gpsCurrentPage - 1) * this.gpsPerPage;
+    return src.slice(start, start + this.gpsPerPage);
+  }
+
+  get gpsTotalPages(): number {
+    const total = Math.ceil(this.gpsFiltered.length / this.gpsPerPage);
+    return Math.max(1, total);
+  }
+
+  updateGpsSearch(v: string) { this.gpsSearch = (v ?? '').trim(); this.gpsCurrentPage = 1; }
+  onGpsFilterChange() { this.gpsCurrentPage = 1; }
+  setGpsPage(p: number) { this.gpsCurrentPage = Math.min(Math.max(1, p), this.gpsTotalPages); }
+  toggleGpsShowAll() { this.gpsShowAll = !this.gpsShowAll; this.gpsCurrentPage = 1; }
+
+  onGpsPurchaseDateChange(d: Date | null) { this.gpsPurchaseDateFilter = d; this.gpsCurrentPage = 1; }
+  clearGpsPurchaseDate() { this.onGpsPurchaseDateChange(null); }
+  onGpsEntryDateChange(d: Date | null) { this.gpsEntryDateFilter = d; this.gpsCurrentPage = 1; }
+  clearGpsEntryDate() { this.onGpsEntryDateChange(null); }
+
+  // lista filtrada
+  get gpsFiltered(): GpsItem[] {
+    const q = this.s(this.gpsSearch);
+    const fBrand = this.s(this.gpsFilterBrand);
+    const fModel = this.s(this.gpsFilterModel);
+    const fStatus = this.s(this.gpsFilterStatus);
+
+    const purchaseKey = this.dayKeyFromPickerLocal(this.gpsPurchaseDateFilter);
+    const entryKey = this.dayKeyFromPickerLocal(this.gpsEntryDateFilter);
+
+    return (this.gps ?? []).filter(g => {
+      const okSearch = !q || this.s(g.imei).includes(q) || this.s(g.sn).includes(q);
+      const okBrand = !fBrand || this.s(g.marca) === fBrand;
+      const okModel = !fModel || this.s(g.modelo) === fModel;
+      const okStatus = !fStatus || this.s(g.estatus) === fStatus;
+
+      const pKey = this.dayKeyUTC(g.fechaCompra);
+      const eKey = this.dayKeyUTC(g.fechaIngresoLepton);
+      const okPurchase = !purchaseKey || (pKey !== null && pKey === purchaseKey);
+      const okEntry = !entryKey || (eKey !== null && eKey === entryKey);
+
+      return okSearch && okBrand && okModel && okStatus && okPurchase && okEntry;
+    });
+  }
+
+  // ==== Ordenación (GPS) ====
+  resetGpsSort() {
+    this.gps = [...this.gpsInitial];
+    this.gpsSortKey = 'no';
+    this.gpsSortDir = 'desc';
+    this.gpsCurrentPage = 1;
+  }
+
+  sortGpsBy(key: keyof GpsItem | 'no') {
+    if (this.gpsSortKey === key) {
+      if (this.gpsSortDir === 'asc') this.gpsSortDir = 'desc';
+      else { this.resetGpsSort(); return; }
+    } else { this.gpsSortKey = key; this.gpsSortDir = 'asc'; }
+
+    if (key === 'no') return;
+    const dir = this.gpsSortDir === 'asc' ? 1 : -1;
+
+    this.gps = [...this.gps].sort((a, b) => {
+      let av: any = (a as any)[key];
+      let bv: any = (b as any)[key];
+
+      if (key === 'fechaCompra' || key === 'fechaIngresoLepton') {
+        const ams = this.ymdUtcMs(av), bms = this.ymdUtcMs(bv);
+        return (ams - bms) * dir;
+      }
+
+      const as = this.s(av), bs = this.s(bv);
+      if (as < bs) return -1 * dir;
+      if (as > bs) return 1 * dir;
+      return 0;
+    });
+
+    this.gpsCurrentPage = 1;
+  }
+
+  arrowForGps(key: keyof GpsItem | 'no'): string {
+    if (this.gpsSortKey !== key) return '';
+    return this.gpsSortDir === 'asc' ? '▲' : '▼';
+  }
+
+  // ==== Listas únicas para filtros (GPS) ====
+  get uniqueGpsBrands(): string[] {
+    const set = new Set((this.gps ?? []).map(g => g.marca).filter(Boolean) as string[]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+  get uniqueGpsModels(): string[] {
+    const set = new Set((this.gps ?? []).map(g => g.modelo).filter(Boolean) as string[]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+  get uniqueGpsStatuses(): string[] {
+    const set = new Set((this.gps ?? []).map(g => g.estatus).filter(Boolean) as string[]);
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }
+
+  // ==== CRUD GPS ====
+  nuevoGps() { this.newGpsModal.open(); }
+
+  onGpsCreated(evt: {
+    type: 'gps';
+    imei: string;
+    sn: string;
+    name: string;
+    brand: string;
+    model: string;
+    status: 'En inventario' | 'En configuración' | 'Instalado';
+    purchaseDate: string;
+    entryDate: string;
+    installationDate?: string | null;
+    client?: string | null;
+    comments?: string | null;
+  }) {
+    this.apiService.createGps(evt).subscribe({
+      next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS registrado', duration: 4000 }); this.loadGps(); },
+      error: (err) => {
+        const msg = err?.error?.error || 'Error al registrar GPS';
+        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+      }
+    });
+  }
+
+  onGpsBulkCreated(list: Array<{
+    type: 'gps';
+    imei: string;
+    sn: string;
+    name: string;
+    brand: string;
+    model: string;
+    status: 'En inventario' | 'En configuración' | 'Instalado';
+    purchaseDate: string;       // 'YYYY-MM-DD'
+    entryDate: string;          // 'YYYY-MM-DD'
+    installationDate?: string | null;
+    client?: string | null;
+    comments?: string | null;
+  }>) {
+    if (!Array.isArray(list) || list.length === 0) {
+      this.toast.warning({ detail: 'Aviso', summary: 'No hay GPS para registrar.', duration: 3000 });
+      return;
+    }
+    const payloads = list.map(x => ({
+      ...x,
+      imei: String(x.imei || '').trim(),
+      sn: String(x.sn || '').trim(),
+    }));
+    const reqs = payloads.map(p => this.apiService.createGps(p).pipe(catchError(err => of({ __error: err }))));
+
+    forkJoin(reqs).subscribe({
+      next: (res: any[]) => {
+        const ok = res.filter(r => !r?.__error).length;
+        const ko = res.length - ok;
+        if (ok) this.toast.success({ detail: 'Éxito', summary: `${ok} GPS registrado(s).`, duration: 5000 });
+        if (ko) this.toast.error({ detail: 'Error', summary: `${ko} GPS no se registraron.`, duration: 6000 });
+        this.loadGps();
+      },
+      error: () => {
+        this.toast.error({ detail: 'Error', summary: 'Falló el registro masivo.', duration: 6000 });
+        this.loadGps();
+      }
+    });
+  }
+
+  editarGps(g: GpsItem) {
+    const found = this.gps.find(x => x.id === g.id);
+    if (!found) { this.toast.error({ detail: 'Error', summary: 'GPS no encontrado', duration: 4000 }); return; }
+    this.editGpsModal.open({
+      id: found.id,
+      imei: found.imei,
+      sn: found.sn,
+      name: found.nombre,
+      brand: found.marca,
+      model: found.modelo,
+      status: (found.estatus as any) || 'En inventario',
+      purchaseDate: found.fechaCompra ?? null,
+      entryDate: found.fechaIngresoLepton ?? null,
+      installationDate: found.installationDate ?? null,
+      client: found.cliente ?? '',
+      comments: found.comments ?? ''
+    });
+  }
+
+  onGpsUpdated(evt: {
+    id: string;
+    payload: Partial<Omit<CreateGpsPayload, 'type'>>;
+  }) {
+    this.apiService.updateGps(evt.id, evt.payload).subscribe({
+      next: () => {
+        this.toast.success({ detail: 'Éxito', summary: 'GPS actualizado', duration: 4000 });
+        this.loadGps();
+      },
+      error: (err) => {
+        const msg = err?.error?.error || 'Error al actualizar GPS';
+        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+      }
+    });
+  }
+
+
+  eliminarGps(g: GpsItem) {
+    Swal.fire({
+      title: '¿Eliminar GPS?',
+      html: `
+      <div style="text-align:left">
+        <div><b>IMEI:</b> ${g.imei}</div>
+        <div><b>Serie:</b> ${g.sn}</div>
+        <div><b>Modelo:</b> ${g.modelo}</div>
+        <div><b>Marca:</b> ${g.marca}</div>
+      </div>
+      <br>Esta acción no se puede deshacer.
+    `,
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonColor: 'var(--color-primary)',
+      confirmButtonColor: 'var(--color-danger)',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar',
+      reverseButtons: true,
+    }).then(result => {
+      if (!result.isConfirmed) return;
+      this.gpsDeletingId = g.id;
+
+      this.apiService.deleteGps(g.id).subscribe({
+        next: () => {
+          this.gps = this.gps.filter(x => x.id !== g.id);
+          this.gpsInitial = this.gpsInitial.filter(x => x.id !== g.id);
+          if (!this.gpsShowAll) {
+            const totalPages = Math.max(1, Math.ceil(this.gps.length / this.gpsPerPage));
+            if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
+          }
+          this.toast.success({ detail: 'Éxito', summary: 'GPS eliminado', duration: 4000 });
+        },
+        error: (err) => {
+          const msg = err?.error?.error || 'No se pudo eliminar el GPS';
+          this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+        },
+        complete: () => { this.gpsDeletingId = null; }
+      });
+    });
+  }
+
+  verGps(g: GpsItem) {
+    const found = this.gps.find(x => x.id === g.id);
+    if (!found) { this.toast.error({ detail: 'Error', summary: 'GPS no encontrado', duration: 4000 }); return; }
+    this.viewGpsModal.open({
+      id: found.id,
+      imei: found.imei,
+      sn: found.sn,
+      nombre: found.nombre,
+      marca: found.marca,
+      modelo: found.modelo,
+      estatus: found.estatus,
+      fechaCompra: found.fechaCompra ?? null,
+      fechaIngresoLepton: found.fechaIngresoLepton ?? null,
+      cliente: found.cliente ?? '',
+      comentarios: found.comments ?? ''
+    });
+  }
+
+  // ==== Unique options a exponer a modales GPS ====
+  get gpsModelOptions(): string[] { return this.uniqueGpsModels; }
+  get gpsBrandOptions(): string[] { return this.uniqueGpsBrands; }
 
 }

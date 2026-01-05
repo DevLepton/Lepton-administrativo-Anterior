@@ -1,5 +1,207 @@
 <mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
 
+  <!-- ================= GPS's ================= -->
+  <mat-tab label="GPS's">
+    <div class="tab-pane">
+      <div class="header">
+        <!-- <h2>GPS's</h2>
+        <hr class="divider"> -->
+
+        <div class="filter-bar">
+          <div class="filter-container">
+
+            <!-- Buscador por IMEI o S/N -->
+            <mat-form-field appearance="outline" class="sim-search">
+              <mat-label>Buscar por IMEI / S/N</mat-label>
+              <input matInput [(ngModel)]="gpsSearch" (ngModelChange)="updateGpsSearch($event)"
+                placeholder="Ingrese IMEI o número de serie..." autocomplete="off" />
+              <button *ngIf="gpsSearch" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateGpsSearch('')">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-hint *ngIf="gpsSearch">
+                {{ gpsFiltered.length }} resultado{{ gpsFiltered.length === 1 ? '' : 's' }}
+              </mat-hint>
+            </mat-form-field>
+
+            <!-- Marca -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Marca</mat-label>
+              <mat-select [(value)]="gpsFilterBrand" (selectionChange)="onGpsFilterChange()">
+                <mat-option [value]="''">Todas</mat-option>
+                <mat-option *ngFor="let b of uniqueGpsBrands" [value]="b">{{ b }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Modelo (opcional) -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Modelo</mat-label>
+              <mat-select [(value)]="gpsFilterModel" (selectionChange)="onGpsFilterChange()">
+                <mat-option [value]="''">Todos</mat-option>
+                <mat-option *ngFor="let m of uniqueGpsModels" [value]="m">{{ m }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Estatus -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Estatus</mat-label>
+              <mat-select [(value)]="gpsFilterStatus" (selectionChange)="onGpsFilterChange()">
+                <mat-option [value]="''">Todos</mat-option>
+                <mat-option *ngFor="let s of uniqueGpsStatuses" [value]="s">{{ s }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- 📅 Fecha de compra -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Fecha de compra</mat-label>
+              <input matInput [matDatepicker]="gpPickerCompra" placeholder="Selecciona fecha"
+                [(ngModel)]="gpsPurchaseDateFilter" (dateChange)="onGpsPurchaseDateChange($event.value)" />
+              <mat-datepicker-toggle matSuffix [for]="gpPickerCompra"></mat-datepicker-toggle>
+              <mat-datepicker #gpPickerCompra></mat-datepicker>
+              <button *ngIf="gpsPurchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+                (click)="clearGpsPurchaseDate()">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-hint *ngIf="gpsPurchaseDateFilter">
+                Filtrando: {{ gpsPurchaseDateFilter | date:'dd MMM yyyy' }}
+              </mat-hint>
+            </mat-form-field>
+
+            <!-- 📅 Fecha de ingreso -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Fecha de ingreso</mat-label>
+              <input matInput [matDatepicker]="gpPickerIngreso" placeholder="Selecciona fecha"
+                [(ngModel)]="gpsEntryDateFilter" (dateChange)="onGpsEntryDateChange($event.value)" />
+              <mat-datepicker-toggle matSuffix [for]="gpPickerIngreso"></mat-datepicker-toggle>
+              <mat-datepicker #gpPickerIngreso></mat-datepicker>
+              <button *ngIf="gpsEntryDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+                (click)="clearGpsEntryDate()">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-hint *ngIf="gpsEntryDateFilter">
+                Filtrando: {{ gpsEntryDateFilter | date:'dd MMM yyyy' }}
+              </mat-hint>
+            </mat-form-field>
+
+          </div>
+
+          <button class="new-button" (click)="nuevoGps()">
+            <span class="material-icons">gps_fixed</span> Nuevo GPS
+          </button>
+        </div>
+
+        <div class="filter-bar" style="justify-content: end;">
+          <div class="filter-container">
+            <div class="pagination-container">
+              <button class="filter-btn" (click)="toggleGpsShowAll()">
+                {{ gpsShowAll ? 'Paginado' : 'Mostrar todos' }}
+              </button>
+
+              <div class="pagination" *ngIf="!gpsShowAll && gpsFiltered.length > 0 && gpsTotalPages > 1">
+                <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage - 1)"
+                  [disabled]="gpsCurrentPage === 1">«</button>
+                <button *ngFor="let p of [].constructor(gpsTotalPages); let i = index" class="pagination-btn"
+                  [class.active]="gpsCurrentPage === (i + 1)" (click)="setGpsPage(i + 1)">
+                  {{ i + 1 }}
+                </button>
+                <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage + 1)"
+                  [disabled]="gpsCurrentPage === gpsTotalPages">»</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Tabla GPS ===== -->
+      <div class="table-container">
+        <table class="table">
+          <thead>
+            <tr>
+              <th>No.</th>
+              <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow">{{ arrowForGps('imei') }}</span>
+              </th>
+              <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow">{{ arrowForGps('sn') }}</span></th>
+              <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow">{{ arrowForGps('nombre')
+                  }}</span></th>
+              <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow">{{ arrowForGps('marca')
+                  }}</span></th>
+              <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow">{{ arrowForGps('modelo')
+                  }}</span></th>
+              <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow">{{ arrowForGps('estatus')
+                  }}</span></th>
+              <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
+                  arrowForGps('fechaCompra') }}</span></th>
+              <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span class="arrow">{{
+                  arrowForGps('fechaIngresoLepton') }}</span></th>
+              <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow">{{ arrowForGps('cliente')
+                  }}</span></th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+
+          <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
+            <tr *ngFor="let g of displayedGps; let idx = index">
+              <td>{{ gpsShowAll ? (idx + 1) : ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
+              <td>{{ g.imei }}</td>
+              <td>{{ g.sn }}</td>
+              <td>{{ g.nombre }}</td>
+              <td>{{ g.marca }}</td>
+              <td>{{ g.modelo }}</td>
+              <td>
+                <span class="status-badge" [ngClass]="{
+                    inv:  g.estatus === 'En inventario',
+                    cfg:  g.estatus === 'En configuración',
+                    inst: g.estatus === 'Instalado'
+                  }">
+                  {{ g.estatus }}
+                </span>
+              </td>
+              <td>{{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
+              <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+              <td>{{ g.cliente || '—' }}</td>
+              <td class="actions-cell">
+                <button class="icon-button view-button" title="Ver" (click)="verGps(g)">
+                  <span class="material-icons">visibility</span>
+                </button>
+                <button class="icon-button edit-button" title="Editar" (click)="editarGps(g)">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="icon-button delete-button" title="Eliminar" (click)="eliminarGps(g)"
+                  [disabled]="gpsDeletingId === g.id">
+                  <span class="material-icons">
+                    {{ gpsDeletingId === g.id ? 'hourglass_top' : 'delete' }}
+                  </span>
+                </button>
+              </td>
+            </tr>
+            <tr *ngIf="displayedGps.length === 0">
+              <td colspan="11" style="text-align:center; padding:1rem;">Sin GPS para mostrar.</td>
+            </tr>
+          </tbody>
+
+          <ng-template #gpsLoadingTpl>
+            <tbody>
+              <tr>
+                <td colspan="11" style="text-align:center; padding:1rem;">Cargando GPS…</td>
+              </tr>
+            </tbody>
+          </ng-template>
+        </table>
+
+        <!-- Modales GPS (análogos a SIM, pero con campos del schema) -->
+        <app-new-gps-modal (gpsCreated)="onGpsCreated($event)" (gpsBulkCreated)="onGpsBulkCreated($event)"
+          [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
+        </app-new-gps-modal>
+
+        <app-view-gps-modal></app-view-gps-modal>
+
+        <app-edit-gps-modal (gpsUpdated)="onGpsUpdated($event)" [modelOptions]="gpsModelOptions"
+          [brandOptions]="gpsBrandOptions">
+        </app-edit-gps-modal>
+
+      </div>
+    </div>
+  </mat-tab>
+
 
 
 
@@ -7,34 +209,102 @@
   <mat-tab label="SIM's">
     <div class="tab-pane">
       <div class="header">
-        <h2>SIM's</h2>
-        <hr class="divider">
+        <!-- <h2>SIM's</h2>
+        <hr class="divider"> -->
         <div class="filter-bar">
+          <div class="filter-container">
+
+            <!-- Buscador por ICCID -->
+            <mat-form-field appearance="outline" class="sim-search">
+              <mat-label>Buscar por ICCID</mat-label>
+              <input matInput [(ngModel)]="simsSearch" (ngModelChange)="updateSimSearch($event)"
+                placeholder="Ingrese el ICCID..." inputmode="numeric" autocomplete="off" />
+
+              <button *ngIf="simsSearch" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSimSearch('')">
+                <mat-icon>close</mat-icon>
+              </button>
+              <mat-hint *ngIf="simsSearch">
+                {{ simsFiltered.length }} resultado{{ simsFiltered.length === 1 ? '' : 's' }}
+              </mat-hint>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Compañía</mat-label>
+              <mat-select [(value)]="simsFilterCompany" (selectionChange)="onSimFilterChange()">
+                <mat-option [value]="''">Todas</mat-option>
+                <mat-option *ngFor="let c of uniqueSimCompanies" [value]="c">{{ c }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- Filtro por Estatus -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Estatus</mat-label>
+              <mat-select [(value)]="simsFilterStatus" (selectionChange)="onSimFilterChange()">
+                <mat-option [value]="''">Todos</mat-option>
+                <mat-option *ngFor="let s of uniqueSimStatuses" [value]="s">{{ s }}</mat-option>
+              </mat-select>
+            </mat-form-field>
+
+            <!-- 📅 Filtro: Fecha de compra -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Fecha de compra</mat-label>
+              <input matInput [matDatepicker]="pickerCompra" placeholder="Selecciona fecha"
+                [(ngModel)]="purchaseDateFilter" (dateChange)="onPurchaseDateChange($event.value)" />
+              <mat-datepicker-toggle matSuffix [for]="pickerCompra"></mat-datepicker-toggle>
+              <mat-datepicker #pickerCompra></mat-datepicker>
+
+              <button *ngIf="purchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+                (click)="clearPurchaseDate()">
+                <mat-icon>close</mat-icon>
+              </button>
+
+              <mat-hint *ngIf="purchaseDateFilter">
+                Filtrando: {{ purchaseDateFilter | date:'dd MMM yyyy' }}
+              </mat-hint>
+            </mat-form-field>
+
+            <!-- 📅 Filtro: Fecha de ingreso -->
+            <mat-form-field appearance="outline" class="sim-filter">
+              <mat-label>Fecha de ingreso</mat-label>
+              <input matInput [matDatepicker]="pickerIngreso" placeholder="Selecciona fecha"
+                [(ngModel)]="entryDateFilter" (dateChange)="onEntryDateChange($event.value)" />
+              <mat-datepicker-toggle matSuffix [for]="pickerIngreso"></mat-datepicker-toggle>
+              <mat-datepicker #pickerIngreso></mat-datepicker>
+
+              <button *ngIf="entryDateFilter" matSuffix mat-icon-button aria-label="Limpiar" (click)="clearEntryDate()">
+                <mat-icon>close</mat-icon>
+              </button>
+
+              <mat-hint *ngIf="entryDateFilter">
+                Filtrando: {{ entryDateFilter | date:'dd MMM yyyy' }}
+              </mat-hint>
+            </mat-form-field>
+
+          </div>
+
+          <button class="new-button" (click)="nuevoSim()">
+            <span class="material-icons">sim_card</span> Nuevo SIM
+          </button>
+        </div>
+        <div class="filter-bar" style="justify-content: end;">
           <div class="filter-container">
             <div class="pagination-container">
               <button class="filter-btn" (click)="toggleSimsShowAll()">
                 {{ simsShowAll ? 'Paginado' : 'Mostrar todos' }}
               </button>
 
-              <div class="pagination" *ngIf="!simsShowAll && sims.length > 0 && simsTotalPages > 1">
+              <div class="pagination" *ngIf="!simsShowAll && simsFiltered.length > 0 && simsTotalPages > 1">
                 <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage - 1)"
                   [disabled]="simsCurrentPage === 1">«</button>
-
                 <button *ngFor="let p of [].constructor(simsTotalPages); let i = index" class="pagination-btn"
                   [class.active]="simsCurrentPage === (i + 1)" (click)="setSimsPage(i + 1)">
                   {{ i + 1 }}
                 </button>
-
                 <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage + 1)"
                   [disabled]="simsCurrentPage === simsTotalPages">»</button>
               </div>
-
             </div>
           </div>
-
-          <button class="new-button" (click)="nuevoSim()">
-            <span class="material-icons">sim_card</span> Nuevo SIM
-          </button>
         </div>
       </div>
 
@@ -105,8 +375,8 @@
             </tbody>
           </ng-template>
         </table>
-        <app-new-sim-modal (simCreated)="onSimCreated($event)" [modelOptions]="uniqueSimModels"
-          [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
+        <app-new-sim-modal (simCreated)="onSimCreated($event)" (simsBulkCreated)="onSimsBulkCreated($event)"
+          [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
         <app-view-sim-modal></app-view-sim-modal>
         <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
           [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>
@@ -149,100 +419,7 @@
     </div>
   </mat-tab>
 
-  <!-- ================= GPS's ================= -->
-  <mat-tab label="GPS's">
-    <div class="tab-pane">
-      <div class="header">
-        <h2>Listado de Dispositivos</h2>
-        <hr class="divider">
-        <h3>Filtrar</h3>
 
-        <div class="filter-bar">
-          <div class="filter-container">
-            <label for="status">Estatus:</label>
-            <select id="status" [(ngModel)]="selectedStatus" (change)="applyFilters()">
-              <option value="">Todos</option>
-              <option value="activo">Activo</option>
-              <option value="inactivo">Inactivo</option>
-              <option value="pendiente">Pendiente</option>
-            </select>
-
-            <label for="comprobante">Tipo de Comprobante:</label>
-            <select id="comprobante" [(ngModel)]="selectedComprobante" (change)="applyFilters()">
-              <option value="">Todos</option>
-              <option value="recibo">Recibo</option>
-              <option value="factura">Factura</option>
-            </select>
-
-            <div class="pagination-container">
-              <button class="filter-btn" (click)="toggleShowAll()">
-                {{ showAll ? 'Paginado' : 'Mostrar todos' }}
-              </button>
-
-              <div class="pagination" *ngIf="!showAll">
-                <button class="pagination-btn" (click)="setPage(currentPage - 1)"
-                  [disabled]="currentPage === 1">«</button>
-                <button *ngFor="let page of [].constructor(totalPages); let i = index" class="pagination-btn"
-                  [class.active]="currentPage === (i + 1)" (click)="setPage(i + 1)">
-                  {{ i + 1 }}
-                </button>
-                <button class="pagination-btn" (click)="setPage(currentPage + 1)"
-                  [disabled]="currentPage === totalPages">»</button>
-              </div>
-            </div>
-          </div>
-
-          <button class="new-button" (click)="openModal()">
-            <span class="material-icons">add</span> Nuevo
-          </button>
-
-          <!-- Modales -->
-          <app-register-clientes-modal (clienteRegistered)="addNewCliente($event)"></app-register-clientes-modal>
-          <app-edit-clientes-modal #editClientesModal
-            (clienteUpdated)="actualizarCliente($event)"></app-edit-clientes-modal>
-        </div>
-      </div>
-
-      <div class="clientes-table-container">
-        <table class="clientes-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Nombre</th>
-              <th>Teléfono</th>
-              <th>Correo</th>
-              <th>Comprobante</th>
-              <th>Estatus</th>
-              <th>Opciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let cliente of displayedClientes">
-              <td>{{ cliente.idCliente }}</td>
-              <td>{{ cliente.nombre + ' ' + cliente.aPaterno + ' ' + cliente.aMaterno}}</td>
-              <td>{{ cliente.contacto.telefono }}</td>
-              <td>{{ cliente.contacto.correo }}</td>
-              <td>{{ cliente.datosComerciales.comprobante}}</td>
-              <td>
-                <span class="status-badge" [ngClass]="getStatusClass(cliente.estatus)">
-                  {{ cliente.estatus }}
-                </span>
-              </td>
-              <td>
-                <button class="edit-button" (click)="editarCliente(cliente)">
-                  <span class="material-icons">edit</span>Editar
-                </button>
-                <button class="delete-button" (click)="eliminarCliente(cliente)">
-                  <span class="material-icons">delete</span>Eliminar
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-  </mat-tab>
 
   <!-- ================= Accesorios ================= -->
   <mat-tab label="Accesorios">

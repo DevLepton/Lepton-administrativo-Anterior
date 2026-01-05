@@ -92,7 +92,12 @@ export class EditSimModalComponent {
 
   constructor(private fb: FormBuilder) {
     this.form = this.fb.group({
-      iccid: ['', [Validators.required, Validators.minLength(20)]],
+      iccid: ['', [
+        Validators.required,
+        Validators.minLength(20),
+        Validators.maxLength(20),
+        Validators.pattern(/^\d+$/)
+      ]],
       model: ['', Validators.required],
       company: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -208,4 +213,13 @@ export class EditSimModalComponent {
     const t = (s ?? '').toString().trim();
     return t === '' ? null : t;
   }
+
+  digitsOnly(ctrlName: string) {
+    const ctrl = this.form.get(ctrlName);
+    if (!ctrl) return;
+    const before = (ctrl.value ?? '').toString();
+    const after = before.replace(/\D+/g, ''); // quita todo lo no numérico
+    if (after !== before) ctrl.setValue(after, { emitEvent: false });
+  }
+
 }

@@ -15,6 +15,7 @@ import { AccesoDenegadoComponent } from './acceso-denegado/acceso-denegado.compo
 import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redireccion.component';
 import { UsersComponent } from './admin/users/users.component';
 import { AlmacenComponent } from './inventario/almacen/almacen.component';
+import { EventsComponent } from './admin/events/events.component';
 
 const routes: Routes = [
   {
@@ -32,6 +33,13 @@ const routes: Routes = [
         canActivate: [RoleGuard],
         data: { roles: ['admin'] }
       },
+      {
+        path: 'eventos',
+        component: EventsComponent,
+        canActivate: [RoleGuard],
+        data: { roles: ['admin', 'inventario'] }
+      },
+
       {
         path: 'almacen',
         component: AlmacenComponent,

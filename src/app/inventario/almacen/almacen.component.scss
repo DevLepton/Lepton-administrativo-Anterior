@@ -25,15 +25,16 @@
 
 .filter-bar {
   display: flex;
-  justify-content: flex-end; // Alinea todo el contenido al final del contenedor
-  align-items: center;
-  margin-bottom: 1.5rem;
+  justify-content: space-between; // Alinea todo el contenido al final del contenedor
+  align-items: start;
+  margin-bottom: 0.5rem;
+  flex-wrap: wrap;
 
   .filter-container {
     display: flex;
-    align-items: center;
+    align-items: start;
     gap: 1rem;
-    margin-right: auto; // Empuja los filtros hacia la izquierda
+    flex-wrap: wrap;
 
     label {
       font-weight: bold;
@@ -112,7 +113,6 @@
   .new-button {
     display: flex;
     align-items: center;
-    margin-right: 1.5rem;
     font-weight: bold;
     gap: 0.25rem;
     padding: 0.5rem 1rem;

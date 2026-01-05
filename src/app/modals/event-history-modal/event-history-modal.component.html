@@ -1,0 +1,78 @@
+﻿<div class="modal-backdrop" *ngIf="visible" (click)="close()" #backdrop>
+  <div class="modal" (click)="stop($event)">
+    <div class="modal-header">
+      <h3>Historial del documento</h3>
+      <button class="icon-btn" (click)="close()" aria-label="Cerrar">✕</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Encabezado de contexto (opcional) -->
+      <div class="grid">
+        <div><span class="k">Colección:</span><strong>{{ data?.collectionName }}</strong></div>
+        <div><span class="k">Eventos encontrados:</span><strong>{{ relatedEvents.length }}</strong></div>
+      </div>
+
+      <div class="table-wrap horizontal-scroll" *ngIf="relatedEvents.length > 0; else noData">
+        <table class="grid-2rows" role="table" aria-label="Historial de eventos del documento">
+          <thead>
+            <tr class="row-keys">
+              <!-- Columnas fijas -->
+              <th>Operación</th>
+              <th>Usuario</th>
+              <th>Fecha</th>
+              <th>Colección</th>
+
+              <!-- Columnas dinámicas (todas las claves de finalValues, en español) -->
+              <th *ngFor="let label of dynamicLabels">{{ label }}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr *ngFor="let ev of relatedEvents" class="row-values">
+              <!-- Fijas -->
+              <td>
+                <span class="status-badge"
+                      [ngClass]="{ cre: ev.operation === 'Creación',
+                                   upd: ev.operation === 'Actualización',
+                                   del: ev.operation === 'Eliminación' }">
+                  {{ ev.operation }}
+                </span>
+              </td>
+              <td>{{ displayUser(ev) }}</td>
+              <td>{{ ev.createdAt | date:'dd MMM yyyy' }}</td> <!-- sin hora -->
+              <td>{{ ev.collectionName }}</td>
+
+              <!-- Dinámicas -->
+              <td *ngFor="let key of dynamicKeys" class="cell-val">
+                <ng-container [ngSwitch]="true">
+                  <!-- fecha sin hora si corresponde -->
+                  <ng-container *ngSwitchCase="asDateOnly(key)">
+                    {{ getCellValue(ev, key) | date:'dd MMM yyyy' }}
+                  </ng-container>
+
+                  <!-- objeto/array -->
+                  <ng-container *ngSwitchCase="isObject(getCellValue(ev, key))">
+                    <pre class="json">{{ displayValue(getCellValue(ev, key)) }}</pre>
+                  </ng-container>
+
+                  <!-- primitivo / vacío -->
+                  <ng-container *ngSwitchDefault>
+                    {{ displayValue(getCellValue(ev, key)) }}
+                  </ng-container>
+                </ng-container>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #noData>
+        <div class="empty">Sin eventos para mostrar.</div>
+      </ng-template>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn" (click)="close()">Cerrar</button>
+    </div>
+  </div>
+</div>

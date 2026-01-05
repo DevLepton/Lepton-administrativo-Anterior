@@ -28,12 +28,14 @@
         justify-content: space-between; // Alinea todo el contenido al final del contenedor
         align-items: center;
         margin-bottom: 1.5rem;
+        flex-wrap: wrap;
       
         .filter-container {
           display: flex;
           align-items: center;
           gap: 1rem;
           margin-right: auto; // Empuja el contenedor de filtros hacia la izquierda
+          flex-wrap: wrap;
       
           label {
             font-weight: bold;

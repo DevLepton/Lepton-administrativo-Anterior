@@ -1,42 +1,45 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
-import { Observable } from 'rxjs';
-import { map, startWith } from 'rxjs/operators';
+import { map, Observable, startWith } from 'rxjs';
 
-type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
 
 @Component({
-  selector: 'app-new-sim-modal',
-  templateUrl: './new-sim-modal.component.html',
-  styleUrl: './new-sim-modal.component.scss'
+  selector: 'app-new-gps-modal',
+  templateUrl: './new-gps-modal.component.html',
+  styleUrl: './new-gps-modal.component.scss'
 })
-export class NewSimModalComponent {
+export class NewGpsModalComponent {
   @Input() modelOptions: string[] = [];
-  @Input() companyOptions: string[] = [];
+  @Input() brandOptions: string[] = [];
 
-  /** Emite un solo SIM (pestaña Individual) */
-  @Output() simCreated = new EventEmitter<{
-    type: 'sim';
-    iccid: string;
+  /** Emite un solo GPS (pestaña Individual) */
+  @Output() gpsCreated = new EventEmitter<{
+    type: 'gps';
+    imei: string;
+    sn: string;
+    name: string;
+    brand: string;
     model: string;
-    company: string;
     status: DeviceStatus;
-    purchaseDate: string;
-    entryDate: string;
+    purchaseDate: string;     // 'YYYY-MM-DD'
+    entryDate: string;        // 'YYYY-MM-DD'
     installationDate?: string | null;
     client?: string | null;
     comments?: string | null;
   }>();
 
-  /** Emite muchos SIM (pestaña Masivo) */
-  @Output() simsBulkCreated = new EventEmitter<Array<{
-    type: 'sim';
-    iccid: string;
+  /** Emite muchos GPS (pestaña Masivo) */
+  @Output() gpsBulkCreated = new EventEmitter<Array<{
+    type: 'gps';
+    imei: string;
+    sn: string;
+    name: string;
+    brand: string;
     model: string;
-    company: string;
     status: DeviceStatus;
-    purchaseDate: string;
-    entryDate: string;
+    purchaseDate: string;     // 'YYYY-MM-DD'
+    entryDate: string;        // 'YYYY-MM-DD'
     installationDate?: string | null;
     client?: string | null;
     comments?: string | null;
@@ -49,21 +52,32 @@ export class NewSimModalComponent {
   // ---- Form individual ----
   form!: FormGroup;
   filteredModels$!: Observable<string[]>;
-  filteredCompanies$!: Observable<string[]>;
+  filteredBrands$!: Observable<string[]>;
 
   // ---- Form masivo ----
   bulkForm!: FormGroup;
   filteredModelsBulk$!: Observable<string[]>;
-  filteredCompaniesBulk$!: Observable<string[]>;
+  filteredBrandsBulk$!: Observable<string[]>;
 
   constructor(private fb: FormBuilder) {
     const today = new Date();
 
-    // Individual
+    // ====== INDIVIDUAL ======
     this.form = this.fb.group({
-      iccid: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(20), Validators.pattern(/^\d+$/)]],
+      imei: ['', [
+        Validators.required,
+        Validators.pattern(/^\d+$/),
+        Validators.minLength(14),
+        Validators.maxLength(20)
+      ]],
+      sn: ['', [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50)
+      ]],
+      name: ['', Validators.required],
+      brand: ['', Validators.required],
       model: ['', Validators.required],
-      company: ['', Validators.required],
       status: ['En inventario', Validators.required],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
@@ -72,35 +86,33 @@ export class NewSimModalComponent {
       comments: [''],
     });
 
-    // Masivo
+    // ====== MASIVO ======
     this.bulkForm = this.fb.group({
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(200)]],
+      name: ['', Validators.required],
+      brand: ['', Validators.required],
       model: ['', Validators.required],
-      company: ['', Validators.required],
       status: ['En inventario', Validators.required],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
       comments: [''],
-      iccids: this.fb.array([this.buildIccidCtrl()]),
+      imeis: this.fb.array([this.buildImeiCtrl()]),
+      sns: this.fb.array([this.buildSnCtrl()]),
     });
 
     // Autocomplete streams
     this.filteredModels$ = this.form.get('model')!.valueChanges.pipe(
-      startWith(''),
-      map(v => this.filterList((v ?? '').toString(), this.modelOptions))
+      startWith(''), map(v => this.filterList((v ?? '').toString(), this.modelOptions))
     );
-    this.filteredCompanies$ = this.form.get('company')!.valueChanges.pipe(
-      startWith(''),
-      map(v => this.filterList((v ?? '').toString(), this.companyOptions))
+    this.filteredBrands$ = this.form.get('brand')!.valueChanges.pipe(
+      startWith(''), map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
 
     this.filteredModelsBulk$ = this.bulkForm.get('model')!.valueChanges.pipe(
-      startWith(''),
-      map(v => this.filterList((v ?? '').toString(), this.modelOptions))
+      startWith(''), map(v => this.filterList((v ?? '').toString(), this.modelOptions))
     );
-    this.filteredCompaniesBulk$ = this.bulkForm.get('company')!.valueChanges.pipe(
-      startWith(''),
-      map(v => this.filterList((v ?? '').toString(), this.companyOptions))
+    this.filteredBrandsBulk$ = this.bulkForm.get('brand')!.valueChanges.pipe(
+      startWith(''), map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
   }
 
@@ -117,11 +129,14 @@ export class NewSimModalComponent {
     this.activeTab = 0;
 
     const today = new Date();
+
     // Individual
     this.form.reset({
-      iccid: '',
+      imei: '',
+      sn: '',
+      name: '',
+      brand: '',
       model: '',
-      company: '',
       status: 'En inventario',
       purchaseDate: today,
       entryDate: today,
@@ -133,16 +148,18 @@ export class NewSimModalComponent {
     // Masivo
     this.bulkForm.reset({
       quantity: 1,
+      name: '',
+      brand: '',
       model: '',
-      company: '',
       status: 'En inventario',
       purchaseDate: today,
       entryDate: today,
       comments: '',
     });
-    // deja un campo ICCID
-    this.iccids.clear();
-    this.iccids.push(this.buildIccidCtrl());
+
+    // deja un IMEI y un SN
+    this.imeis.clear(); this.imeis.push(this.buildImeiCtrl());
+    this.sns.clear(); this.sns.push(this.buildSnCtrl());
   }
 
   close() { this.show = false; }
@@ -152,11 +169,14 @@ export class NewSimModalComponent {
     if (this.form.invalid) return;
     this.loading = true;
     const v = this.form.value;
-    this.simCreated.emit({
-      type: 'sim',
-      iccid: String(v.iccid).trim(),
+
+    this.gpsCreated.emit({
+      type: 'gps',
+      imei: String(v.imei).trim(),
+      sn: String(v.sn).trim(),
+      name: String(v.name).trim(),
+      brand: String(v.brand).trim(),
       model: String(v.model).trim(),
-      company: String(v.company).trim(),
       status: v.status as DeviceStatus,
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
@@ -164,69 +184,84 @@ export class NewSimModalComponent {
       client: this.emptyToNull(v.client),
       comments: this.emptyToNull(v.comments),
     });
+
     this.loading = false;
     this.close();
   }
 
   // ====== MASIVO ======
-  get iccids(): FormArray<FormControl<string>> {
-    return this.bulkForm.get('iccids') as FormArray<FormControl<string>>;
+  get imeis(): FormArray<FormControl<string>> {
+    return this.bulkForm.get('imeis') as FormArray<FormControl<string>>;
+  }
+  get sns(): FormArray<FormControl<string>> {
+    return this.bulkForm.get('sns') as FormArray<FormControl<string>>;
   }
 
-  private buildIccidCtrl(): FormControl<string> {
+  private buildImeiCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(20), Validators.maxLength(20), Validators.pattern(/^\d+$/)]
+      validators: [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]
+    });
+  }
+  private buildSnCtrl(): FormControl<string> {
+    return new FormControl<string>('', {
+      nonNullable: true,
+      validators: [Validators.required, Validators.minLength(3), Validators.maxLength(50)]
     });
   }
 
   incQty() {
     const q = (this.bulkForm.get('quantity')!.value || 1) + 1;
     this.bulkForm.get('quantity')!.setValue(Math.min(q, 200));
-    this.syncIccidsWithQuantity();
+    this.syncArraysWithQuantity();
   }
-
   decQty() {
     const q = (this.bulkForm.get('quantity')!.value || 1) - 1;
     this.bulkForm.get('quantity')!.setValue(Math.max(q, 1));
-    this.syncIccidsWithQuantity();
+    this.syncArraysWithQuantity();
   }
 
-  syncIccidsWithQuantity() {
+  syncArraysWithQuantity() {
     let q = Number(this.bulkForm.get('quantity')!.value || 1);
     if (q < 1) q = 1;
     if (q > 200) q = 200;
 
-    const current = this.iccids.length;
-    if (q > current) {
-      for (let i = current; i < q; i++) this.iccids.push(this.buildIccidCtrl());
-    } else if (q < current) {
-      for (let i = current - 1; i >= q; i--) this.iccids.removeAt(i);
-    }
+    // IMEIs
+    const ci = this.imeis.length;
+    if (q > ci) for (let i = ci; i < q; i++) this.imeis.push(this.buildImeiCtrl());
+    else if (q < ci) for (let i = ci - 1; i >= q; i--) this.imeis.removeAt(i);
+
+    // SNs
+    const cs = this.sns.length;
+    if (q > cs) for (let i = cs; i < q; i++) this.sns.push(this.buildSnCtrl());
+    else if (q < cs) for (let i = cs - 1; i >= q; i--) this.sns.removeAt(i);
   }
 
   submitBulk() {
-    if (this.bulkForm.invalid || this.iccids.length === 0) return;
+    if (this.bulkForm.invalid || this.imeis.length === 0 || this.sns.length === 0) return;
 
     const v = this.bulkForm.value;
     const common = {
+      name: String(v.name).trim(),
+      brand: String(v.brand).trim(),
       model: String(v.model).trim(),
-      company: String(v.company).trim(),
       status: v.status as DeviceStatus,
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       comments: this.emptyToNull(v.comments),
     };
 
-    // Construimos el array de dispositivos
-    const payloads = this.iccids.controls.map(ctrl => ({
-      type: 'sim' as const,
-      iccid: String(ctrl.value).trim(),
+    // Construimos el array de dispositivos con pares IMEI/SN por índice
+    const n = Math.min(this.imeis.length, this.sns.length);
+    const payloads = Array.from({ length: n }, (_, i) => ({
+      type: 'gps' as const,
+      imei: String(this.imeis.at(i).value).trim(),
+      sn: String(this.sns.at(i).value).trim(),
       ...common
     }));
 
     this.loading = true;
-    this.simsBulkCreated.emit(payloads);
+    this.gpsBulkCreated.emit(payloads);
     this.loading = false;
     this.close();
   }
@@ -245,6 +280,7 @@ export class NewSimModalComponent {
     return t === '' ? null : t;
   }
 
+  // Limpia no-numérico (para IMEI)
   digitsOnlyCtrl(group: FormGroup, ctrlName: string) {
     const ctrl = group.get(ctrlName);
     if (!ctrl) return;
@@ -252,7 +288,6 @@ export class NewSimModalComponent {
     const after = before.replace(/\D+/g, '');
     if (after !== before) ctrl.setValue(after, { emitEvent: false });
   }
-
   digitsOnlyFA(arr: FormArray, idx: number) {
     const ctrl = arr.at(idx) as FormControl;
     const before = (ctrl.value ?? '').toString();

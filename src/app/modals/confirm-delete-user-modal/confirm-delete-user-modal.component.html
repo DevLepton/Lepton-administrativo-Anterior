@@ -1,4 +1,4 @@
-<div *ngIf="showModal" class="mat-elevation-z8 backdrop" (click)="onBackdropClick($event)">
+<div *ngIf="showModal" class="mat-elevation-z8 modal-backdrop" (click)="onBackdropClick($event)">
   <div class="panel" (click)="$event.stopPropagation()">
     <h2 class="title">Confirmar eliminación</h2>
     <p>¿Estás seguro de que deseas eliminar al usuario <strong>{{ userName }}</strong>?</p>

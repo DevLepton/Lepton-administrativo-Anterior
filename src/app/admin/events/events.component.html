@@ -1,0 +1,141 @@
+﻿<div class="tab-pane">
+    <div class="header">
+        <h2>Eventos</h2>
+        <hr class="divider">
+
+        <div class="filter-bar">
+            <div class="filter-container">
+                <!-- 🔎 Buscar -->
+                <mat-form-field appearance="outline" class="sim-search">
+                    <mat-label>Buscar por identificador</mat-label>
+                    <input matInput [(ngModel)]="search" (ngModelChange)="onSearchChange($event)"
+                        placeholder="Introduce el texto" autocomplete="off" />
+                    <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="onSearchChange('')">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                    <mat-hint *ngIf="search">
+                        {{ filtered.length }} resultado{{ filtered.length === 1 ? '' : 's' }}
+                    </mat-hint>
+                </mat-form-field>
+
+                <!-- 🧮 Filtro por Operación (múltiple) -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Operación</mat-label>
+                    <mat-select [(ngModel)]="selectedOps" multiple (selectionChange)="onFiltersChange()">
+                        <mat-option *ngFor="let op of opsOptions" [value]="op">{{ op || 'Todasl' }}</mat-option>
+                    </mat-select>
+                    <mat-hint *ngIf="selectedOps.length">{{ selectedOps.length }} seleccionada{{
+                        selectedOps.length>1?'s':'' }}</mat-hint>
+                </mat-form-field>
+
+                <!-- 🗂️ Filtro por Colección (múltiple) -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Colección</mat-label>
+                    <mat-select [(ngModel)]="selectedCols" multiple (selectionChange)="onFiltersChange()">
+                        <mat-option *ngFor="let c of colOptions" [value]="c">{{ c }}</mat-option>
+                    </mat-select>
+                    <mat-hint *ngIf="selectedCols.length">{{ selectedCols.length }} seleccionada{{
+                        selectedCols.length>1?'s':'' }}</mat-hint>
+                </mat-form-field>
+
+                <!-- 📅 Filtro por fecha (día) -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Fecha del evento</mat-label>
+                    <input matInput [matDatepicker]="picker" placeholder="Selecciona una fecha"
+                        [(ngModel)]="selectedDate" (dateChange)="onDateChange($event.value)" />
+                    <mat-datepicker-toggle matSuffix [for]="picker"></mat-datepicker-toggle>
+                    <mat-datepicker #picker></mat-datepicker>
+
+                    <button *ngIf="selectedDate" matSuffix mat-icon-button aria-label="Limpiar fecha"
+                        (click)="clearDate()">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                    <mat-hint *ngIf="selectedDate">
+                        Mostrando eventos del {{ selectedDate | date:'dd MMM yyyy' }}
+                    </mat-hint>
+                </mat-form-field>
+
+            </div>
+
+            <div class="filter-container" style="margin-left:auto;">
+                <button class="filter-btn" (click)="toggleShowAll()">
+                    {{ showAll ? 'Paginado' : 'Mostrar todos' }}
+                </button>
+                <div class="pagination" *ngIf="!showAll && filtered.length > 0 && totalPages > 1">
+                    <button class="pagination-btn" (click)="setPage(currentPage - 1)"
+                        [disabled]="currentPage === 1">«</button>
+                    <button *ngFor="let p of [].constructor(totalPages); let i = index" class="pagination-btn"
+                        [class.active]="currentPage === (i + 1)" (click)="setPage(i + 1)">
+                        {{ i + 1 }}
+                    </button>
+                    <button class="pagination-btn" (click)="setPage(currentPage + 1)"
+                        [disabled]="currentPage === totalPages">»</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>No.</th>
+                    <th>Operación</th>
+                    <th>Identificador</th>
+                    <th>Colección</th>
+                    <th>Usuario</th>
+                    <th>Fecha</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody *ngIf="!eventsLoading; else loadingTpl">
+                <tr *ngFor="let ev of displayed; let idx = index">
+                    <td>{{ showAll ? (idx + 1) : ((currentPage - 1) * perPage + idx + 1) }}</td>
+                    <td>
+                        <span class="status-badge" [ngClass]="{
+                    cre: ev.operation === 'Creación',
+                    upd: ev.operation === 'Actualización',
+                    del: ev.operation === 'Eliminación'
+                  }">
+                            {{ ev.operation }}
+                        </span>
+                    </td>
+                    <td>{{ ev.identifier }}</td>
+                    <td>{{ ev.collectionName }}</td>
+                    <td>{{ displayUser(ev) }}</td>
+                    <td>{{ ev.createdAt | date:'dd MMM yyyy, HH:mm' }}</td>
+                    <td class="actions-cell">
+                        <button class="icon-button view-button" title="Ver detalles" (click)="openDetails(ev)">
+                            <span class="material-icons">visibility</span>
+                        </button>
+                        <button class="icon-button history-button" title="Ver historial" (click)="openHistory(ev)">
+                            <span class="material-icons">history</span>
+                        </button>
+                        <button class="icon-button delete-button" title="Eliminar" (click)="deleteEvent(ev)"
+                            [disabled]="deletingId === ev._id">
+                            <span class="material-icons">delete</span>
+                        </button>
+
+                    </td>
+                </tr>
+                <tr *ngIf="displayed.length === 0">
+                    <td colspan="7" style="text-align:center; padding:1rem;">Sin eventos para mostrar.</td>
+                </tr>
+            </tbody>
+
+            <ng-template #loadingTpl>
+                <tbody>
+                    <tr>
+                        <td colspan="7" style="text-align:center; padding:1rem;">Cargando eventos…</td>
+                    </tr>
+                </tbody>
+            </ng-template>
+        </table>
+
+        <div *ngIf="errorMsg" class="error">{{ errorMsg }}</div>
+    </div>
+    <app-event-details-modal></app-event-details-modal>
+    <app-event-history-modal></app-event-history-modal>
+</div>

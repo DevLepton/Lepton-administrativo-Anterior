@@ -2,15 +2,17 @@
 
 <div class="modal" *ngIf="show">
   <header class="modal__header">
-    <h3>Detalles del SIM</h3>
+    <h3>Detalles del GPS</h3>
     <button class="icon-btn" (click)="close()" aria-label="Cerrar">✕</button>
   </header>
 
   <div class="modal__body compact">
     <div class="rows">
-      <div class="row"><span>ICCID</span><b>{{ data?.iccid || '—' }}</b></div>
+      <div class="row"><span>IMEI</span><b>{{ data?.imei || '—' }}</b></div>
+      <div class="row"><span>Serie</span><b>{{ data?.sn || '—' }}</b></div>
+      <div class="row"><span>Nombre</span><b>{{ data?.nombre || '—' }}</b></div>
+      <div class="row"><span>Marca</span><b>{{ data?.marca || '—' }}</b></div>
       <div class="row"><span>Modelo</span><b>{{ data?.modelo || '—' }}</b></div>
-      <div class="row"><span>Compañía</span><b>{{ data?.compania || '—' }}</b></div>
       <div class="row"><span>Estatus</span><b>{{ data?.estatus || '—' }}</b></div>
       <div class="row"><span>Fecha de compra</span><b>{{ fmtDate(data?.fechaCompra) }}</b></div>
       <div class="row"><span>Fecha de ingreso</span><b>{{ fmtDate(data?.fechaIngresoLepton) }}</b></div>

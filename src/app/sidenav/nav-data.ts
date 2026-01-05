@@ -21,6 +21,13 @@ export const navbarData: NavItem[] = [
   },
 
   {
+    RouteLink: 'eventos',
+    icon: 'fal fa-clipboard-list',
+    label: 'Eventos',
+    roles: ['admin', 'inventario']
+  },
+  
+  {
     RouteLink: 'dashboard',
     icon: 'fal fa-home',
     label: 'Dashboard',

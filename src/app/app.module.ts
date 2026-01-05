@@ -60,6 +60,12 @@ import { ViewSimModalComponent } from './modals/view-sim-modal/view-sim-modal.co
 import { registerLocaleData } from '@angular/common';
 import es from '@angular/common/locales/es';
 import { EditSimModalComponent } from './modals/edit-sim-modal/edit-sim-modal.component';
+import { EventsComponent } from './admin/events/events.component';
+import { EventDetailsModalComponent } from './modals/event-details-modal/event-details-modal.component';
+import { EventHistoryModalComponent } from './modals/event-history-modal/event-history-modal.component';
+import { NewGpsModalComponent } from './modals/new-gps-modal/new-gps-modal.component';
+import { ViewGpsModalComponent } from './modals/view-gps-modal/view-gps-modal.component';
+import { EditGpsModalComponent } from './modals/edit-gps-modal/edit-gps-modal.component';
 
 registerLocaleData(es);
 
@@ -98,6 +104,12 @@ registerLocaleData(es);
     NewSimModalComponent,
     ViewSimModalComponent,
     EditSimModalComponent,
+    EventsComponent,
+    EventDetailsModalComponent,
+    EventHistoryModalComponent,
+    NewGpsModalComponent,
+    ViewGpsModalComponent,
+    EditGpsModalComponent,
   ],
   imports: [
     BrowserModule,
