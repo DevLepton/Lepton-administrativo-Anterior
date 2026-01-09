@@ -3,7 +3,7 @@
 <!-- modal más ancho cuando activeTab === 1 -->
 <div class="modal" *ngIf="show" [class.modal--wide]="activeTab === 1">
   <header class="modal__header">
-    <h3>Nuevo GPS</h3>
+    <h3>Nuevo Accesorio</h3>
     <button mat-icon-button (click)="close()" aria-label="Cerrar">
       <mat-icon>close</mat-icon>
     </button>
@@ -15,15 +15,13 @@
       <form [formGroup]="form" (ngSubmit)="submit()" class="modal__form compact">
         <div class="modal__scroll">
           <div class="grid">
-            <!-- IMEI -->
+            <!-- ID Accesorio -->
             <mat-form-field appearance="outline">
-              <mat-label>IMEI</mat-label>
-              <input matInput formControlName="imei" placeholder="8670..." inputmode="numeric" autocomplete="off"
-                (input)="digitsOnlyCtrl(form, 'imei')" maxlength="20" />
-              <mat-error *ngIf="form.get('imei')?.hasError('required')">IMEI es requerido</mat-error>
-              <mat-error *ngIf="form.get('imei')?.hasError('pattern')">Solo números</mat-error>
-              <mat-error *ngIf="form.get('imei')?.hasError('minlength') || form.get('imei')?.hasError('maxlength')">
-                14–20 dígitos
+              <mat-label>ID Accesorio</mat-label>
+              <input matInput formControlName="id" placeholder="ACC-001 / 12345..." autocomplete="off" maxlength="60" />
+              <mat-error *ngIf="form.get('id')?.hasError('required')">ID es requerido</mat-error>
+              <mat-error *ngIf="form.get('id')?.hasError('minlength') || form.get('id')?.hasError('maxlength')">
+                2–60 caracteres
               </mat-error>
             </mat-form-field>
 
@@ -37,7 +35,7 @@
             <!-- Nombre -->
             <mat-form-field appearance="outline">
               <mat-label>Nombre</mat-label>
-              <input matInput formControlName="name" placeholder="Alias / Identificador" />
+              <input matInput formControlName="name" placeholder="Nombre del accesorio / Alias" />
               <mat-error *ngIf="form.get('name')?.hasError('required')">Nombre es requerido</mat-error>
             </mat-form-field>
 
@@ -55,7 +53,7 @@
             <!-- Modelo -->
             <mat-form-field appearance="outline">
               <mat-label>Modelo</mat-label>
-              <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="FMC130 / GV300..." />
+              <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="Modelo..." />
               <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
                 <mat-option *ngFor="let opt of filteredModels$ | async" [value]="opt">{{ opt }}</mat-option>
               </mat-autocomplete>
@@ -126,7 +124,7 @@
                   [disabled]="(bulkForm.get('quantity')?.value || 1) >= 200">
                   <mat-icon>add</mat-icon>
                 </button>
-                <mat-hint align="start">Genera {{ imeis.controls.length }} IMEI(s) y {{ sns.controls.length }}
+                <mat-hint align="start">Genera {{ ids.controls.length }} ID(s) y {{ sns.controls.length }}
                   serie(s).</mat-hint>
                 <mat-error *ngIf="bulkForm.get('quantity')?.invalid">Entre 1 y 200</mat-error>
               </mat-form-field>
@@ -134,7 +132,7 @@
               <!-- Nombre común -->
               <mat-form-field appearance="outline">
                 <mat-label>Nombre</mat-label>
-                <input matInput formControlName="name" placeholder="Alias / Identificador" />
+                <input matInput formControlName="name" placeholder="Nombre del accesorio / Alias" />
                 <mat-error *ngIf="bulkForm.get('name')?.hasError('required')">Requerido</mat-error>
               </mat-form-field>
 
@@ -152,8 +150,7 @@
               <!-- Modelo -->
               <mat-form-field appearance="outline">
                 <mat-label>Modelo</mat-label>
-                <input matInput formControlName="model" [matAutocomplete]="modelAutoB"
-                  placeholder="FMC130 / GV300..." />
+                <input matInput formControlName="model" [matAutocomplete]="modelAutoB" placeholder="Modelo..." />
                 <mat-autocomplete #modelAutoB="matAutocomplete" autoActiveFirstOption>
                   <mat-option *ngFor="let opt of filteredModelsBulk$ | async" [value]="opt">{{ opt }}</mat-option>
                 </mat-autocomplete>
@@ -199,20 +196,19 @@
 
           <aside class="bulk-right">
             <!-- Panel con encabezado + área scrollable -->
-            <section class="iccids-panel">
-              <h4>IMEI y Serie de cada GPS</h4>
-              <div class="iccids-scroll">
-                <div class="iccids-grid">
-                  <div class="iccids-item" *ngFor="let _ of imeis.controls; let i = index">
+            <section class="bulk-panel">
+              <h4>ID y Serie de cada Accesorio</h4>
+              <div class="bulk-scroll">
+                <div class="bulk-grid">
+                  <div class="bulk-item" *ngFor="let _ of ids.controls; let i = index">
                     <div class="grid" style="grid-template-columns: 1fr 1fr; gap:.6rem;">
                       <mat-form-field appearance="outline" class="w-full">
-                        <mat-label>IMEI #{{ i + 1 }}</mat-label>
-                        <input matInput [formControl]="imeis.at(i)" placeholder="8670..." inputmode="numeric"
-                          autocomplete="off" maxlength="20" (input)="digitsOnlyFA(imeis, i)" />
-                        <mat-error *ngIf="imeis.at(i).hasError('required')">Requerido</mat-error>
-                        <mat-error *ngIf="imeis.at(i).hasError('pattern')">Solo números</mat-error>
-                        <mat-error *ngIf="imeis.at(i).hasError('minlength') || imeis.at(i).hasError('maxlength')">
-                          14–20 dígitos
+                        <mat-label>ID #{{ i + 1 }}</mat-label>
+                        <input matInput [formControl]="ids.at(i)" placeholder="ACC-001 / 12345..." autocomplete="off"
+                          maxlength="60" />
+                        <mat-error *ngIf="ids.at(i).hasError('required')">Requerido</mat-error>
+                        <mat-error *ngIf="ids.at(i).hasError('minlength') || ids.at(i).hasError('maxlength')">
+                          2–60 caracteres
                         </mat-error>
                       </mat-form-field>
 
@@ -233,7 +229,7 @@
         <footer class="modal__footer">
           <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
           <button type="submit" mat-flat-button color="primary"
-            [disabled]="bulkForm.invalid || imeis.length === 0 || sns.length === 0 || loading">
+            [disabled]="bulkForm.invalid || ids.length === 0 || sns.length === 0 || loading">
             {{ loading ? 'Guardando...' : 'Guardar lote' }}
           </button>
         </footer>

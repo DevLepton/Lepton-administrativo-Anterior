@@ -17,6 +17,18 @@ export interface EventDetailsData {
   styleUrls: ['./event-details-modal.component.scss']
 })
 export class EventDetailsModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   visible = false;
   data!: EventDetailsData;
 
@@ -25,8 +37,9 @@ export class EventDetailsModalComponent {
   open(data: EventDetailsData) {
     this.data = data;
     this.visible = true;
+    this.lockBodyScroll();
   }
-  close() { this.visible = false; }
+  close() { this.visible = false; this.unlockBodyScroll(); }
   stop(e: Event) { e.stopPropagation(); }
 
   /** Mapea claves a etiquetas en español */

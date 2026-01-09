@@ -1,3 +1,184 @@
+/* ================= RESUMEN ================= */
+.resumen-pane {
+  padding: 14px 8px;
+}
+
+.resumen-kpis {
+  display: grid;
+  grid-template-columns: 1.4fr repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 14px;
+
+  @media (max-width: 1100px) {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
+}
+
+.kpi-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .05);
+
+  .kpi-title {
+    font-weight: 700;
+    font-size: 13px;
+    opacity: .8;
+    margin-bottom: 6px;
+  }
+
+  .kpi-value {
+    font-size: 30px;
+    font-weight: 900;
+    line-height: 1;
+  }
+
+  .kpi-sub {
+    margin-top: 8px;
+    font-size: 12px;
+    opacity: .75;
+  }
+}
+
+.kpi-main {
+  border-left: 6px solid var(--color-primary);
+}
+
+.resumen-modelos {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.resumen-block {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 14px;
+  padding: 12px 12px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .04);
+
+  &__header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 4px 6px 10px 6px;
+
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      font-weight: 900;
+    }
+
+    .resumen-total {
+      font-size: 12px;
+      opacity: .75;
+      font-weight: 700;
+    }
+  }
+}
+
+.resumen-table {
+  display: grid;
+  gap: 6px;
+}
+
+.resumen-row {
+  display: grid;
+  grid-template-columns: 1fr 120px 220px;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 10px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, .06);
+
+  &.resumen-head {
+    background: rgba(0, 0, 0, .03);
+    font-weight: 800;
+    font-size: 12px;
+    opacity: .85;
+  }
+
+  .model {
+    font-weight: 700;
+  }
+
+  .qty {
+    font-weight: 900;
+  }
+
+  .badge {
+    display: flex;
+  }
+
+  @media (max-width: 900px) {
+    grid-template-columns: 1fr 90px 1fr;
+  }
+
+  @media (max-width: 650px) {
+    grid-template-columns: 1fr 90px;
+
+    .badge {
+      justify-content: flex-start;
+    }
+  }
+}
+
+.resumen-empty {
+  padding: 10px 12px;
+  opacity: .75;
+  font-weight: 600;
+}
+
+/* ===== Badge llamativo ===== */
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: .2px;
+  border: 1px solid transparent;
+
+  &.ok {
+    background: rgba(46, 204, 113, .14);
+    border-color: rgba(46, 204, 113, .25);
+  }
+
+  &.none {
+    background: rgba(0, 0, 0, .06);
+    border-color: rgba(0, 0, 0, .10);
+    opacity: .85;
+  }
+
+  &.low {
+    color: #fff;
+    background: linear-gradient(135deg, #ff3b30, #ff9500);
+    border-color: rgba(255, 59, 48, .35);
+    box-shadow: 0 10px 24px rgba(255, 59, 48, .22);
+    animation: pulseLow 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes pulseLow {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.03);
+  }
+}
+
 .header {
   margin-bottom: 2rem;
 
@@ -109,32 +290,10 @@
       }
     }
   }
-
-  .new-button {
-    display: flex;
-    align-items: center;
-    font-weight: bold;
-    gap: 0.25rem;
-    padding: 0.5rem 1rem;
-    background-color: #0074FF;
-    color: #fff;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-
-    .material-icons {
-      font-size: 1.2rem;
-    }
-
-    &:hover {
-      background-color: #005bb5;
-    }
-  }
 }
 
 .table-container {
+  overflow-x: auto;
   width: 100%;
   padding: 20px 0 20px 0;
   background-color: #f8f9fc;
@@ -176,49 +335,6 @@
       display: flex;
     }
 
-    button {
-      font-size: 0.85rem;
-      font-weight: bold;
-      color: #fff;
-      margin: 4px;
-      display: flex;
-      align-items: center;
-      gap: 0.25rem;
-      padding: 0.4rem 0.8rem;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-      transition: background-color 0.3s ease;
-
-      .material-icons {
-        font-size: 1rem;
-      }
-    }
-
-    .view-button {
-      background-color: var(--color-success);
-
-      &:hover {
-        background-color: var(--color-success-hover);
-      }
-    }
-
-    .edit-button {
-      background-color: var(--color-primary);
-
-      &:hover {
-        background-color: var(--color-primary-hover);
-      }
-    }
-
-    .delete-button {
-      background-color: var(--color-danger);
-
-      &:hover {
-        background-color: var(--color-danger-hover);
-      }
-    }
-
     .status-badge {
       display: inline-block;
       padding: 0.3rem 0.9rem;
@@ -242,6 +358,74 @@
       &.inst {
         background-color: var(--color-primary);
       }
+    }
+  }
+}
+
+.actions-top {
+  display: inline-flex;
+  align-items: center;
+
+  .tooltip-wrap {
+    display: inline-flex; // mantiene el ancho del botón
+    align-items: center;
+  }
+
+  button {
+    font-size: 1rem;
+    font-weight: bold;
+    color: #fff;
+    margin: 4px;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    padding: 0.4rem 0.8rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+
+    .material-icons {
+      font-size: 1.2rem;
+    }
+
+    &:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+      filter: grayscale(40%);
+      pointer-events: none;
+    }
+  }
+
+  .new-button {
+    background-color: #0074FF;
+
+    &:hover:not(:disabled) {
+      background-color: #005bb5;
+    }
+  }
+
+  .view-button {
+    background-color: var(--color-success);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-success-hover);
+    }
+  }
+
+  .edit-button {
+    background-color: var(--color-primary);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-primary-hover);
+    }
+  }
+
+  .delete-button {
+    background-color: var(--color-danger);
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-danger-hover);
     }
   }
 }
@@ -521,4 +705,22 @@
 
 .st-stop .status-text {
   color: #cc0000;
+}
+
+tr.row-selected td {
+  background: rgba(23, 105, 224, .06);
+}
+
+/* checkbox column compact */
+.th-check,
+.td-check {
+  width: 38px;
+  text-align: center;
+}
+
+.th-check input,
+.td-check input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
 }

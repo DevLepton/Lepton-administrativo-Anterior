@@ -5,11 +5,12 @@ import { map, Observable, startWith } from 'rxjs';
 export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
 
 @Component({
-  selector: 'app-new-gps-modal',
-  templateUrl: './new-gps-modal.component.html',
-  styleUrl: './new-gps-modal.component.scss'
+  selector: 'app-new-accessory-modal',
+  templateUrl: './new-accessory-modal.component.html',
+  styleUrl: './new-accessory-modal.component.scss'
 })
-export class NewGpsModalComponent {
+
+export class NewAccessoryModalComponent {
   private lockBodyScroll() {
     document.body.style.overflow = 'hidden';
   }
@@ -22,38 +23,39 @@ export class NewGpsModalComponent {
     this.unlockBodyScroll();
   }
 
+
   @Input() modelOptions: string[] = [];
   @Input() brandOptions: string[] = [];
 
-  /** Emite un solo GPS (pestaña Individual) */
-  @Output() gpsCreated = new EventEmitter<{
-    type: 'gps';
-    imei: string;
+  /** Emite un solo Accesorio (pestaña Individual) */
+  @Output() accessoryCreated = new EventEmitter<{
+    type: 'accessory';
+    id: string;                 // 👈 campo "id" del accesorio (schema)
     sn: string;
     name: string;
     brand: string;
     model: string;
     status: DeviceStatus;
-    purchaseDate: string;     // 'YYYY-MM-DD'
-    entryDate: string;        // 'YYYY-MM-DD'
+    purchaseDate: string;       // 'YYYY-MM-DD'
+    entryDate: string;          // 'YYYY-MM-DD'
     installationDate?: string | null;
     client?: string | null;
     comments?: string | null;
   }>();
 
-  /** Emite muchos GPS (pestaña Masivo) */
-  @Output() gpsBulkCreated = new EventEmitter<Array<{
-    type: 'gps';
-    imei: string;
+  /** Emite muchos Accesorios (pestaña Masivo) */
+  @Output() accessoriesBulkCreated = new EventEmitter<Array<{
+    type: 'accessory';
+    id: string;                 // 👈 campo "id" del accesorio
     sn: string;
     name: string;
     brand: string;
     model: string;
     status: DeviceStatus;
-    purchaseDate: string;     // 'YYYY-MM-DD'
-    entryDate: string;        // 'YYYY-MM-DD'
-    installationDate?: string | null;
-    client?: string | null;
+    purchaseDate: string;       // 'YYYY-MM-DD'
+    entryDate: string;          // 'YYYY-MM-DD'
+    installationDate?: string | null; // (en masivo lo dejamos null)
+    client?: string | null;           // (en masivo lo dejamos null)
     comments?: string | null;
   }>>();
 
@@ -76,17 +78,8 @@ export class NewGpsModalComponent {
 
     // ====== INDIVIDUAL ======
     this.form = this.fb.group({
-      imei: ['', [
-        Validators.required,
-        Validators.pattern(/^\d+$/),
-        Validators.minLength(14),
-        Validators.maxLength(20)
-      ]],
-      sn: ['', [
-        Validators.required,
-        Validators.minLength(3),
-        Validators.maxLength(50)
-      ]],
+      id: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
+      sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
       name: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
@@ -108,7 +101,7 @@ export class NewGpsModalComponent {
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
       comments: [''],
-      imeis: this.fb.array([this.buildImeiCtrl()]),
+      ids: this.fb.array([this.buildIdCtrl()]),
       sns: this.fb.array([this.buildSnCtrl()]),
     });
 
@@ -145,7 +138,7 @@ export class NewGpsModalComponent {
 
     // Individual
     this.form.reset({
-      imei: '',
+      id: '',
       sn: '',
       name: '',
       brand: '',
@@ -170,8 +163,8 @@ export class NewGpsModalComponent {
       comments: '',
     });
 
-    // deja un IMEI y un SN
-    this.imeis.clear(); this.imeis.push(this.buildImeiCtrl());
+    // deja un ID y un SN
+    this.ids.clear(); this.ids.push(this.buildIdCtrl());
     this.sns.clear(); this.sns.push(this.buildSnCtrl());
   }
 
@@ -181,11 +174,12 @@ export class NewGpsModalComponent {
   submit() {
     if (this.form.invalid) return;
     this.loading = true;
+
     const v = this.form.value;
 
-    this.gpsCreated.emit({
-      type: 'gps',
-      imei: String(v.imei).trim(),
+    this.accessoryCreated.emit({
+      type: 'accessory',
+      id: String(v.id).trim(),
       sn: String(v.sn).trim(),
       name: String(v.name).trim(),
       brand: String(v.brand).trim(),
@@ -203,17 +197,17 @@ export class NewGpsModalComponent {
   }
 
   // ====== MASIVO ======
-  get imeis(): FormArray<FormControl<string>> {
-    return this.bulkForm.get('imeis') as FormArray<FormControl<string>>;
+  get ids(): FormArray<FormControl<string>> {
+    return this.bulkForm.get('ids') as FormArray<FormControl<string>>;
   }
   get sns(): FormArray<FormControl<string>> {
     return this.bulkForm.get('sns') as FormArray<FormControl<string>>;
   }
 
-  private buildImeiCtrl(): FormControl<string> {
+  private buildIdCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]
+      validators: [Validators.required, Validators.minLength(2), Validators.maxLength(60)]
     });
   }
   private buildSnCtrl(): FormControl<string> {
@@ -239,10 +233,10 @@ export class NewGpsModalComponent {
     if (q < 1) q = 1;
     if (q > 200) q = 200;
 
-    // IMEIs
-    const ci = this.imeis.length;
-    if (q > ci) for (let i = ci; i < q; i++) this.imeis.push(this.buildImeiCtrl());
-    else if (q < ci) for (let i = ci - 1; i >= q; i--) this.imeis.removeAt(i);
+    // IDs
+    const ci = this.ids.length;
+    if (q > ci) for (let i = ci; i < q; i++) this.ids.push(this.buildIdCtrl());
+    else if (q < ci) for (let i = ci - 1; i >= q; i--) this.ids.removeAt(i);
 
     // SNs
     const cs = this.sns.length;
@@ -251,7 +245,7 @@ export class NewGpsModalComponent {
   }
 
   submitBulk() {
-    if (this.bulkForm.invalid || this.imeis.length === 0 || this.sns.length === 0) return;
+    if (this.bulkForm.invalid || this.ids.length === 0 || this.sns.length === 0) return;
 
     const v = this.bulkForm.value;
     const common = {
@@ -262,19 +256,21 @@ export class NewGpsModalComponent {
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       comments: this.emptyToNull(v.comments),
+      installationDate: null as null,
+      client: null as null,
     };
 
-    // Construimos el array de dispositivos con pares IMEI/SN por índice
-    const n = Math.min(this.imeis.length, this.sns.length);
+    // pares ID/SN por índice
+    const n = Math.min(this.ids.length, this.sns.length);
     const payloads = Array.from({ length: n }, (_, i) => ({
-      type: 'gps' as const,
-      imei: String(this.imeis.at(i).value).trim(),
+      type: 'accessory' as const,
+      id: String(this.ids.at(i).value).trim(),
       sn: String(this.sns.at(i).value).trim(),
       ...common
     }));
 
     this.loading = true;
-    this.gpsBulkCreated.emit(payloads);
+    this.accessoriesBulkCreated.emit(payloads);
     this.loading = false;
     this.close();
   }
@@ -291,20 +287,5 @@ export class NewGpsModalComponent {
   private emptyToNull(s: any) {
     const t = (s ?? '').toString().trim();
     return t === '' ? null : t;
-  }
-
-  // Limpia no-numérico (para IMEI)
-  digitsOnlyCtrl(group: FormGroup, ctrlName: string) {
-    const ctrl = group.get(ctrlName);
-    if (!ctrl) return;
-    const before = (ctrl.value ?? '').toString();
-    const after = before.replace(/\D+/g, '');
-    if (after !== before) ctrl.setValue(after, { emitEvent: false });
-  }
-  digitsOnlyFA(arr: FormArray, idx: number) {
-    const ctrl = arr.at(idx) as FormControl;
-    const before = (ctrl.value ?? '').toString();
-    const after = before.replace(/\D+/g, '');
-    if (after !== before) ctrl.setValue(after, { emitEvent: false });
   }
 }

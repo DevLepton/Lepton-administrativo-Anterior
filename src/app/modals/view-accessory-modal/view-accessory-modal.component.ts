@@ -1,9 +1,9 @@
 import { Component } from '@angular/core';
 
-export interface ViewGpsData {
-  id: string;
-  imei: string;
-  sn: string;
+export interface ViewAccessoryData {
+  idMongo: string;                    // _id de Mongo (para referencia si lo quieres)
+  id: string;                         // id del accesorio (schema)
+  sn: string;                         // requerido (no-sim)
   nombre: string;                     // name
   marca: string;                      // brand
   modelo: string;                     // model
@@ -15,11 +15,11 @@ export interface ViewGpsData {
 }
 
 @Component({
-  selector: 'app-view-gps-modal',
-  templateUrl: './view-gps-modal.component.html',
-  styleUrl: './view-gps-modal.component.scss'
+  selector: 'app-view-accessory-modal',
+  templateUrl: './view-accessory-modal.component.html',
+  styleUrl: './view-accessory-modal.component.scss'
 })
-export class ViewGpsModalComponent {
+export class ViewAccessoryModalComponent {
   private lockBodyScroll() {
     document.body.style.overflow = 'hidden';
   }
@@ -33,14 +33,14 @@ export class ViewGpsModalComponent {
   }
 
   show = false;
-  data: ViewGpsData | null = null;
+  data: ViewAccessoryData | null = null;
 
-  open(d: ViewGpsData) {
+  open(d: ViewAccessoryData) {
     this.data = d;
     this.show = true;
     this.lockBodyScroll();
   }
-  close() { this.show = false; this.unlockBodyScroll(); }
+  close() { this.show = false; this.unlockBodyScroll();}
 
   fmtDate(v: any): string {
     if (!v) return '—';

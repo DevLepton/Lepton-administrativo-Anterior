@@ -6,6 +6,18 @@ import { Component, EventEmitter, Output } from '@angular/core';
   styleUrl: './confirm-delete-user-modal.component.scss'
 })
 export class ConfirmDeleteUserModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @Output() confirmed = new EventEmitter<void>();
   showModal = false;
   userName = '';
@@ -15,10 +27,12 @@ export class ConfirmDeleteUserModalComponent {
     this.userName = userName;
     this.confirmAction = onConfirm;
     this.showModal = true;
+    this.lockBodyScroll();
   }
 
   close() {
     this.showModal = false;
+    this.unlockBodyScroll();
   }
 
   confirm() {

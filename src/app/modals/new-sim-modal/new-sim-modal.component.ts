@@ -11,6 +11,18 @@ type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
   styleUrl: './new-sim-modal.component.scss'
 })
 export class NewSimModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @Input() modelOptions: string[] = [];
   @Input() companyOptions: string[] = [];
 
@@ -114,6 +126,7 @@ export class NewSimModalComponent {
   // ===== Apertura / reset =====
   open() {
     this.show = true;
+    this.lockBodyScroll();
     this.activeTab = 0;
 
     const today = new Date();
@@ -145,7 +158,7 @@ export class NewSimModalComponent {
     this.iccids.push(this.buildIccidCtrl());
   }
 
-  close() { this.show = false; }
+  close() { this.show = false; this.unlockBodyScroll(); }
 
   // ====== INDIVIDUAL ======
   submit() {

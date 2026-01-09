@@ -19,6 +19,18 @@ type RowEvent = EventDetailsData; // alias semántico para filas
   styleUrl: './event-history-modal.component.scss'
 })
 export class EventHistoryModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   visible = false;
 
   /** Evento “base” que disparó la apertura del historial (opcional, solo para encabezado) */
@@ -48,9 +60,10 @@ export class EventHistoryModalComponent {
 
     this.computeDynamicColumns();
     this.visible = true;
+    this.lockBodyScroll();
   }
 
-  close() { this.visible = false; }
+  close() { this.visible = false; this.unlockBodyScroll(); }
   stop(e: Event) { e.stopPropagation(); }
 
   /** Construye el conjunto de claves dinámicas de finalValues (unión de todas), en orden estable */

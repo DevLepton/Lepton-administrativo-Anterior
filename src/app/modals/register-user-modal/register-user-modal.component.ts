@@ -9,6 +9,18 @@ import { NgToastService } from 'ng-angular-popup';
   styleUrls: ['./register-user-modal.component.scss']
 })
 export class RegisterUserModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+  
   @Output() userRegistered = new EventEmitter<any>();
 
   showModal = false;
@@ -31,10 +43,12 @@ export class RegisterUserModalComponent {
 
   open() {
     this.showModal = true;
+    this.lockBodyScroll();
   }
 
   close() {
     this.showModal = false;
+    this.unlockBodyScroll();
     // Resetea y vuelve a estado inicial
     this.form.reset({ userName: '', email: '', password: '', role: 'admin' });
     this.loading = false;

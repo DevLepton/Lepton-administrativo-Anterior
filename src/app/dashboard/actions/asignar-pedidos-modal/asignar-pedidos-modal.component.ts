@@ -9,6 +9,18 @@ import {MatButtonModule} from '@angular/material/button';
   styleUrls: ['./asignar-pedidos-modal.component.scss'],
 })
 export class AsignarPedidosModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @ViewChild(AddDispositivosModalComponent) addDispositivosModal!: AddDispositivosModalComponent;
   @Output() closeModal = new EventEmitter<void>();
 
@@ -21,6 +33,7 @@ export class AsignarPedidosModalComponent {
   // Cerrar el modal principal
   close(): void {
     this.isVisible = false;
+    this.unlockBodyScroll();
     this.closeModal.emit();
   }
 
@@ -28,6 +41,7 @@ export class AsignarPedidosModalComponent {
   openAddDispositivos(): void {
     console.log('Abriendo modal de Add Dispositivos');
     this.isAddDispositivosVisible = true;
+    this.lockBodyScroll();
     setTimeout(() => this.addDispositivosModal.open(), 0); // 🔑 clave
   }
 

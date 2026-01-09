@@ -1,0 +1,245 @@
+<div class="tab-pane">
+  <div class="header">
+    <div class="filter-bar">
+      <div class="filter-container">
+
+        <!-- Buscador por ID o S/N -->
+        <mat-form-field appearance="outline" class="sim-search">
+          <mat-label>Buscar por ID / S/N</mat-label>
+          <input matInput [(ngModel)]="accessorySearch" (ngModelChange)="updateAccessorySearch($event)"
+            placeholder="Ingrese ID de accesorio o número de serie..." autocomplete="off" />
+          <button *ngIf="accessorySearch" matSuffix mat-icon-button aria-label="Limpiar"
+            (click)="updateAccessorySearch('')">
+            <mat-icon>close</mat-icon>
+          </button>
+          <mat-hint *ngIf="accessorySearch">
+            {{ accessoriesFiltered.length }} resultado{{ accessoriesFiltered.length === 1 ? '' : 's' }}
+          </mat-hint>
+        </mat-form-field>
+
+        <!-- Marca -->
+        <mat-form-field appearance="outline" class="sim-filter">
+          <mat-label>Marca</mat-label>
+          <mat-select [(value)]="accessoryFilterBrand" (selectionChange)="onAccessoryFilterChange()">
+            <mat-option [value]="''">Todas</mat-option>
+            <mat-option *ngFor="let b of uniqueAccessoryBrands" [value]="b">{{ b }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Modelo -->
+        <mat-form-field appearance="outline" class="sim-filter">
+          <mat-label>Modelo</mat-label>
+          <mat-select [(value)]="accessoryFilterModel" (selectionChange)="onAccessoryFilterChange()">
+            <mat-option [value]="''">Todos</mat-option>
+            <mat-option *ngFor="let m of uniqueAccessoryModels" [value]="m">{{ m }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Estatus -->
+        <mat-form-field appearance="outline" class="sim-filter">
+          <mat-label>Estatus</mat-label>
+          <mat-select [(value)]="accessoryFilterStatus" (selectionChange)="onAccessoryFilterChange()">
+            <mat-option [value]="''">Todos</mat-option>
+            <mat-option *ngFor="let s of uniqueAccessoryStatuses" [value]="s">{{ s }}</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <!-- Fecha compra -->
+        <mat-form-field appearance="outline" class="sim-filter">
+          <mat-label>Fecha de compra</mat-label>
+          <input matInput [matDatepicker]="accPickerCompra" placeholder="Selecciona fecha"
+            [(ngModel)]="accessoryPurchaseDateFilter" (dateChange)="onAccessoryPurchaseDateChange($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="accPickerCompra"></mat-datepicker-toggle>
+          <mat-datepicker #accPickerCompra></mat-datepicker>
+
+          <button *ngIf="accessoryPurchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+            (click)="clearAccessoryPurchaseDate()">
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <mat-hint *ngIf="accessoryPurchaseDateFilter">
+            Filtrando: {{ accessoryPurchaseDateFilter | date:'dd MMM yyyy' }}
+          </mat-hint>
+        </mat-form-field>
+
+        <!-- Fecha ingreso -->
+        <mat-form-field appearance="outline" class="sim-filter">
+          <mat-label>Fecha de ingreso</mat-label>
+          <input matInput [matDatepicker]="accPickerIngreso" placeholder="Selecciona fecha"
+            [(ngModel)]="accessoryEntryDateFilter" (dateChange)="onAccessoryEntryDateChange($event.value)" />
+          <mat-datepicker-toggle matSuffix [for]="accPickerIngreso"></mat-datepicker-toggle>
+          <mat-datepicker #accPickerIngreso></mat-datepicker>
+
+          <button *ngIf="accessoryEntryDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+            (click)="clearAccessoryEntryDate()">
+            <mat-icon>close</mat-icon>
+          </button>
+
+          <mat-hint *ngIf="accessoryEntryDateFilter">
+            Filtrando: {{ accessoryEntryDateFilter | date:'dd MMM yyyy' }}
+          </mat-hint>
+        </mat-form-field>
+
+      </div>
+    </div>
+
+    <div class="filter-bar" style="justify-content: end;">
+      <div class="filter-container" style="display: flex; flex: 1; justify-content: space-between;">
+        <div class="pagination-container">
+          <button class="filter-btn" (click)="toggleAccessoriesShowAll()">
+            {{ accessoriesShowAll ? 'Paginado' : 'Mostrar todos' }}
+          </button>
+
+          <div class="pagination"
+            *ngIf="!accessoriesShowAll && accessoriesFiltered.length > 0 && accessoriesTotalPages > 1">
+            <button class="pagination-btn" (click)="setAccessoriesPage(accessoriesCurrentPage - 1)"
+              [disabled]="accessoriesCurrentPage === 1">«</button>
+
+            <button *ngFor="let p of [].constructor(accessoriesTotalPages); let i = index" class="pagination-btn"
+              [class.active]="accessoriesCurrentPage === (i + 1)" (click)="setAccessoriesPage(i + 1)">
+              {{ i + 1 }}
+            </button>
+
+            <button class="pagination-btn" (click)="setAccessoriesPage(accessoriesCurrentPage + 1)"
+              [disabled]="accessoriesCurrentPage === accessoriesTotalPages">»</button>
+          </div>
+        </div>
+        <!-- ✅ Barra de acciones -->
+        <div class="actions-top">
+          <button class="new-button" (click)="nuevoAccesorio()">
+            <span class="material-icons">extension</span> Nuevo Accesorio
+          </button>
+
+          <span class="tooltip-wrap" [matTooltip]="canViewOrEditAccessory ? '' : 'Selecciona 1 accesorio para ver'"
+            [matTooltipDisabled]="canViewOrEditAccessory" matTooltipPosition="above">
+            <button class="icon-button view-button" title="Ver" (click)="viewSelectedAccessory()"
+              [disabled]="!canViewOrEditAccessory">
+              <span class="material-icons">visibility</span>
+            </button>
+          </span>
+
+          <span class="tooltip-wrap" [matTooltip]="canViewOrEditAccessory ? '' : 'Selecciona 1 accesorio para editar'"
+            [matTooltipDisabled]="canViewOrEditAccessory" matTooltipPosition="above">
+            <button class="icon-button edit-button" title="Editar" (click)="editSelectedAccessory()"
+              [disabled]="!canViewOrEditAccessory">
+              <span class="material-icons">edit</span>
+            </button>
+          </span>
+
+          <span class="tooltip-wrap"
+            [matTooltip]="accessoriesSelectedCount > 0 ? '' : 'Selecciona al menos 1 accesorio para eliminar'"
+            [matTooltipDisabled]="accessoriesSelectedCount > 0" matTooltipPosition="above">
+            <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedAccessories()"
+              [disabled]="accessoriesSelectedCount === 0 || accessoriesDeletingId === '__bulk__'">
+              <span class="material-icons">
+                {{ accessoriesDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
+              </span>
+            </button>
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Tabla Accesorios ===== -->
+  <div class="table-container">
+    <table class="table">
+      <thead>
+        <tr>
+          <!-- ✅ seleccionar todo -->
+          <th class="th-check">
+            <input type="checkbox" [checked]="isAllAccessoriesVisibleSelected"
+              [indeterminate]="isSomeAccessoriesVisibleSelected"
+              (change)="toggleSelectAllAccessoriesVisible($any($event.target).checked)"
+              aria-label="Seleccionar todos" />
+          </th>
+
+          <th>No.</th>
+
+          <th (click)="sortAccessoryBy('idAccesorio')" class="th-sort">
+            ID <span class="arrow">{{ arrowForAccessory('idAccesorio') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('sn')" class="th-sort">
+            S/N <span class="arrow">{{ arrowForAccessory('sn') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('nombre')" class="th-sort">
+            Nombre <span class="arrow">{{ arrowForAccessory('nombre') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('marca')" class="th-sort">
+            Marca <span class="arrow">{{ arrowForAccessory('marca') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('modelo')" class="th-sort">
+            Modelo <span class="arrow">{{ arrowForAccessory('modelo') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('estatus')" class="th-sort">
+            Estatus <span class="arrow">{{ arrowForAccessory('estatus') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('fechaCompra')" class="th-sort">
+            Fecha de compra <span class="arrow">{{ arrowForAccessory('fechaCompra') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('fechaIngresoLepton')" class="th-sort">
+            Fecha ingreso Leptón <span class="arrow">{{ arrowForAccessory('fechaIngresoLepton') }}</span>
+          </th>
+          <th (click)="sortAccessoryBy('cliente')" class="th-sort">
+            Cliente <span class="arrow">{{ arrowForAccessory('cliente') }}</span>
+          </th>
+        </tr>
+      </thead>
+
+      <tbody *ngIf="!accessoriesLoading; else accessoriesLoadingTpl">
+        <tr *ngFor="let a of displayedAccessories; let idx = index" (click)="toggleAccessoryRowByClick(a)"
+          [class.row-selected]="isAccessorySelected(a.id)" style="cursor:pointer;">
+
+          <td class="td-check" (click)="toggleAccessoryRowByClick(a); $event.stopPropagation()">
+            <input type="checkbox" [checked]="isAccessorySelected(a.id)"
+              (change)="toggleAccessoryRowSelection(a, $any($event.target).checked)" (click)="$event.stopPropagation()"
+              aria-label="Seleccionar accesorio" />
+          </td>
+
+          <td>{{ accessoriesShowAll ? (idx + 1) : ((accessoriesCurrentPage - 1) * accessoriesPerPage + idx + 1) }}</td>
+          <td>{{ a.idAccesorio }}</td>
+          <td>{{ a.sn }}</td>
+          <td>{{ a.nombre }}</td>
+          <td>{{ a.marca }}</td>
+          <td>{{ a.modelo }}</td>
+          <td>
+            <span class="status-badge" [ngClass]="{
+              inv:  a.estatus === 'En inventario',
+              cfg:  a.estatus === 'En configuración',
+              inst: a.estatus === 'Instalado'
+            }">
+              {{ a.estatus }}
+            </span>
+          </td>
+          <td>{{ a.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
+          <td>{{ a.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+          <td>{{ a.cliente || '—' }}</td>
+        </tr>
+
+        <tr *ngIf="displayedAccessories.length === 0">
+          <td colspan="11" style="text-align:center; padding:1rem;">Sin Accesorios para mostrar.</td>
+        </tr>
+      </tbody>
+
+      <ng-template #accessoriesLoadingTpl>
+        <tbody>
+          <tr>
+            <td colspan="11" style="text-align:center; padding:1rem;">Cargando Accesorios…</td>
+          </tr>
+        </tbody>
+      </ng-template>
+    </table>
+
+    <!-- Modales Accesorios -->
+    <app-new-accessory-modal (accessoryCreated)="onAccessoryCreated($event)"
+      (accessoriesBulkCreated)="onAccessoriesBulkCreated($event)" [modelOptions]="accessoryModelOptions"
+      [brandOptions]="accessoryBrandOptions">
+    </app-new-accessory-modal>
+
+    <app-view-accessory-modal></app-view-accessory-modal>
+
+    <app-edit-accessory-modal (accessoryUpdated)="onAccessoryUpdated($event)" [modelOptions]="accessoryModelOptions"
+      [brandOptions]="accessoryBrandOptions">
+    </app-edit-accessory-modal>
+  </div>
+</div>

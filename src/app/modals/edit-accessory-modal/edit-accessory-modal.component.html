@@ -1,0 +1,97 @@
+<div class="modal-backdrop" *ngIf="show" (click)="close()"></div>
+
+<div class="modal" *ngIf="show">
+  <header class="modal__header">
+    <h3>Editar Accesorio</h3>
+    <button mat-icon-button (click)="close()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="modal__body compact">
+    <div class="grid">
+
+      <!-- ID Accesorio (schema: id) -->
+      <mat-form-field appearance="outline">
+        <mat-label>ID Accesorio</mat-label>
+        <input matInput formControlName="accId" placeholder="ACC-001 / SERIAL-ID..." autocomplete="off" maxlength="80" />
+        <mat-error *ngIf="form.get('accId')?.hasError('required')">ID es requerido</mat-error>
+      </mat-form-field>
+
+      <!-- Serie -->
+      <mat-form-field appearance="outline">
+        <mat-label>Serie (SN)</mat-label>
+        <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
+        <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Nombre -->
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+        <input matInput formControlName="name" placeholder="Alias / Identificador" />
+        <mat-error *ngIf="form.get('name')?.hasError('required')">Nombre es requerido</mat-error>
+      </mat-form-field>
+
+      <!-- Marca -->
+      <mat-form-field appearance="outline">
+        <mat-label>Marca</mat-label>
+        <input matInput formControlName="brand" [matAutocomplete]="brandAuto" placeholder="Teltonika / Queclink..." />
+        <mat-autocomplete #brandAuto="matAutocomplete" autoActiveFirstOption>
+          <mat-option *ngFor="let opt of filteredBrands$ | async" [value]="opt">{{ opt }}</mat-option>
+        </mat-autocomplete>
+        <mat-error *ngIf="form.get('brand')?.hasError('required')">Marca es requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Modelo -->
+      <mat-form-field appearance="outline">
+        <mat-label>Modelo</mat-label>
+        <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="Rollo / Relé / Sensor..." />
+        <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
+          <mat-option *ngFor="let opt of filteredModels$ | async" [value]="opt">{{ opt }}</mat-option>
+        </mat-autocomplete>
+        <mat-error *ngIf="form.get('model')?.hasError('required')">Modelo es requerido</mat-error>
+      </mat-form-field>
+
+      <!-- Estatus -->
+      <mat-form-field appearance="outline">
+        <mat-label>Estatus</mat-label>
+        <mat-select formControlName="status">
+          <mat-option value="En inventario">En inventario</mat-option>
+          <mat-option value="En configuración">En configuración</mat-option>
+          <mat-option value="Instalado">Instalado</mat-option>
+        </mat-select>
+        <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+      </mat-form-field>
+
+      <!-- Fechas -->
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de compra</mat-label>
+        <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
+        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
+        <mat-datepicker #pd></mat-datepicker>
+        <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+      </mat-form-field>
+
+      <mat-form-field appearance="outline">
+        <mat-label>Fecha de ingreso</mat-label>
+        <input matInput [matDatepicker]="ed" formControlName="entryDate" />
+        <mat-datepicker-toggle matSuffix [for]="ed"></mat-datepicker-toggle>
+        <mat-datepicker #ed></mat-datepicker>
+        <mat-error *ngIf="form.get('entryDate')?.hasError('required')">Requerida</mat-error>
+      </mat-form-field>
+
+      <!-- Comentarios -->
+      <mat-form-field appearance="outline" class="col-span-2">
+        <mat-label>Comentarios (opcional)</mat-label>
+        <textarea matInput formControlName="comments" rows="3" placeholder="Notas adicionales..."></textarea>
+      </mat-form-field>
+    </div>
+
+    <footer class="modal__footer">
+      <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+      <button type="submit" mat-flat-button color="primary" [disabled]="form.invalid || loading || !hasChanges">
+        {{ loading ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </footer>
+  </form>
+</div>

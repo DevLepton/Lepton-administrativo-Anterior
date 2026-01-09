@@ -19,14 +19,27 @@ export interface ViewSimData {
   encapsulation: ViewEncapsulation.None
 })
 export class ViewSimModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   show = false;
   data: ViewSimData | null = null;
 
   open(d: ViewSimData) {
     this.data = d;
     this.show = true;
+    this.lockBodyScroll();
   }
-  close() { this.show = false; }
+  close() { this.show = false; this.unlockBodyScroll();}
 
   fmtDate(v: any): string {
     if (!v) return '—';

@@ -1,0 +1,231 @@
+<div class="tab-pane">
+    <div class="header">
+        <div class="filter-bar">
+            <div class="filter-container">
+                <!-- Buscador -->
+                <mat-form-field appearance="outline" class="sim-search">
+                    <mat-label>Buscar por IMEI / S/N</mat-label>
+                    <input matInput [(ngModel)]="gpsSearch" (ngModelChange)="updateGpsSearch($event)"
+                        placeholder="Ingrese IMEI o número de serie..." autocomplete="off" />
+                    <button *ngIf="gpsSearch" matSuffix mat-icon-button aria-label="Limpiar"
+                        (click)="updateGpsSearch('')">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                    <mat-hint *ngIf="gpsSearch">
+                        {{ gpsFiltered.length }} resultado{{ gpsFiltered.length === 1 ? '' : 's' }}
+                    </mat-hint>
+                </mat-form-field>
+
+                <!-- Marca -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Marca</mat-label>
+                    <mat-select [(value)]="gpsFilterBrand" (selectionChange)="onGpsFilterChange()">
+                        <mat-option [value]="''">Todas</mat-option>
+                        <mat-option *ngFor="let b of uniqueGpsBrands" [value]="b">{{ b }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+
+                <!-- Modelo -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Modelo</mat-label>
+                    <mat-select [(value)]="gpsFilterModel" (selectionChange)="onGpsFilterChange()">
+                        <mat-option [value]="''">Todos</mat-option>
+                        <mat-option *ngFor="let m of uniqueGpsModels" [value]="m">{{ m }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+
+                <!-- Estatus -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Estatus</mat-label>
+                    <mat-select [(value)]="gpsFilterStatus" (selectionChange)="onGpsFilterChange()">
+                        <mat-option [value]="''">Todos</mat-option>
+                        <mat-option *ngFor="let s of uniqueGpsStatuses" [value]="s">{{ s }}</mat-option>
+                    </mat-select>
+                </mat-form-field>
+
+                <!-- Fecha compra -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Fecha de compra</mat-label>
+                    <input matInput [matDatepicker]="gpPickerCompra" placeholder="Selecciona fecha"
+                        [(ngModel)]="gpsPurchaseDateFilter" (dateChange)="onGpsPurchaseDateChange($event.value)" />
+                    <mat-datepicker-toggle matSuffix [for]="gpPickerCompra"></mat-datepicker-toggle>
+                    <mat-datepicker #gpPickerCompra></mat-datepicker>
+                    <button *ngIf="gpsPurchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+                        (click)="clearGpsPurchaseDate()">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                    <mat-hint *ngIf="gpsPurchaseDateFilter">
+                        Filtrando: {{ gpsPurchaseDateFilter | date:'dd MMM yyyy' }}
+                    </mat-hint>
+                </mat-form-field>
+
+                <!-- Fecha ingreso -->
+                <mat-form-field appearance="outline" class="sim-filter">
+                    <mat-label>Fecha de ingreso</mat-label>
+                    <input matInput [matDatepicker]="gpPickerIngreso" placeholder="Selecciona fecha"
+                        [(ngModel)]="gpsEntryDateFilter" (dateChange)="onGpsEntryDateChange($event.value)" />
+                    <mat-datepicker-toggle matSuffix [for]="gpPickerIngreso"></mat-datepicker-toggle>
+                    <mat-datepicker #gpPickerIngreso></mat-datepicker>
+                    <button *ngIf="gpsEntryDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+                        (click)="clearGpsEntryDate()">
+                        <mat-icon>close</mat-icon>
+                    </button>
+                    <mat-hint *ngIf="gpsEntryDateFilter">
+                        Filtrando: {{ gpsEntryDateFilter | date:'dd MMM yyyy' }}
+                    </mat-hint>
+                </mat-form-field>
+            </div>
+
+
+        </div>
+
+        <div class="filter-bar">
+            <div class="filter-container" style="display: flex; flex: 1; justify-content: space-between;">
+                <div class="pagination-container">
+                    <button class="filter-btn" (click)="toggleGpsShowAll()">
+                        {{ gpsShowAll ? 'Paginado' : 'Mostrar todos' }}
+                    </button>
+
+                    <div class="pagination" *ngIf="!gpsShowAll && gpsFiltered.length > 0 && gpsTotalPages > 1">
+                        <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage - 1)"
+                            [disabled]="gpsCurrentPage === 1">«</button>
+                        <button *ngFor="let p of [].constructor(gpsTotalPages); let i = index" class="pagination-btn"
+                            [class.active]="gpsCurrentPage === (i + 1)" (click)="setGpsPage(i + 1)">
+                            {{ i + 1 }}
+                        </button>
+                        <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage + 1)"
+                            [disabled]="gpsCurrentPage === gpsTotalPages">»</button>
+                    </div>
+                </div>
+                <!-- ✅ Barra de acciones -->
+                <div class="actions-top">
+                    <button class="new-button" (click)="nuevoGps()">
+                        <span class="material-icons">gps_fixed</span> Nuevo GPS
+                    </button>
+
+                    <span class="tooltip-wrap" [matTooltip]="canViewOrEditGps ? '' : 'Selecciona 1 GPS para ver'"
+                        [matTooltipDisabled]="canViewOrEditGps" matTooltipPosition="above">
+                        <button class="icon-button view-button" title="Ver" (click)="viewSelectedGps()"
+                            [disabled]="!canViewOrEditGps">
+                            <span class="material-icons">visibility</span>
+                        </button>
+                    </span>
+
+                    <span class="tooltip-wrap" [matTooltip]="canViewOrEditGps ? '' : 'Selecciona 1 GPS para editar'"
+                        [matTooltipDisabled]="canViewOrEditGps" matTooltipPosition="above">
+                        <button class="icon-button edit-button" title="Editar" (click)="editSelectedGps()"
+                            [disabled]="!canViewOrEditGps">
+                            <span class="material-icons">edit</span>
+                        </button>
+                    </span>
+
+                    <span class="tooltip-wrap"
+                        [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para eliminar'"
+                        [matTooltipDisabled]="gpsSelectedCount > 0" matTooltipPosition="above">
+                        <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedGps()"
+                            [disabled]="gpsSelectedCount === 0 || gpsDeletingId === '__bulk__'">
+                            <span class="material-icons">
+                                {{ gpsDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
+                            </span>
+                        </button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== Tabla GPS ===== -->
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <!-- ✅ checkbox seleccionar todo -->
+                    <th class="th-check">
+                        <input type="checkbox" [checked]="isAllGpsVisibleSelected"
+                            [indeterminate]="isSomeGpsVisibleSelected"
+                            (change)="toggleSelectAllGpsVisible($any($event.target).checked)"
+                            aria-label="Seleccionar todos" />
+                    </th>
+
+                    <th>No.</th>
+
+                    <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow">{{ arrowForGps('imei')
+                            }}</span></th>
+                    <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow">{{ arrowForGps('sn') }}</span>
+                    </th>
+                    <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow">{{
+                            arrowForGps('nombre') }}</span></th>
+                    <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow">{{ arrowForGps('marca')
+                            }}</span></th>
+                    <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow">{{
+                            arrowForGps('modelo') }}</span></th>
+                    <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow">{{
+                            arrowForGps('estatus') }}</span></th>
+                    <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
+                            arrowForGps('fechaCompra') }}</span></th>
+                    <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span
+                            class="arrow">{{ arrowForGps('fechaIngresoLepton') }}</span></th>
+                    <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow">{{
+                            arrowForGps('cliente') }}</span></th>
+
+                    <!-- ❌ ya no hay acciones por fila -->
+                </tr>
+            </thead>
+
+            <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
+                <tr *ngFor="let g of displayedGps; let idx = index" (click)="toggleGpsRowByClick(g)"
+                    [class.row-selected]="isGpsSelected(g.id)" style="cursor:pointer;">
+
+                    <!-- ✅ celda checkbox clickable -->
+                    <td class="td-check" (click)="toggleGpsRowByClick(g); $event.stopPropagation()">
+                        <input type="checkbox" [checked]="isGpsSelected(g.id)"
+                            (change)="toggleGpsRowSelection(g, $any($event.target).checked)"
+                            (click)="$event.stopPropagation()" aria-label="Seleccionar GPS" />
+                    </td>
+
+                    <td>{{ gpsShowAll ? (idx + 1) : ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
+                    <td>{{ g.imei }}</td>
+                    <td>{{ g.sn }}</td>
+                    <td>{{ g.nombre }}</td>
+                    <td>{{ g.marca }}</td>
+                    <td>{{ g.modelo }}</td>
+                    <td>
+                        <span class="status-badge" [ngClass]="{
+              inv:  g.estatus === 'En inventario',
+              cfg:  g.estatus === 'En configuración',
+              inst: g.estatus === 'Instalado'
+            }">
+                            {{ g.estatus }}
+                        </span>
+                    </td>
+                    <td>{{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
+                    <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+                    <td>{{ g.cliente || '—' }}</td>
+                </tr>
+
+                <tr *ngIf="displayedGps.length === 0">
+                    <td colspan="11" style="text-align:center; padding:1rem;">Sin GPS para mostrar.</td>
+                </tr>
+            </tbody>
+
+            <ng-template #gpsLoadingTpl>
+                <tbody>
+                    <tr>
+                        <td colspan="11" style="text-align:center; padding:1rem;">Cargando GPS…</td>
+                    </tr>
+                </tbody>
+            </ng-template>
+        </table>
+
+        <!-- Modales GPS -->
+        <app-new-gps-modal (gpsCreated)="onGpsCreated($event)" (gpsBulkCreated)="onGpsBulkCreated($event)"
+            [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
+        </app-new-gps-modal>
+
+        <app-view-gps-modal></app-view-gps-modal>
+
+        <app-edit-gps-modal (gpsUpdated)="onGpsUpdated($event)" [modelOptions]="gpsModelOptions"
+            [brandOptions]="gpsBrandOptions">
+        </app-edit-gps-modal>
+    </div>
+</div>

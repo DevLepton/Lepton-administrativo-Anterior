@@ -1,438 +1,134 @@
-<mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
+<mat-tab-group
+  [selectedIndex]="activeTabIndex"
+  (selectedIndexChange)="onTabChange($event)"
+  class="almacen-tabs"
+>
 
-  <!-- ================= GPS's ================= -->
-  <mat-tab label="GPS's">
-    <div class="tab-pane">
-      <div class="header">
-        <!-- <h2>GPS's</h2>
-        <hr class="divider"> -->
-
-        <div class="filter-bar">
-          <div class="filter-container">
-
-            <!-- Buscador por IMEI o S/N -->
-            <mat-form-field appearance="outline" class="sim-search">
-              <mat-label>Buscar por IMEI / S/N</mat-label>
-              <input matInput [(ngModel)]="gpsSearch" (ngModelChange)="updateGpsSearch($event)"
-                placeholder="Ingrese IMEI o número de serie..." autocomplete="off" />
-              <button *ngIf="gpsSearch" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateGpsSearch('')">
-                <mat-icon>close</mat-icon>
-              </button>
-              <mat-hint *ngIf="gpsSearch">
-                {{ gpsFiltered.length }} resultado{{ gpsFiltered.length === 1 ? '' : 's' }}
-              </mat-hint>
-            </mat-form-field>
-
-            <!-- Marca -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Marca</mat-label>
-              <mat-select [(value)]="gpsFilterBrand" (selectionChange)="onGpsFilterChange()">
-                <mat-option [value]="''">Todas</mat-option>
-                <mat-option *ngFor="let b of uniqueGpsBrands" [value]="b">{{ b }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Modelo (opcional) -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Modelo</mat-label>
-              <mat-select [(value)]="gpsFilterModel" (selectionChange)="onGpsFilterChange()">
-                <mat-option [value]="''">Todos</mat-option>
-                <mat-option *ngFor="let m of uniqueGpsModels" [value]="m">{{ m }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Estatus -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Estatus</mat-label>
-              <mat-select [(value)]="gpsFilterStatus" (selectionChange)="onGpsFilterChange()">
-                <mat-option [value]="''">Todos</mat-option>
-                <mat-option *ngFor="let s of uniqueGpsStatuses" [value]="s">{{ s }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- 📅 Fecha de compra -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Fecha de compra</mat-label>
-              <input matInput [matDatepicker]="gpPickerCompra" placeholder="Selecciona fecha"
-                [(ngModel)]="gpsPurchaseDateFilter" (dateChange)="onGpsPurchaseDateChange($event.value)" />
-              <mat-datepicker-toggle matSuffix [for]="gpPickerCompra"></mat-datepicker-toggle>
-              <mat-datepicker #gpPickerCompra></mat-datepicker>
-              <button *ngIf="gpsPurchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
-                (click)="clearGpsPurchaseDate()">
-                <mat-icon>close</mat-icon>
-              </button>
-              <mat-hint *ngIf="gpsPurchaseDateFilter">
-                Filtrando: {{ gpsPurchaseDateFilter | date:'dd MMM yyyy' }}
-              </mat-hint>
-            </mat-form-field>
-
-            <!-- 📅 Fecha de ingreso -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Fecha de ingreso</mat-label>
-              <input matInput [matDatepicker]="gpPickerIngreso" placeholder="Selecciona fecha"
-                [(ngModel)]="gpsEntryDateFilter" (dateChange)="onGpsEntryDateChange($event.value)" />
-              <mat-datepicker-toggle matSuffix [for]="gpPickerIngreso"></mat-datepicker-toggle>
-              <mat-datepicker #gpPickerIngreso></mat-datepicker>
-              <button *ngIf="gpsEntryDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
-                (click)="clearGpsEntryDate()">
-                <mat-icon>close</mat-icon>
-              </button>
-              <mat-hint *ngIf="gpsEntryDateFilter">
-                Filtrando: {{ gpsEntryDateFilter | date:'dd MMM yyyy' }}
-              </mat-hint>
-            </mat-form-field>
-
-          </div>
-
-          <button class="new-button" (click)="nuevoGps()">
-            <span class="material-icons">gps_fixed</span> Nuevo GPS
-          </button>
-        </div>
-
-        <div class="filter-bar" style="justify-content: end;">
-          <div class="filter-container">
-            <div class="pagination-container">
-              <button class="filter-btn" (click)="toggleGpsShowAll()">
-                {{ gpsShowAll ? 'Paginado' : 'Mostrar todos' }}
-              </button>
-
-              <div class="pagination" *ngIf="!gpsShowAll && gpsFiltered.length > 0 && gpsTotalPages > 1">
-                <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage - 1)"
-                  [disabled]="gpsCurrentPage === 1">«</button>
-                <button *ngFor="let p of [].constructor(gpsTotalPages); let i = index" class="pagination-btn"
-                  [class.active]="gpsCurrentPage === (i + 1)" (click)="setGpsPage(i + 1)">
-                  {{ i + 1 }}
-                </button>
-                <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage + 1)"
-                  [disabled]="gpsCurrentPage === gpsTotalPages">»</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- ===== Tabla GPS ===== -->
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow">{{ arrowForGps('imei') }}</span>
-              </th>
-              <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow">{{ arrowForGps('sn') }}</span></th>
-              <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow">{{ arrowForGps('nombre')
-                  }}</span></th>
-              <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow">{{ arrowForGps('marca')
-                  }}</span></th>
-              <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow">{{ arrowForGps('modelo')
-                  }}</span></th>
-              <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow">{{ arrowForGps('estatus')
-                  }}</span></th>
-              <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
-                  arrowForGps('fechaCompra') }}</span></th>
-              <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span class="arrow">{{
-                  arrowForGps('fechaIngresoLepton') }}</span></th>
-              <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow">{{ arrowForGps('cliente')
-                  }}</span></th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-
-          <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
-            <tr *ngFor="let g of displayedGps; let idx = index">
-              <td>{{ gpsShowAll ? (idx + 1) : ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
-              <td>{{ g.imei }}</td>
-              <td>{{ g.sn }}</td>
-              <td>{{ g.nombre }}</td>
-              <td>{{ g.marca }}</td>
-              <td>{{ g.modelo }}</td>
-              <td>
-                <span class="status-badge" [ngClass]="{
-                    inv:  g.estatus === 'En inventario',
-                    cfg:  g.estatus === 'En configuración',
-                    inst: g.estatus === 'Instalado'
-                  }">
-                  {{ g.estatus }}
-                </span>
-              </td>
-              <td>{{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
-              <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-              <td>{{ g.cliente || '—' }}</td>
-              <td class="actions-cell">
-                <button class="icon-button view-button" title="Ver" (click)="verGps(g)">
-                  <span class="material-icons">visibility</span>
-                </button>
-                <button class="icon-button edit-button" title="Editar" (click)="editarGps(g)">
-                  <span class="material-icons">edit</span>
-                </button>
-                <button class="icon-button delete-button" title="Eliminar" (click)="eliminarGps(g)"
-                  [disabled]="gpsDeletingId === g.id">
-                  <span class="material-icons">
-                    {{ gpsDeletingId === g.id ? 'hourglass_top' : 'delete' }}
-                  </span>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="displayedGps.length === 0">
-              <td colspan="11" style="text-align:center; padding:1rem;">Sin GPS para mostrar.</td>
-            </tr>
-          </tbody>
-
-          <ng-template #gpsLoadingTpl>
-            <tbody>
-              <tr>
-                <td colspan="11" style="text-align:center; padding:1rem;">Cargando GPS…</td>
-              </tr>
-            </tbody>
-          </ng-template>
-        </table>
-
-        <!-- Modales GPS (análogos a SIM, pero con campos del schema) -->
-        <app-new-gps-modal (gpsCreated)="onGpsCreated($event)" (gpsBulkCreated)="onGpsBulkCreated($event)"
-          [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
-        </app-new-gps-modal>
-
-        <app-view-gps-modal></app-view-gps-modal>
-
-        <app-edit-gps-modal (gpsUpdated)="onGpsUpdated($event)" [modelOptions]="gpsModelOptions"
-          [brandOptions]="gpsBrandOptions">
-        </app-edit-gps-modal>
-
-      </div>
-    </div>
-  </mat-tab>
-
-
-
-
-  <!-- ================= SIM's ================= -->
-  <mat-tab label="SIM's">
-    <div class="tab-pane">
-      <div class="header">
-        <!-- <h2>SIM's</h2>
-        <hr class="divider"> -->
-        <div class="filter-bar">
-          <div class="filter-container">
-
-            <!-- Buscador por ICCID -->
-            <mat-form-field appearance="outline" class="sim-search">
-              <mat-label>Buscar por ICCID</mat-label>
-              <input matInput [(ngModel)]="simsSearch" (ngModelChange)="updateSimSearch($event)"
-                placeholder="Ingrese el ICCID..." inputmode="numeric" autocomplete="off" />
-
-              <button *ngIf="simsSearch" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSimSearch('')">
-                <mat-icon>close</mat-icon>
-              </button>
-              <mat-hint *ngIf="simsSearch">
-                {{ simsFiltered.length }} resultado{{ simsFiltered.length === 1 ? '' : 's' }}
-              </mat-hint>
-            </mat-form-field>
-
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Compañía</mat-label>
-              <mat-select [(value)]="simsFilterCompany" (selectionChange)="onSimFilterChange()">
-                <mat-option [value]="''">Todas</mat-option>
-                <mat-option *ngFor="let c of uniqueSimCompanies" [value]="c">{{ c }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- Filtro por Estatus -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Estatus</mat-label>
-              <mat-select [(value)]="simsFilterStatus" (selectionChange)="onSimFilterChange()">
-                <mat-option [value]="''">Todos</mat-option>
-                <mat-option *ngFor="let s of uniqueSimStatuses" [value]="s">{{ s }}</mat-option>
-              </mat-select>
-            </mat-form-field>
-
-            <!-- 📅 Filtro: Fecha de compra -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Fecha de compra</mat-label>
-              <input matInput [matDatepicker]="pickerCompra" placeholder="Selecciona fecha"
-                [(ngModel)]="purchaseDateFilter" (dateChange)="onPurchaseDateChange($event.value)" />
-              <mat-datepicker-toggle matSuffix [for]="pickerCompra"></mat-datepicker-toggle>
-              <mat-datepicker #pickerCompra></mat-datepicker>
-
-              <button *ngIf="purchaseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
-                (click)="clearPurchaseDate()">
-                <mat-icon>close</mat-icon>
-              </button>
-
-              <mat-hint *ngIf="purchaseDateFilter">
-                Filtrando: {{ purchaseDateFilter | date:'dd MMM yyyy' }}
-              </mat-hint>
-            </mat-form-field>
-
-            <!-- 📅 Filtro: Fecha de ingreso -->
-            <mat-form-field appearance="outline" class="sim-filter">
-              <mat-label>Fecha de ingreso</mat-label>
-              <input matInput [matDatepicker]="pickerIngreso" placeholder="Selecciona fecha"
-                [(ngModel)]="entryDateFilter" (dateChange)="onEntryDateChange($event.value)" />
-              <mat-datepicker-toggle matSuffix [for]="pickerIngreso"></mat-datepicker-toggle>
-              <mat-datepicker #pickerIngreso></mat-datepicker>
-
-              <button *ngIf="entryDateFilter" matSuffix mat-icon-button aria-label="Limpiar" (click)="clearEntryDate()">
-                <mat-icon>close</mat-icon>
-              </button>
-
-              <mat-hint *ngIf="entryDateFilter">
-                Filtrando: {{ entryDateFilter | date:'dd MMM yyyy' }}
-              </mat-hint>
-            </mat-form-field>
-
-          </div>
-
-          <button class="new-button" (click)="nuevoSim()">
-            <span class="material-icons">sim_card</span> Nuevo SIM
-          </button>
-        </div>
-        <div class="filter-bar" style="justify-content: end;">
-          <div class="filter-container">
-            <div class="pagination-container">
-              <button class="filter-btn" (click)="toggleSimsShowAll()">
-                {{ simsShowAll ? 'Paginado' : 'Mostrar todos' }}
-              </button>
-
-              <div class="pagination" *ngIf="!simsShowAll && simsFiltered.length > 0 && simsTotalPages > 1">
-                <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage - 1)"
-                  [disabled]="simsCurrentPage === 1">«</button>
-                <button *ngFor="let p of [].constructor(simsTotalPages); let i = index" class="pagination-btn"
-                  [class.active]="simsCurrentPage === (i + 1)" (click)="setSimsPage(i + 1)">
-                  {{ i + 1 }}
-                </button>
-                <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage + 1)"
-                  [disabled]="simsCurrentPage === simsTotalPages">»</button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="table-container">
-        <table class="table">
-          <thead>
-            <tr>
-              <th>No.</th>
-              <th (click)="sortBy('iccid')" class="th-sort">ICCID <span class="arrow">{{ arrowFor('iccid') }}</span>
-              </th>
-              <th (click)="sortBy('modelo')" class="th-sort">Modelo <span class="arrow">{{ arrowFor('modelo') }}</span>
-              </th>
-              <th (click)="sortBy('compania')" class="th-sort">Compañía <span class="arrow">{{ arrowFor('compania')
-                  }}</span></th>
-              <th (click)="sortBy('estatus')" class="th-sort">Estatus <span class="arrow">{{ arrowFor('estatus')
-                  }}</span></th>
-              <th (click)="sortBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
-                  arrowFor('fechaCompra') }}</span></th>
-              <th (click)="sortBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span class="arrow">{{
-                  arrowFor('fechaIngresoLepton') }}</span></th>
-              <th (click)="sortBy('cliente')" class="th-sort">Cliente <span class="arrow">{{ arrowFor('cliente')
-                  }}</span></th>
-              <th>Acciones</th>
-            </tr>
-          </thead>
-          <tbody *ngIf="!simsLoading; else simsLoadingTpl">
-            <tr *ngFor="let sim of displayedSims; let idx = index">
-              <td>{{ simsShowAll ? (idx + 1) : ((simsCurrentPage - 1) * simsPerPage + idx + 1) }}</td>
-              <td>{{ sim.iccid }}</td>
-              <td>{{ sim.modelo }}</td>
-              <td>{{ sim.compania }}</td>
-              <td>
-                <span class="status-badge" [ngClass]="{
-                      inv:  sim.estatus === 'En inventario',
-                      cfg:  sim.estatus === 'En configuración',
-                      inst: sim.estatus === 'Instalado'
-                    }">
-                  {{ sim.estatus }}
-                </span>
-              </td>
-              <td>{{ sim.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
-              <td>{{ sim.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-              <td>{{ sim.cliente || '—' }}</td>
-              <td class="actions-cell">
-                <button class="icon-button view-button" title="Ver" (click)="verSim(sim)">
-                  <span class="material-icons">visibility</span>
-                </button>
-                <button class="icon-button edit-button" title="Editar" (click)="editarSim(sim)">
-                  <span class="material-icons">edit</span>
-                </button>
-                <button class="icon-button delete-button" title="Eliminar" (click)="eliminarSim(sim)"
-                  [disabled]="simsDeletingId === sim.id">
-                  <span class="material-icons">
-                    {{ simsDeletingId === sim.id ? 'hourglass_top' : 'delete' }}
-                  </span>
-                </button>
-              </td>
-            </tr>
-            <tr *ngIf="displayedSims.length === 0">
-              <td colspan="9" style="text-align:center; padding:1rem;">Sin SIM's para mostrar.</td>
-            </tr>
-          </tbody>
-          <ng-template #simsLoadingTpl>
-            <tbody>
-              <tr>
-                <td colspan="9" style="text-align:center; padding:1rem;">Cargando SIM's…</td>
-              </tr>
-            </tbody>
-          </ng-template>
-        </table>
-        <app-new-sim-modal (simCreated)="onSimCreated($event)" (simsBulkCreated)="onSimsBulkCreated($event)"
-          [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
-        <app-view-sim-modal></app-view-sim-modal>
-        <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
-          [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>
-      </div>
-    </div>
-  </mat-tab>
-
-  <!-- ================= RESUMEN (SOLO KPIs) ================ -->
+  <!-- ================= RESUMEN ================= -->
   <mat-tab label="Resumen">
-    <div class="tab-pane">
+    <!-- Deja tu resumen tal cual lo tienes -->
+    <div class="tab-pane resumen-pane">
+      <!-- KPIs -->
+      <div class="resumen-kpis">
+        <div class="kpi-card kpi-main">
+          <div class="kpi-title">Total en existencia</div>
+          <div class="kpi-value">{{ totalDevicesInStock }}</div>
+          <div class="kpi-sub">GPS + SIM + Accesorios (En inventario / En configuración)</div>
+        </div>
 
-      <div class="grupos">
-        <section class="grupo" *ngFor="let g of inventarioGrupos">
-          <div class="grupo-badge" [ngStyle]="{ '--grupo-color': g.color || '#1f8eeb' }">
-            <span>{{ g.nombre }}</span>
-          </div>
+        <div class="kpi-card">
+          <div class="kpi-title">GPS en existencia</div>
+          <div class="kpi-value">{{ gpsInStockCount }}</div>
+        </div>
 
-          <div class="modelos-grid">
-            <article class="modelo-card" *ngFor="let it of g.items" [ngClass]="{
-                     'st-ok': computeStatus(it) === 'EN_EXISTENCIA',
-                     'st-empty': computeStatus(it) === 'SIN_EXISTENCIA',
-                     'st-ask': computeStatus(it) === 'SOLICITAR',
-                     'st-low': computeStatus(it) === 'ULTIMOS',
-                     'st-stop': computeStatus(it) === 'NO_USAR'
-                   }">
+        <div class="kpi-card">
+          <div class="kpi-title">SIM en existencia</div>
+          <div class="kpi-value">{{ simsInStockCount }}</div>
+        </div>
 
-              <header class="modelo-title">{{ it.modelo }}</header>
+        <div class="kpi-card">
+          <div class="kpi-title">Accesorios en existencia</div>
+          <div class="kpi-value">{{ accessoriesInStockCount }}</div>
+        </div>
+      </div>
 
-              <div class="exist-band">
-                <div class="exist-label">Existencia</div>
-                <div class="exist-value">{{ it.cantidad }}</div>
+      <!-- Por modelo -->
+      <div class="resumen-modelos">
+        <!-- GPS -->
+        <section class="resumen-block">
+          <header class="resumen-block__header">
+            <h3>GPS por modelo</h3>
+            <span class="resumen-total">Total: {{ gpsInStockCount }}</span>
+          </header>
+
+          <div class="resumen-table" *ngIf="gpsByModelInStock.length; else gpsEmpty">
+            <div class="resumen-row resumen-head">
+              <div>Modelo</div>
+              <div>Cantidad</div>
+              <div>Estatus</div>
+            </div>
+            <div class="resumen-row" *ngFor="let it of gpsByModelInStock">
+              <div class="model">{{ it.modelo }}</div>
+              <div class="qty">{{ it.cantidad }}</div>
+              <div class="badge">
+                <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                  {{ stockBadgeText(it.cantidad) }}
+                </span>
               </div>
+            </div>
+          </div>
+        </section>
 
-              <footer class="status-text">{{ statusText(computeStatus(it)) }}</footer>
-            </article>
+        <!-- SIM -->
+        <section class="resumen-block">
+          <header class="resumen-block__header">
+            <h3>SIM por modelo</h3>
+            <span class="resumen-total">Total: {{ simsInStockCount }}</span>
+          </header>
+
+          <div class="resumen-table" *ngIf="simsByModelInStock.length; else simEmpty">
+            <div class="resumen-row resumen-head">
+              <div>Modelo</div>
+              <div>Cantidad</div>
+              <div>Estatus</div>
+            </div>
+
+            <div class="resumen-row" *ngFor="let it of simsByModelInStock">
+              <div class="model">{{ it.modelo }}</div>
+              <div class="qty">{{ it.cantidad }}</div>
+              <div class="badge">
+                <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                  {{ stockBadgeText(it.cantidad) }}
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Accesorios -->
+        <section class="resumen-block">
+          <header class="resumen-block__header">
+            <h3>Accesorios por modelo</h3>
+            <span class="resumen-total">Total: {{ accessoriesInStockCount }}</span>
+          </header>
+
+          <div class="resumen-table" *ngIf="accessoriesByModelInStock.length; else accEmpty">
+            <div class="resumen-row resumen-head">
+              <div>Modelo</div>
+              <div>Cantidad</div>
+              <div>Estatus</div>
+            </div>
+
+            <div class="resumen-row" *ngFor="let it of accessoriesByModelInStock">
+              <div class="model">{{ it.modelo }}</div>
+              <div class="qty">{{ it.cantidad }}</div>
+              <div class="badge">
+                <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                  {{ stockBadgeText(it.cantidad) }}
+                </span>
+              </div>
+            </div>
           </div>
         </section>
       </div>
 
+      <ng-template #gpsEmpty><div class="resumen-empty">Sin GPS en existencia.</div></ng-template>
+      <ng-template #simEmpty><div class="resumen-empty">Sin SIM en existencia.</div></ng-template>
+      <ng-template #accEmpty><div class="resumen-empty">Sin Accesorios en existencia.</div></ng-template>
     </div>
   </mat-tab>
 
+  <!-- ============= TABS COMPONENTIZADOS ============= -->
+  <mat-tab label="GPS's">
+    <app-gps-tab></app-gps-tab>
+  </mat-tab>
 
+  <mat-tab label="SIM's">
+    <app-sims-tab></app-sims-tab>
+  </mat-tab>
 
-  <!-- ================= Accesorios ================= -->
   <mat-tab label="Accesorios">
-    <div class="tab-pane">
-      <div class="empty-state">
-        <h3>Accesorios</h3>
-        <p>Aquí podrás listar, filtrar y gestionar accesorios.</p>
-        <button class="new-button">
-          <span class="material-icons">extension</span> Agregar Accesorio
-        </button>
-      </div>
-      <!-- TODO: tu tabla de Accesorios -->
-    </div>
+    <app-accessories-tab></app-accessories-tab>
   </mat-tab>
 
 </mat-tab-group>

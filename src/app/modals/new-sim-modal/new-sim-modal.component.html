@@ -12,75 +12,77 @@
   <mat-tab-group [(selectedIndex)]="activeTab">
     <!-- ============ TAB 1: INDIVIDUAL ============ -->
     <mat-tab label="Individual">
-      <form [formGroup]="form" (ngSubmit)="submit()" class="modal__body compact">
-        <div class="grid">
-          <!-- ICCID -->
-          <mat-form-field appearance="outline">
-            <mat-label>ICCID</mat-label>
-            <input matInput formControlName="iccid" placeholder="123456789..." inputmode="numeric" autocomplete="off"
-              (input)="digitsOnlyCtrl(form, 'iccid')" maxlength="20" />
-            <mat-error *ngIf="form.get('iccid')?.hasError('required')">ICCID es requerido</mat-error>
-            <mat-error *ngIf="form.get('iccid')?.hasError('minlength') || form.get('iccid')?.hasError('maxlength')">
-              Debe contener 20 dígitos
-            </mat-error>
-            <mat-error *ngIf="form.get('iccid')?.hasError('pattern')">Solo números (0-9)</mat-error>
-          </mat-form-field>
+      <form [formGroup]="form" (ngSubmit)="submit()" class="modal__form compact">
+        <div class="modal__scroll">
+          <div class="grid">
+            <!-- ICCID -->
+            <mat-form-field appearance="outline">
+              <mat-label>ICCID</mat-label>
+              <input matInput formControlName="iccid" placeholder="123456789..." inputmode="numeric" autocomplete="off"
+                (input)="digitsOnlyCtrl(form, 'iccid')" maxlength="20" />
+              <mat-error *ngIf="form.get('iccid')?.hasError('required')">ICCID es requerido</mat-error>
+              <mat-error *ngIf="form.get('iccid')?.hasError('minlength') || form.get('iccid')?.hasError('maxlength')">
+                Debe contener 20 dígitos
+              </mat-error>
+              <mat-error *ngIf="form.get('iccid')?.hasError('pattern')">Solo números (0-9)</mat-error>
+            </mat-form-field>
 
-          <!-- Modelo -->
-          <mat-form-field appearance="outline">
-            <mat-label>Modelo</mat-label>
-            <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="2 3 ff / 4ff" />
-            <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
-              <mat-option *ngFor="let opt of filteredModels$ | async" [value]="opt">{{ opt }}</mat-option>
-            </mat-autocomplete>
-            <mat-error *ngIf="form.get('model')?.hasError('required')">Modelo es requerido</mat-error>
-          </mat-form-field>
+            <!-- Modelo -->
+            <mat-form-field appearance="outline">
+              <mat-label>Modelo</mat-label>
+              <input matInput formControlName="model" [matAutocomplete]="modelAuto" placeholder="2 3 ff / 4ff" />
+              <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
+                <mat-option *ngFor="let opt of filteredModels$ | async" [value]="opt">{{ opt }}</mat-option>
+              </mat-autocomplete>
+              <mat-error *ngIf="form.get('model')?.hasError('required')">Modelo es requerido</mat-error>
+            </mat-form-field>
 
-          <!-- Compañía -->
-          <mat-form-field appearance="outline">
-            <mat-label>Compañía</mat-label>
-            <input matInput formControlName="company" [matAutocomplete]="companyAuto"
-              placeholder="Introduzca la compañía" />
-            <mat-autocomplete #companyAuto="matAutocomplete" autoActiveFirstOption>
-              <mat-option *ngFor="let opt of filteredCompanies$ | async" [value]="opt">{{ opt }}</mat-option>
-            </mat-autocomplete>
-            <mat-error *ngIf="form.get('company')?.hasError('required')">Compañía es requerida</mat-error>
-          </mat-form-field>
+            <!-- Compañía -->
+            <mat-form-field appearance="outline">
+              <mat-label>Compañía</mat-label>
+              <input matInput formControlName="company" [matAutocomplete]="companyAuto"
+                placeholder="Introduzca la compañía" />
+              <mat-autocomplete #companyAuto="matAutocomplete" autoActiveFirstOption>
+                <mat-option *ngFor="let opt of filteredCompanies$ | async" [value]="opt">{{ opt }}</mat-option>
+              </mat-autocomplete>
+              <mat-error *ngIf="form.get('company')?.hasError('required')">Compañía es requerida</mat-error>
+            </mat-form-field>
 
-          <!-- Estatus -->
-          <mat-form-field appearance="outline">
-            <mat-label>Estatus</mat-label>
-            <mat-select formControlName="status">
-              <mat-option value="En inventario">En inventario</mat-option>
-              <mat-option value="En configuración">En configuración</mat-option>
-              <mat-option value="Instalado">Instalado</mat-option>
-            </mat-select>
-            <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
-          </mat-form-field>
+            <!-- Estatus -->
+            <mat-form-field appearance="outline">
+              <mat-label>Estatus</mat-label>
+              <mat-select formControlName="status">
+                <mat-option value="En inventario">En inventario</mat-option>
+                <mat-option value="En configuración">En configuración</mat-option>
+                <mat-option value="Instalado">Instalado</mat-option>
+              </mat-select>
+              <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+            </mat-form-field>
 
-          <!-- Fecha de compra -->
-          <mat-form-field appearance="outline">
-            <mat-label>Fecha de compra</mat-label>
-            <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
-            <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
-            <mat-datepicker #pd></mat-datepicker>
-            <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
-          </mat-form-field>
+            <!-- Fecha de compra -->
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de compra</mat-label>
+              <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
+              <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
+              <mat-datepicker #pd></mat-datepicker>
+              <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+            </mat-form-field>
 
-          <!-- Fecha de ingreso -->
-          <mat-form-field appearance="outline">
-            <mat-label>Fecha de ingreso</mat-label>
-            <input matInput [matDatepicker]="ed" formControlName="entryDate" />
-            <mat-datepicker-toggle matSuffix [for]="ed"></mat-datepicker-toggle>
-            <mat-datepicker #ed></mat-datepicker>
-            <mat-error *ngIf="form.get('entryDate')?.hasError('required')">Requerida</mat-error>
-          </mat-form-field>
+            <!-- Fecha de ingreso -->
+            <mat-form-field appearance="outline">
+              <mat-label>Fecha de ingreso</mat-label>
+              <input matInput [matDatepicker]="ed" formControlName="entryDate" />
+              <mat-datepicker-toggle matSuffix [for]="ed"></mat-datepicker-toggle>
+              <mat-datepicker #ed></mat-datepicker>
+              <mat-error *ngIf="form.get('entryDate')?.hasError('required')">Requerida</mat-error>
+            </mat-form-field>
 
-          <!-- Comentarios -->
-          <mat-form-field appearance="outline" class="col-span-2">
-            <mat-label>Comentarios (opcional)</mat-label>
-            <textarea matInput formControlName="comments" rows="3" placeholder="Notas adicionales..."></textarea>
-          </mat-form-field>
+            <!-- Comentarios -->
+            <mat-form-field appearance="outline" class="col-span-2">
+              <mat-label>Comentarios (opcional)</mat-label>
+              <textarea matInput formControlName="comments" rows="3" placeholder="Notas adicionales..."></textarea>
+            </mat-form-field>
+          </div>
         </div>
 
         <footer class="modal__footer">
@@ -95,7 +97,7 @@
     <!-- ============ TAB 2: MASIVO ============ -->
     <mat-tab label="Registro masivo">
       <!-- ⚠️ el form actúa como contenedor de toda la fila con alturas adaptables -->
-      <form [formGroup]="bulkForm" (ngSubmit)="submitBulk()" class="modal__body compact bulk-body">
+      <form [formGroup]="bulkForm" (ngSubmit)="submitBulk()" class="modal__form compact bulk-body">
         <div class="bulk-two-col">
           <div class="bulk-left">
             <div class="grid">

@@ -24,6 +24,18 @@ export interface EditSimOpenData {
   styleUrl: './edit-sim-modal.component.scss'
 })
 export class EditSimModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @Input() modelOptions: string[] = [];
   @Input() companyOptions: string[] = [];
 
@@ -128,6 +140,7 @@ export class EditSimModalComponent {
   open(data: EditSimOpenData) {
     this.currentId = data.id;
     this.show = true;
+    this.lockBodyScroll();
 
     this.form.reset({
       iccid: data.iccid ?? '',
@@ -155,6 +168,7 @@ export class EditSimModalComponent {
 
   close() {
     this.show = false;
+    this.unlockBodyScroll();
     this.changesSub?.unsubscribe();
   }
 

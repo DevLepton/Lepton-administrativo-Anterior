@@ -27,6 +27,18 @@ export interface Cliente {
   styleUrls: ['./register-pedidos-modal.component.scss'],
 })
 export class RegisterPedidosModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @Input() cliente!: Cliente | null; // Recibe los datos desde el componente padre
   @Output() closeModal = new EventEmitter<void>(); // Emitir evento para cerrar el modal
 
@@ -35,11 +47,13 @@ export class RegisterPedidosModalComponent {
 
 
   close(): void {
+    this.unlockBodyScroll();
     this.closeModal.emit(); // Emitir evento de cierre
   }
 
   openModalPedidos(): void {
     this.isAsignarPedidosVisible = true;
+    this.lockBodyScroll();
   }
 
   closeAsignarPedidosModal(): void {

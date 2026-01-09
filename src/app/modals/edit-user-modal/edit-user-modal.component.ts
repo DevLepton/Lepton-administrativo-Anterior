@@ -9,6 +9,18 @@ import { NgToastService } from 'ng-angular-popup';
   styleUrls: ['./edit-user-modal.component.scss']
 })
 export class EditUserModalComponent {
+  private lockBodyScroll() {
+    document.body.style.overflow = 'hidden';
+  }
+
+  private unlockBodyScroll() {
+    document.body.style.overflow = '';
+  }
+
+  ngOnDestroy() {
+    this.unlockBodyScroll();
+  }
+
   @Input() user: any;
   @Output() userUpdated = new EventEmitter<any>();
 
@@ -45,6 +57,7 @@ export class EditUserModalComponent {
 
     this.form.patchValue(this.originalData);
     this.showModal = true;
+    this.lockBodyScroll();
   }
 
 
@@ -55,6 +68,7 @@ export class EditUserModalComponent {
 
   close() {
     this.showModal = false;
+    this.unlockBodyScroll();
     this.form.reset();
     this.loading = false;
   }

@@ -4,33 +4,32 @@ import { map, Observable, startWith, Subscription } from 'rxjs';
 
 type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
 
-export interface EditGpsOpenData {
-  id: string;
-  imei: string;
-  sn: string;
-  name: string;
-  brand: string;
-  model: string;
-  status: DeviceStatus;
-  purchaseDate: string | Date | null;
-  entryDate: string | Date | null;
+export interface EditAccessoryOpenData {
+  id: string;                        // _id de Mongo (para update endpoint)
+  accId: string;                     // device.id (id del accesorio en schema)
+  sn: string;                        // requerido y único
+  name: string;                      // device.name
+  brand: string;                     // device.brand
+  model: string;                     // device.model
+  status: DeviceStatus;              // device.status
+  purchaseDate: string | Date | null;// device.purchaseDate
+  entryDate: string | Date | null;   // device.entryDate
   installationDate?: string | Date | null;
   client?: string | null;
   comments?: string | null;
 }
 
-type GpsEditableKeys =
-  | 'imei' | 'sn' | 'name' | 'brand' | 'model' | 'status'
+type AccessoryEditableKeys =
+  | 'accId' | 'sn' | 'name' | 'brand' | 'model' | 'status'
   | 'purchaseDate' | 'entryDate' | 'installationDate'
   | 'client' | 'comments';
 
-
 @Component({
-  selector: 'app-edit-gps-modal',
-  templateUrl: './edit-gps-modal.component.html',
-  styleUrl: './edit-gps-modal.component.scss'
+  selector: 'app-edit-accessory-modal',
+  templateUrl: './edit-accessory-modal.component.html',
+  styleUrl: './edit-accessory-modal.component.scss'
 })
-export class EditGpsModalComponent {
+export class EditAccessoryModalComponent {
   private lockBodyScroll() {
     document.body.style.overflow = 'hidden';
   }
@@ -46,10 +45,10 @@ export class EditGpsModalComponent {
   @Input() modelOptions: string[] = [];
   @Input() brandOptions: string[] = [];
 
-  @Output() gpsUpdated = new EventEmitter<{
-    id: string;
+  @Output() accessoryUpdated = new EventEmitter<{
+    id: string; // _id mongo
     payload: Partial<{
-      imei: string;
+      id: string;                 // 👈 OJO: backend espera "id" (no accId)
       sn: string;
       name: string;
       brand: string;
@@ -77,7 +76,7 @@ export class EditGpsModalComponent {
 
   constructor(private fb: FormBuilder) {
     this.form = this.fb.group({
-      imei: ['', [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]],
+      accId: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(80)]],
       sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
       name: ['', Validators.required],
       brand: ['', Validators.required],
@@ -112,7 +111,7 @@ export class EditGpsModalComponent {
     if (d instanceof Date) return d;
     const iso = new Date(d);
     if (isNaN(iso.getTime())) return null;
-    // crear fecha local usando Y-M-D UTC (evita “un día menos”)
+    // fecha local a partir del Y-M-D UTC (evita “un día menos”)
     return new Date(iso.getUTCFullYear(), iso.getUTCMonth(), iso.getUTCDate());
   }
 
@@ -129,13 +128,13 @@ export class EditGpsModalComponent {
     return t === '' ? null : t;
   }
 
-  private snapshotForm(): Record<GpsEditableKeys, any> {
+  private snapshotForm(): Record<AccessoryEditableKeys, any> {
     const v = this.form.getRawValue();
     const toKey = (x: any) => (x ? this.toYMD(x) : null);
     const t = (s: any) => (s ?? '').toString().trim();
 
     return {
-      imei: t(v.imei),
+      accId: t(v.accId),
       sn: t(v.sn),
       name: t(v.name),
       brand: t(v.brand),
@@ -149,7 +148,6 @@ export class EditGpsModalComponent {
     };
   }
 
-
   private shallowEqual(a: any, b: any) {
     const ka = Object.keys(a);
     const kb = Object.keys(b);
@@ -158,22 +156,14 @@ export class EditGpsModalComponent {
     return true;
   }
 
-  digitsOnly(ctrlName: string) {
-    const ctrl = this.form.get(ctrlName);
-    if (!ctrl) return;
-    const before = (ctrl.value ?? '').toString();
-    const after = before.replace(/\D+/g, '');
-    if (after !== before) ctrl.setValue(after, { emitEvent: false });
-  }
-
   // ===== API del modal =====
-  open(data: EditGpsOpenData) {
+  open(data: EditAccessoryOpenData) {
     this.currentId = data.id;
     this.show = true;
     this.lockBodyScroll();
 
     this.form.reset({
-      imei: data.imei ?? '',
+      accId: data.accId ?? '',
       sn: data.sn ?? '',
       name: data.name ?? '',
       brand: data.brand ?? '',
@@ -206,12 +196,12 @@ export class EditGpsModalComponent {
     if (this.form.invalid || !this.currentId) return;
     this.loading = true;
 
-    // snapshot actual (normalizado) y payload (con formato API)
     const v = this.form.value;
-    const current: Record<GpsEditableKeys, any> = this.snapshotForm();
+    const current: Record<AccessoryEditableKeys, any> = this.snapshotForm();
 
-    const fullPayload: Record<GpsEditableKeys, any> = {
-      imei: String(v.imei ?? '').trim(),
+    // payload completo (normalizado)
+    const fullPayload: Record<AccessoryEditableKeys, any> = {
+      accId: String(v.accId ?? '').trim(),
       sn: String(v.sn ?? '').trim(),
       name: String(v.name ?? '').trim(),
       brand: String(v.brand ?? '').trim(),
@@ -224,19 +214,22 @@ export class EditGpsModalComponent {
       comments: this.emptyToNull(v.comments),
     };
 
-    // Enviar solo campos cambiados (opcional, eficiente)
-    const keys = Object.keys(current) as GpsEditableKeys[];
-    const changedOnly: Partial<Record<GpsEditableKeys, any>> = {};
-
+    // solo cambios
+    const keys = Object.keys(current) as AccessoryEditableKeys[];
+    const changedOnly: Partial<Record<AccessoryEditableKeys, any>> = {};
     for (const k of keys) {
       if (!this.initialSnapshot || current[k] !== this.initialSnapshot[k]) {
         changedOnly[k] = fullPayload[k];
       }
     }
 
-    this.gpsUpdated.emit({
+    // 🔁 traducir accId -> id (backend)
+    const out: any = { ...(Object.keys(changedOnly).length ? changedOnly : fullPayload) };
+    if ('accId' in out) { out.id = out.accId; delete out.accId; }
+
+    this.accessoryUpdated.emit({
       id: this.currentId,
-      payload: Object.keys(changedOnly).length ? changedOnly : fullPayload, // fallback por si acaso
+      payload: out,
     });
 
     this.loading = false;

@@ -87,6 +87,23 @@ export interface CreateGpsPayload {
 }
 export type UpdateGpsPayload = Partial<Omit<CreateGpsPayload, 'type'>>;
 
+/** Payload para crear Accesorio */
+export interface CreateAccessoryPayload {
+  type: 'accessory';
+  id: string;              // 👈 campo "id" del accesorio (schema)
+  sn: string;
+  name: string;
+  brand: string;
+  model: string;
+  status: DeviceStatus;
+  purchaseDate: string | Date;
+  entryDate: string | Date;
+  installationDate?: string | Date | null;
+  client?: string | null;
+  comments?: string | null;
+}
+export type UpdateAccessoryPayload = Partial<Omit<CreateAccessoryPayload, 'type'>>;
+
 /** Query de listado GPS (coincide con filtros del UI) */
 export interface GpsQuery {
   // filtros de tu UI
@@ -269,4 +286,39 @@ export class ApiService {
     const params = this.buildHttpParams(filters as any);
     return this.http.delete<{ message: string; deletedCount: number }>(`${this.baseUrl}/events`, { params });
   }
+
+  /* ====================== ACCESORIOS (devices?type=accessory) ====================== */
+  getAccessories(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'accessory' } });
+  }
+
+  getAccessoryById(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/devices/${id}`);
+  }
+
+  createAccessory(payload: Omit<CreateAccessoryPayload, 'type'>): Observable<any> {
+    const body: CreateAccessoryPayload = {
+      type: 'accessory',
+      ...payload,
+      purchaseDate: this.toIsoDate(payload.purchaseDate)!,
+      entryDate: this.toIsoDate(payload.entryDate)!,
+      installationDate: this.toIsoDate(payload.installationDate ?? null),
+    };
+    return this.http.post(`${this.baseUrl}/devices`, body);
+  }
+
+  updateAccessory(id: string, payload: UpdateAccessoryPayload): Observable<any> {
+    const body: any = { ...payload };
+
+    if ('purchaseDate' in body) body.purchaseDate = this.toIsoDate(body.purchaseDate);
+    if ('entryDate' in body) body.entryDate = this.toIsoDate(body.entryDate);
+    if ('installationDate' in body) body.installationDate = this.toIsoDate(body.installationDate);
+
+    return this.http.put(`${this.baseUrl}/devices/${id}`, body);
+  }
+
+  deleteAccessory(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/devices/${id}`);
+  }
+
 }

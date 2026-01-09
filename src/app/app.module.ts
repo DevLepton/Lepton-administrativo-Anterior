@@ -66,6 +66,13 @@ import { EventHistoryModalComponent } from './modals/event-history-modal/event-h
 import { NewGpsModalComponent } from './modals/new-gps-modal/new-gps-modal.component';
 import { ViewGpsModalComponent } from './modals/view-gps-modal/view-gps-modal.component';
 import { EditGpsModalComponent } from './modals/edit-gps-modal/edit-gps-modal.component';
+import { NewAccessoryModalComponent } from './modals/new-accessory-modal/new-accessory-modal.component';
+import { ViewAccessoryModalComponent } from './modals/view-accessory-modal/view-accessory-modal.component';
+import { EditAccessoryModalComponent } from './modals/edit-accessory-modal/edit-accessory-modal.component';
+import { GpsTabComponent } from './inventario/almacen/gps-tab/gps-tab.component';
+import { SimsTabComponent } from './inventario/almacen/sims-tab/sims-tab.component';
+import { AccessoriesTabComponent } from './inventario/almacen/accessories-tab/accessories-tab.component';
+import { MatTooltipModule } from '@angular/material/tooltip';
 
 registerLocaleData(es);
 
@@ -110,6 +117,12 @@ registerLocaleData(es);
     NewGpsModalComponent,
     ViewGpsModalComponent,
     EditGpsModalComponent,
+    NewAccessoryModalComponent,
+    ViewAccessoryModalComponent,
+    EditAccessoryModalComponent,
+    GpsTabComponent,
+    SimsTabComponent,
+    AccessoriesTabComponent,
   ],
   imports: [
     BrowserModule,
@@ -133,7 +146,8 @@ registerLocaleData(es);
     MatAutocompleteModule,
     MatMenuModule,
     MatDivider,
-    MatProgressBar
+    MatProgressBar,
+    MatTooltipModule
 ],
   providers: [
     provideClientHydration(),
