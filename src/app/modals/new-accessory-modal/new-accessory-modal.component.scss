@@ -18,7 +18,7 @@
 }
 
 .modal--wide {
-  width: 980px;
+  width: 60%;
   max-width: calc(100% - 2rem);
 }
 
@@ -309,4 +309,17 @@ input, select {
 @media (max-width: 900px) {
   .modal--wide { width: 100%; }
   .bulk-two-col { grid-template-columns: 1fr; }
+}
+
+.purchase-row{
+  display: flex;
+  gap: .75rem;
+
+  .mat-mdc-slide-toggle {
+    margin-top: 0.8rem;
+  }
+}
+
+.purchase-field{
+  flex: 1;
 }

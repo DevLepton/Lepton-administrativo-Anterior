@@ -16,6 +16,7 @@ import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redirecc
 import { UsersComponent } from './admin/users/users.component';
 import { AlmacenComponent } from './inventario/almacen/almacen.component';
 import { EventsComponent } from './admin/events/events.component';
+import { PeticionesComponent } from './soporte/peticiones/peticiones.component';
 
 const routes: Routes = [
   {
@@ -34,17 +35,22 @@ const routes: Routes = [
         data: { roles: ['admin'] }
       },
       {
+        path: 'peticiones',
+        component: PeticionesComponent,
+        canActivate: [RoleGuard],
+        data: { roles: ['inventario', 'soporte'] }
+      },
+      {
         path: 'eventos',
         component: EventsComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario'] }
+        data: { roles: ['admin', 'inventario', 'soporte'] }
       },
-
       {
         path: 'almacen',
         component: AlmacenComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['inventario'] }
+        data: { roles: ['inventario', 'soporte'] }
       },
       {
         path: 'dashboard',

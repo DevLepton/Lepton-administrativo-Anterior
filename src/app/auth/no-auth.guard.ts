@@ -15,8 +15,10 @@ export class NoAuthGuard implements CanActivate {
 
       if (role === 'admin') {
         this.router.navigate(['/usuarios']);
+      } else if (role === 'soporte') {
+        this.router.navigate(['/peticiones']);
       } else if (role === 'inventario') {
-        this.router.navigate(['/almacen']);
+        this.router.navigate(['/peticiones']);
       } else if (role === 'finanzas') {
         this.router.navigate(['/dashboard']);
       } else {

@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild } from '@angular/core';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -6,7 +6,7 @@ import { ApiService } from '../../../services/api.service';
 import { NewAccessoryModalComponent } from '../../../modals/new-accessory-modal/new-accessory-modal.component';
 import { ViewAccessoryModalComponent } from '../../../modals/view-accessory-modal/view-accessory-modal.component';
 import { EditAccessoryModalComponent } from '../../../modals/edit-accessory-modal/edit-accessory-modal.component';
-
+import { PageEvent } from '@angular/material/paginator';
 
 interface AccessoryItem {
   id: string;                         // _id
@@ -28,12 +28,17 @@ interface AccessoryItem {
   templateUrl: './accessories-tab.component.html',
   styleUrl: '../almacen.component.scss'
 })
-export class AccessoriesTabComponent implements OnInit {
-  @ViewChild(NewAccessoryModalComponent) newAccessoryModal!: NewAccessoryModalComponent;
+export class AccessoriesTabComponent implements OnChanges {
+  @Input() accessoriesData: any[] = [];
+  @Input() isInventoryUser = false;
+
+  @Output() refreshRequested = new EventEmitter<void>();
+
+  @ViewChild(NewAccessoryModalComponent) newAccessoryModal?: NewAccessoryModalComponent;
   @ViewChild(ViewAccessoryModalComponent) viewAccessoryModal!: ViewAccessoryModalComponent;
   @ViewChild(EditAccessoryModalComponent) editAccessoryModal!: EditAccessoryModalComponent;
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   // data
   accessories: AccessoryItem[] = [];
@@ -43,7 +48,6 @@ export class AccessoriesTabComponent implements OnInit {
   // paginado/filtros
   accessoriesPerPage = 10;
   accessoriesCurrentPage = 1;
-  accessoriesShowAll = true;
 
   accessorySearch = '';
   accessoryFilterBrand = '';
@@ -57,8 +61,16 @@ export class AccessoriesTabComponent implements OnInit {
   accessorySortKey: keyof AccessoryItem | 'no' = 'no';
   accessorySortDir: 'asc' | 'desc' = 'desc';
 
-  ngOnInit(): void {
-    this.loadAccessories();
+  ngOnChanges() {
+    if (this.accessoriesData.length > 0) {
+      this.accessories = this.accessoriesData.map(d => this.mapDeviceToAccessoryItem(d));
+      this.accessoriesInitial = [...this.accessories];
+    }
+  }
+
+  onPage(e: PageEvent) {
+    this.accessoriesPerPage = e.pageSize;
+    this.accessoriesCurrentPage = e.pageIndex + 1;
   }
 
   private objectIdEpoch(id: string): number {
@@ -133,7 +145,6 @@ export class AccessoriesTabComponent implements OnInit {
   // ===== pagination =====
   get displayedAccessories(): AccessoryItem[] {
     const src = this.accessoriesFiltered;
-    if (this.accessoriesShowAll) return src;
     const start = (this.accessoriesCurrentPage - 1) * this.accessoriesPerPage;
     return src.slice(start, start + this.accessoriesPerPage);
   }
@@ -143,13 +154,13 @@ export class AccessoriesTabComponent implements OnInit {
     return Math.max(1, total);
   }
 
-  setAccessoriesPage(p: number) {
-    this.accessoriesCurrentPage = Math.min(Math.max(1, p), this.accessoriesTotalPages);
+  onPageChange(e: PageEvent) {
+    this.accessoriesPerPage = e.pageSize;
+    this.accessoriesCurrentPage = e.pageIndex + 1;
   }
 
-  toggleAccessoriesShowAll() {
-    this.accessoriesShowAll = !this.accessoriesShowAll;
-    this.accessoriesCurrentPage = 1;
+  setAccessoriesPage(p: number) {
+    this.accessoriesCurrentPage = Math.min(Math.max(1, p), this.accessoriesTotalPages);
   }
 
   // ===== filters =====
@@ -220,7 +231,7 @@ export class AccessoriesTabComponent implements OnInit {
 
   arrowForAccessory(key: keyof AccessoryItem | 'no'): string {
     if (this.accessorySortKey !== key) return '';
-    return this.accessorySortDir === 'asc' ? '▲' : '▼';
+    return this.accessorySortDir === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
   // ===== uniques =====
@@ -241,7 +252,7 @@ export class AccessoriesTabComponent implements OnInit {
   get accessoryBrandOptions(): string[] { return this.uniqueAccessoryBrands; }
 
   // ===== actions =====
-  nuevoAccesorio() { this.newAccessoryModal.open(); }
+  nuevoAccesorio() { this.newAccessoryModal?.open(); }
 
   verAccesorio(a: AccessoryItem) {
     const found = this.accessories.find(x => x.id === a.id);
@@ -311,12 +322,11 @@ export class AccessoriesTabComponent implements OnInit {
           this.accessories = this.accessories.filter(x => x.id !== a.id);
           this.accessoriesInitial = this.accessoriesInitial.filter(x => x.id !== a.id);
 
-          if (!this.accessoriesShowAll) {
-            const totalPages = Math.max(1, Math.ceil(this.accessories.length / this.accessoriesPerPage));
-            if (this.accessoriesCurrentPage > totalPages) this.accessoriesCurrentPage = totalPages;
-          }
+          const totalPages = Math.max(1, Math.ceil(this.accessoriesFiltered.length / this.accessoriesPerPage));
+          if (this.accessoriesCurrentPage > totalPages) this.accessoriesCurrentPage = totalPages;
 
           this.toast.success({ detail: 'Éxito', summary: 'Accesorio eliminado', duration: 4000 });
+          this.refreshRequested.emit();
         },
         error: (err) => {
           const msg = err?.error?.error || 'No se pudo eliminar el Accesorio';
@@ -328,8 +338,9 @@ export class AccessoriesTabComponent implements OnInit {
   }
 
   onAccessoryCreated(evt: any) {
+    if (!this.isInventoryUser) return;
     this.apiService.createAccessory(evt).subscribe({
-      next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio registrado', duration: 4000 }); this.loadAccessories(); },
+      next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio registrado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
         const msg = err?.error?.error || 'Error al registrar Accesorio';
         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
@@ -338,6 +349,7 @@ export class AccessoriesTabComponent implements OnInit {
   }
 
   onAccessoriesBulkCreated(list: any[]) {
+    if (!this.isInventoryUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay Accesorios para registrar.', duration: 3000 });
       return;
@@ -352,18 +364,18 @@ export class AccessoriesTabComponent implements OnInit {
         const ko = res.length - ok;
         if (ok) this.toast.success({ detail: 'Éxito', summary: `${ok} Accesorio(s) registrado(s).`, duration: 5000 });
         if (ko) this.toast.error({ detail: 'Error', summary: `${ko} Accesorio(s) no se registraron.`, duration: 6000 });
-        this.loadAccessories();
+        this.refreshRequested.emit();
       },
       error: () => {
         this.toast.error({ detail: 'Error', summary: 'Falló el registro masivo.', duration: 6000 });
-        this.loadAccessories();
+        this.refreshRequested.emit();
       }
     });
   }
 
   onAccessoryUpdated(evt: { id: string; payload: any }) {
     this.apiService.updateAccessory(evt.id, evt.payload).subscribe({
-      next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio actualizado', duration: 4000 }); this.loadAccessories(); },
+      next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio actualizado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
         const msg = err?.error?.error || 'Error al actualizar Accesorio';
         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
@@ -372,134 +384,134 @@ export class AccessoriesTabComponent implements OnInit {
   }
 
   // ✅ NUEVO: selección
-selectedAccessoryIds = new Set<string>();
+  selectedAccessoryIds = new Set<string>();
 
-private clearAccessorySelection() {
-  this.selectedAccessoryIds.clear();
-}
+  private clearAccessorySelection() {
+    this.selectedAccessoryIds.clear();
+  }
 
-isAccessorySelected(id: string): boolean {
-  return this.selectedAccessoryIds.has(id);
-}
+  isAccessorySelected(id: string): boolean {
+    return this.selectedAccessoryIds.has(id);
+  }
 
-toggleAccessoryRowSelection(a: AccessoryItem, checked: boolean) {
-  if (checked) this.selectedAccessoryIds.add(a.id);
-  else this.selectedAccessoryIds.delete(a.id);
-}
+  toggleAccessoryRowSelection(a: AccessoryItem, checked: boolean) {
+    if (checked) this.selectedAccessoryIds.add(a.id);
+    else this.selectedAccessoryIds.delete(a.id);
+  }
 
-toggleAccessoryRowByClick(a: AccessoryItem) {
-  this.toggleAccessoryRowSelection(a, !this.isAccessorySelected(a.id));
-}
+  toggleAccessoryRowByClick(a: AccessoryItem) {
+    this.toggleAccessoryRowSelection(a, !this.isAccessorySelected(a.id));
+  }
 
-toggleSelectAllAccessoriesVisible(checked: boolean) {
-  const visible = this.displayedAccessories;
-  if (checked) visible.forEach(x => this.selectedAccessoryIds.add(x.id));
-  else visible.forEach(x => this.selectedAccessoryIds.delete(x.id));
-}
+  toggleSelectAllAccessoriesVisible(checked: boolean) {
+    const visible = this.displayedAccessories;
+    if (checked) visible.forEach(x => this.selectedAccessoryIds.add(x.id));
+    else visible.forEach(x => this.selectedAccessoryIds.delete(x.id));
+  }
 
-get isAllAccessoriesVisibleSelected(): boolean {
-  const visible = this.displayedAccessories;
-  return visible.length > 0 && visible.every(x => this.selectedAccessoryIds.has(x.id));
-}
+  get isAllAccessoriesVisibleSelected(): boolean {
+    const visible = this.displayedAccessories;
+    return visible.length > 0 && visible.every(x => this.selectedAccessoryIds.has(x.id));
+  }
 
-get isSomeAccessoriesVisibleSelected(): boolean {
-  const visible = this.displayedAccessories;
-  return visible.some(x => this.selectedAccessoryIds.has(x.id)) && !this.isAllAccessoriesVisibleSelected;
-}
+  get isSomeAccessoriesVisibleSelected(): boolean {
+    const visible = this.displayedAccessories;
+    return visible.some(x => this.selectedAccessoryIds.has(x.id)) && !this.isAllAccessoriesVisibleSelected;
+  }
 
-get accessoriesSelectedCount(): number {
-  return this.selectedAccessoryIds.size;
-}
+  get accessoriesSelectedCount(): number {
+    return this.selectedAccessoryIds.size;
+  }
 
-get canViewOrEditAccessory(): boolean {
-  return this.accessoriesSelectedCount === 1;
-}
+  get canViewOrEditAccessory(): boolean {
+    return this.accessoriesSelectedCount === 1;
+  }
 
-get selectedAccessoriesItems(): AccessoryItem[] {
-  const map = new Map(this.accessories.map(x => [x.id, x] as const));
-  return Array.from(this.selectedAccessoryIds)
-    .map(id => map.get(id))
-    .filter(Boolean) as AccessoryItem[];
-}
+  get selectedAccessoriesItems(): AccessoryItem[] {
+    const map = new Map(this.accessories.map(x => [x.id, x] as const));
+    return Array.from(this.selectedAccessoryIds)
+      .map(id => map.get(id))
+      .filter(Boolean) as AccessoryItem[];
+  }
 
-viewSelectedAccessory() {
-  if (!this.canViewOrEditAccessory) return;
-  this.verAccesorio(this.selectedAccessoriesItems[0]);
-}
+  viewSelectedAccessory() {
+    if (!this.canViewOrEditAccessory) return;
+    this.verAccesorio(this.selectedAccessoriesItems[0]);
+  }
 
-editSelectedAccessory() {
-  if (!this.canViewOrEditAccessory) return;
-  this.editarAccesorio(this.selectedAccessoriesItems[0]);
-}
+  editSelectedAccessory() {
+    if (!this.canViewOrEditAccessory) return;
+    this.editarAccesorio(this.selectedAccessoriesItems[0]);
+  }
 
-deleteSelectedAccessories() {
-  if (this.accessoriesSelectedCount === 0) return;
+  deleteSelectedAccessories() {
+    if (!this.isInventoryUser) return;
+    if (this.accessoriesSelectedCount === 0) return;
 
-  const selected = this.selectedAccessoriesItems;
+    const selected = this.selectedAccessoriesItems;
 
-  const htmlList = selected.slice(0, 8).map(a => `
+    const htmlList = selected.slice(0, 8).map(a => `
     <div><b>${a.idAccesorio}</b> — ${a.sn} — ${a.modelo}</div>
   `).join('');
 
-  Swal.fire({
-    title: `¿Eliminar ${selected.length} accesorio(s)?`,
-    html: `
+    Swal.fire({
+      title: `¿Eliminar ${selected.length} accesorio(s)?`,
+      html: `
       <div style="text-align:center">
         ${htmlList}
         ${selected.length > 8 ? `<div style="margin-top:.5rem; opacity:.8">…y ${selected.length - 8} más</div>` : ''}
       </div>
       <br>Esta acción no se puede deshacer.
     `,
-    icon: 'warning',
-    showCancelButton: true,
-    cancelButtonColor: 'var(--color-primary)',
-    confirmButtonColor: 'var(--color-danger)',
-    cancelButtonText: 'Cancelar',
-    confirmButtonText: 'Sí, eliminar',
-    reverseButtons: true,
-  }).then(result => {
-    if (!result.isConfirmed) return;
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonColor: 'var(--color-primary)',
+      confirmButtonColor: 'var(--color-danger)',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar',
+      reverseButtons: true,
+    }).then(result => {
+      if (!result.isConfirmed) return;
 
-    const reqs = selected.map(item =>
-      this.apiService.deleteAccessory(item.id).pipe(catchError(err => of({ __error: err, id: item.id })))
-    );
+      const reqs = selected.map(item =>
+        this.apiService.deleteAccessory(item.id).pipe(catchError(err => of({ __error: err, id: item.id })))
+      );
 
-    this.accessoriesDeletingId = '__bulk__';
+      this.accessoriesDeletingId = '__bulk__';
 
-    forkJoin(reqs).subscribe({
-      next: (res: any[]) => {
-        const okIds: string[] = [];
-        res.forEach((r, i) => { if (!r?.__error) okIds.push(selected[i].id); });
+      forkJoin(reqs).subscribe({
+        next: (res: any[]) => {
+          const okIds: string[] = [];
+          res.forEach((r, i) => { if (!r?.__error) okIds.push(selected[i].id); });
 
-        const failures = res.length - okIds.length;
+          const failures = res.length - okIds.length;
 
-        if (okIds.length) {
-          const okSet = new Set(okIds);
+          if (okIds.length) {
+            const okSet = new Set(okIds);
 
-          this.accessories = this.accessories.filter(x => !okSet.has(x.id));
-          this.accessoriesInitial = this.accessoriesInitial.filter(x => !okSet.has(x.id));
-          okIds.forEach(id => this.selectedAccessoryIds.delete(id));
+            this.accessories = this.accessories.filter(x => !okSet.has(x.id));
+            this.accessoriesInitial = this.accessoriesInitial.filter(x => !okSet.has(x.id));
+            okIds.forEach(id => this.selectedAccessoryIds.delete(id));
 
-          if (!this.accessoriesShowAll) {
             const totalPages = Math.max(1, Math.ceil(this.accessoriesFiltered.length / this.accessoriesPerPage));
             if (this.accessoriesCurrentPage > totalPages) this.accessoriesCurrentPage = totalPages;
+
+            this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${okIds.length} accesorio(s).`, duration: 5000 });
           }
 
-          this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${okIds.length} accesorio(s).`, duration: 5000 });
+          if (failures) {
+            this.toast.error({ detail: 'Error', summary: `No se pudieron eliminar ${failures} accesorio(s).`, duration: 6000 });
+          }
+          this.refreshRequested.emit();
+        },
+        error: () => {
+          this.toast.error({ detail: 'Error', summary: 'Falló la eliminación masiva.', duration: 6000 });
+        },
+        complete: () => {
+          this.accessoriesDeletingId = null;
         }
-
-        if (failures) {
-          this.toast.error({ detail: 'Error', summary: `No se pudieron eliminar ${failures} accesorio(s).`, duration: 6000 });
-        }
-      },
-      error: () => {
-        this.toast.error({ detail: 'Error', summary: 'Falló la eliminación masiva.', duration: 6000 });
-      },
-      complete: () => {
-        this.accessoriesDeletingId = null;
-      }
+      });
     });
-  });
-}
+  }
 
 }

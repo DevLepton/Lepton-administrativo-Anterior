@@ -1,0 +1,569 @@
+<div class="tab-pane" *ngIf="!responding">
+  <div class="header">
+    <h2>Peticiones</h2>
+    <hr class="divider">
+
+    <div class="actions-container">
+      <!-- ================= FILTROS ================= -->
+      <div class="filter-bar">
+        <div class="filter-container">
+
+          <!-- Buscador -->
+          <mat-form-field appearance="outline" class="search">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="requestSearch" (ngModelChange)="updateRequestSearch($event)"
+              placeholder="Buscar por dispositivo / resultado..." autocomplete="off" />
+            <button *ngIf="requestSearch" matSuffix mat-icon-button aria-label="Limpiar"
+              (click)="updateRequestSearch('')">
+              <mat-icon>close</mat-icon>
+            </button>
+
+            <mat-hint *ngIf="requestSearch">
+              {{ requestsFiltered.length }} resultado{{ requestsFiltered.length === 1 ? '' : 's' }}
+            </mat-hint>
+          </mat-form-field>
+
+          <!-- Estatus -->
+          <mat-form-field appearance="outline" class="filter">
+            <mat-label>Estatus</mat-label>
+            <mat-select [(value)]="requestFilterStatus" (selectionChange)="onRequestFilterChange()">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option *ngFor="let s of uniqueRequestStatuses" [value]="s">{{ s }}</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- Fecha solicitud -->
+          <mat-form-field appearance="outline" class="filter">
+            <mat-label>Fecha de solicitud</mat-label>
+            <input matInput [matDatepicker]="reqPickerSolicitud" placeholder="Selecciona fecha"
+              [(ngModel)]="requestDateFilter" (dateChange)="onRequestDateChange($event.value)" />
+            <mat-datepicker-toggle matSuffix [for]="reqPickerSolicitud"></mat-datepicker-toggle>
+            <mat-datepicker #reqPickerSolicitud></mat-datepicker>
+
+            <button *ngIf="requestDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+              (click)="clearRequestDate()">
+              <mat-icon>close</mat-icon>
+            </button>
+
+            <mat-hint *ngIf="requestDateFilter">
+              Filtrando: {{ requestDateFilter | date:'dd MMM yyyy' }}
+            </mat-hint>
+          </mat-form-field>
+
+          <!-- Fecha respuesta -->
+          <mat-form-field appearance="outline" class="filter">
+            <mat-label>Fecha de respuesta</mat-label>
+            <input matInput [matDatepicker]="reqPickerRespuesta" placeholder="Selecciona fecha"
+              [(ngModel)]="responseDateFilter" (dateChange)="onResponseDateChange($event.value)" />
+            <mat-datepicker-toggle matSuffix [for]="reqPickerRespuesta"></mat-datepicker-toggle>
+            <mat-datepicker #reqPickerRespuesta></mat-datepicker>
+
+            <button *ngIf="responseDateFilter" matSuffix mat-icon-button aria-label="Limpiar"
+              (click)="clearResponseDate()">
+              <mat-icon>close</mat-icon>
+            </button>
+
+            <mat-hint *ngIf="responseDateFilter">
+              Filtrando: {{ responseDateFilter | date:'dd MMM yyyy' }}
+            </mat-hint>
+          </mat-form-field>
+
+        </div>
+      </div>
+
+      <!-- ================= ACCIONES ================= -->
+      <div class="actions-top">
+
+        <button class="new-button" *ngIf="isSupportUser" (click)="nuevaPeticion()">
+          <span class="material-icons" style="font-weight: bold;">add</span> Nueva Petición
+        </button>
+
+        <span class="tooltip-wrap" [matTooltip]="canViewOrEditRequest ? '' : 'Selecciona 1 petición para ver'"
+          [matTooltipDisabled]="canViewOrEditRequest" matTooltipPosition="above">
+          <button class="icon-button view-button" title="Ver" (click)="viewSelectedRequest()"
+            [disabled]="!canViewOrEditRequest">
+            <span class="material-icons">visibility</span>
+          </button>
+        </span>
+
+        <span class="tooltip-wrap" *ngIf="isSupportUser"
+          [matTooltip]="canViewOrEditRequest ? '' : 'Selecciona 1 petición para editar'"
+          [matTooltipDisabled]="canViewOrEditRequest" matTooltipPosition="above">
+          <button class="icon-button edit-button" title="Editar" (click)="editSelectedRequest()"
+            [disabled]="!canViewOrEditRequest">
+            <span class="material-icons">edit</span>
+          </button>
+        </span>
+
+        <span class="tooltip-wrap" *ngIf="isSupportUser"
+          [matTooltip]="requestsSelectedCount > 0 ? '' : 'Selecciona al menos 1 petición para eliminar'"
+          [matTooltipDisabled]="requestsSelectedCount > 0" matTooltipPosition="above">
+          <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedRequests()"
+            [disabled]="requestsSelectedCount === 0 || requestsDeletingId === '__bulk__'">
+            <span class="material-icons">
+              {{ requestsDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
+            </span>
+          </button>
+        </span>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= LAYOUT: TABLA + SIDEBAR (PUSH) ================= -->
+  <div class="requests-layout">
+
+    <!-- ===== CONTENIDO PRINCIPAL ===== -->
+    <div class="requests-main" [class.with-sidebar]="devicesSidebarOpen">
+
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="th-check">
+                  <input type="checkbox" [checked]="isAllRequestsVisibleSelected"
+                    [indeterminate]="isSomeRequestsVisibleSelected"
+                    (change)="toggleSelectAllRequestsVisible($any($event.target).checked)"
+                    aria-label="Seleccionar todas" />
+                </th>
+
+                <th>No.</th>
+                <th>Dispositivo solicitado</th>
+                <th>Cantidad</th>
+                <th>Estatus</th>
+                <th>Fecha de solicitud</th>
+                <th>Fecha de respuesta</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody *ngIf="!requestsLoading; else requestsLoadingTpl">
+              <tr *ngFor="let r of displayedRequests; let idx = index" (click)="toggleRequestRowByClick(r)"
+                [class.row-selected]="isRequestSelected(r.id)" style="cursor:pointer;">
+                <td class="td-check" (click)="toggleRequestRowByClick(r); $event.stopPropagation()">
+                  <input type="checkbox" [checked]="isRequestSelected(r.id)"
+                    (change)="toggleRequestRowSelection(r, $any($event.target).checked)"
+                    (click)="$event.stopPropagation()" aria-label="Seleccionar petición" />
+                </td>
+
+                <td>{{ ((requestsCurrentPage - 1) * requestsPerPage + idx + 1) }}</td>
+
+                <!-- ✅ Dispositivo solicitado:
+                     - 1 => solo modelo
+                     - >1 => solo "Ver detalles" -->
+                <td>
+                  <ng-container *ngIf="(r.dispositivosSolicitados?.length ?? 0) > 0; else noDevTpl">
+
+                    <!-- 1 solo: solo modelo -->
+                    <ng-container *ngIf="r.dispositivosSolicitados.length === 1; else multiTpl">
+                      <ng-container *ngFor="let it of r.dispositivosSolicitados">
+                        {{ it.model }}
+                      </ng-container>
+
+                    </ng-container>
+
+                    <!-- >1: solo link -->
+                    <ng-template #multiTpl>
+                      <button type="button" class="req-details-link"
+                        (click)="openDevicesSidebar(r); $event.stopPropagation()">
+                        Ver detalles
+                      </button>
+                    </ng-template>
+
+                  </ng-container>
+
+                  <ng-template #noDevTpl>—</ng-template>
+                </td>
+
+                <td>{{ (r.cantidad ?? '—') }}</td>
+
+                <td>
+                  <span class="status-badge" [ngClass]="{
+                    pend: r.estatus === 'Pendiente',
+                    aten: r.estatus === 'Atendida',
+                    acept: r.estatus === 'Aceptada',
+                    recha: r.estatus === 'Rechazada'
+                  }">
+                    {{ r.estatus || '—' }}
+                  </span>
+                </td>
+
+                <td>{{ r.fechaSolicitud ? (r.fechaSolicitud | date:'dd MMM yyyy':'UTC') : '—' }}</td>
+                <td>
+                  <ng-container *ngIf="r.fechaRespuesta; else sinResponse">
+                    {{ r.fechaRespuesta | date:'dd MMM yyyy':'UTC' }}
+                  </ng-container>
+
+                  <ng-template #sinResponse>
+                    <span class="external-text">Sin respuesta</span>
+                  </ng-template>
+                </td>
+
+                <td>
+                  <button *ngIf="isSupportUser && r.estatus === 'Atendida'" class="icon-button validate-button"
+                    (click)="validarPeticion(r); $event.stopPropagation()" title="Validar petición">
+                    <span class="material-icons">fact_check</span>
+                  </button>
+
+                  <!-- RESPONDER -->
+                  <button *ngIf="isInventoryUser && r.estatus === 'Pendiente' && !r.fechaRespuesta"
+                    class="icon-button response-button" (click)="responderPeticion(r); $event.stopPropagation()"
+                    title="Responder petición">
+                    <span class="material-icons">reply</span>
+                  </button>
+
+                  <!-- EDITAR RESPUESTA -->
+                  <button
+                    *ngIf="isInventoryUser && ((r.estatus === 'Pendiente' && r.fechaRespuesta) || r.estatus === 'Atendida')"
+                    class="icon-button edit-button" (click)="editarRespuesta(r); $event.stopPropagation()"
+                    title="Editar respuesta">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="displayedRequests.length === 0">
+                <td colspan="8" style="text-align:center; padding:1rem;">Sin Peticiones para mostrar.</td>
+              </tr>
+
+            </tbody>
+
+            <ng-template #requestsLoadingTpl>
+              <tbody>
+                <tr>
+                  <td colspan="8" style="text-align:center; padding:1rem;">Cargando Peticiones…</td>
+                </tr>
+              </tbody>
+            </ng-template>
+          </table>
+        </div>
+
+        <mat-paginator *ngIf="requestsFiltered.length > 0" [length]="requestsFiltered.length"
+          [pageIndex]="requestsCurrentPage - 1" [pageSize]="requestsPerPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [showFirstLastButtons]="true" (page)="onRequestsPageChange($event)">
+        </mat-paginator>
+      </div>
+
+    </div>
+
+    <!-- ===== SIDEBAR (PUSH, NO OVERLAY) ===== -->
+    <aside class="side-panel" *ngIf="devicesSidebarOpen">
+      <div class="side-panel__head">
+        <div>
+          <div class="side-title">Dispositivos solicitados</div>
+          <div class="side-sub">
+            Total: <b>{{ selectedRequestForSidebar?.cantidad ?? totalFromSidebar }}</b>
+          </div>
+        </div>
+
+        <button mat-icon-button (click)="closeDevicesSidebar()" aria-label="Cerrar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="side-panel__body" *ngIf="selectedRequestForSidebar as r">
+
+        <!-- ===== INFO GENERAL ===== -->
+        <div class="side-section">
+          <div class="side-info">
+            <div><b>Estatus:</b> {{ r.estatus }}</div>
+            <div><b>Fecha solicitud:</b> {{ r.fechaSolicitud | date:'dd MMM yyyy HH:mm' }}</div>
+            <div><b>Fecha respuesta:</b>
+              {{ r.fechaRespuesta ? (r.fechaRespuesta | date:'dd MMM yyyy HH:mm') : 'Sin respuesta' }}
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== DISPOSITIVOS SOLICITADOS ===== -->
+        <div class="side-section">
+          <h4>Dispositivos solicitados</h4>
+
+          <div class="side-table">
+            <div class="side-table__head">
+              <div>Modelo</div>
+              <div class="right">Cantidad</div>
+            </div>
+
+            <div class="side-table__row" *ngFor="let it of r.dispositivosSolicitados">
+              <div>{{ it.model }}</div>
+              <div class="right"><b>{{ it.quantity }}</b></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== RESPUESTA ===== -->
+        <div class="side-section" *ngIf="r.hasResponse">
+          <h4>Dispositivos enviados</h4>
+
+          <div class="response-table">
+
+            <div class="response-head">
+              <div>Modelo</div>
+              <div class="right">ID</div>
+            </div>
+
+            <ng-container *ngFor="let dev of r.dispositivosSolicitados">
+              <ng-container *ngFor="let res of dev.response">
+
+                <div class="response-row">
+                  <div class="ellipsis">{{ res.model }}</div>
+                  <div class="right id ellipsis">{{ res.identifier || res.id }}</div>
+                </div>
+
+              </ng-container>
+            </ng-container>
+
+          </div>
+        </div>
+
+        <!-- ===== COMENTARIOS ===== -->
+        <div class="side-section">
+          <h4>Comentarios</h4>
+
+          <div class="comments-box">
+            {{ r.comments || 'Sin comentarios' }}
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+  </div>
+  <!-- ================= MODALES ================= -->
+  <app-new-request-modal (requestCreated)="onRequestCreated($event)"></app-new-request-modal>
+  <app-edit-request-modal (requestUpdated)="onRequestUpdated($event)" (requestDeleted)="onRequestDeleted($event)">
+  </app-edit-request-modal>
+</div>
+
+<div class="tab-pane" *ngIf="responding">
+
+  <div class="respuesta-container">
+
+    <div class="respuesta-header">
+      <button class="back-button" (click)="this.tipoSeleccionado = 'gps'; responding = false;">
+        <span class="material-icons">arrow_back</span>
+        Regresar
+      </button>
+      <div class="header-bar">
+        <h2>
+          {{ modoValidacion ? 'Validar petición' : 'Responder petición' }}
+        </h2>
+
+        <button class="send-button" (click)="enviarRespuesta()" [disabled]="!modoValidacion && !hayCambios()"
+          [class.disabled]="!modoValidacion && !hayCambios()">
+
+          <span class="material-icons">
+            {{ modoValidacion && !hayCambios() ? 'check_circle' : 'send' }}
+          </span>
+
+          {{ modoValidacion
+          ? (hayCambios() ? 'Devolver petición' : 'Aceptar petición')
+          : 'Enviar respuesta'
+          }}
+
+        </button>
+
+      </div>
+    </div>
+
+    <div class="panel" *ngIf="modoValidacion && peticionAValidar">
+
+      <div class="panel-header">
+        <span class="material-icons">info</span>
+        <h3>Información de la petición</h3>
+      </div>
+
+      <div class="panel-body">
+
+        <div><b>Estatus:</b> {{ peticionAValidar.estatus }}</div>
+        <div><b>Fecha solicitud:</b> {{ peticionAValidar.fechaSolicitud | date:'dd MMM yyyy HH:mm' }}</div>
+        <div><b>Fecha respuesta:</b>
+          {{ peticionAValidar.fechaRespuesta | date:'dd MMM yyyy HH:mm' }}
+        </div>
+
+      </div>
+    </div>
+
+    <div class="respuesta-grid">
+
+      <div class="left-column">
+        <!-- ================= DISPOSITIVOS SOLICITADOS ================= -->
+        <div class="panel">
+
+          <div class="panel-header">
+            <span class="material-icons">inventory_2</span>
+            <h3>Dispositivos solicitados</h3>
+          </div>
+
+          <div class="panel-body">
+
+            <div class="dispositivo-item" *ngFor="let item of listaExpandida; let i = index"
+              (click)="seleccionIndex = i" [class.selected]="seleccionIndex === i && !modoValidacion">
+
+              <div class="device-card">
+
+                <div class="device-row">
+                  <span class="label">Modelo solicitado</span>
+                  <span class="value requested">{{ item.requestedModel }}</span>
+                </div>
+
+                <div class="device-row">
+                  <span class="label">Modelo asignado</span>
+                  <span class="value assigned"
+                    [class.mismatch]="!item.assignedModel || item.assignedModel !== item.requestedModel">
+                    {{ item.assignedModel || 'Sin asignar' }}
+                  </span>
+                </div>
+
+                <div class="device-row">
+                  <span class="label">ID dispositivo</span>
+                  <span class="value id">
+                    {{ item.identifier ? item.identifier : '-' }}
+                  </span>
+                </div>
+
+                <!-- BOTÓN DEVOLVER -->
+                <div class="device-actions">
+
+                  <button class="return-button" (click)="eliminarDispositivoUnitario(i); $event.stopPropagation()"
+                    title="Eliminar dispositivo" *ngIf="isSupportUser">
+                    <span class="material-icons">delete</span>
+                  </button>
+
+                  <button class="return-button" (click)="devolverDispositivo(i); $event.stopPropagation()"
+                    title="Devolver dispositivo" *ngIf="item.id">
+                    <span class="material-icons">arrow_forward</span>
+                  </button>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+      <div class="right-column">
+        <ng-container *ngIf="modoValidacion">
+          <div class="panel">
+
+            <div class="panel-header">
+              <span class="material-icons">add_circle</span>
+              <h3>Agregar dispositivo</h3>
+            </div>
+
+            <div class="panel-body">
+
+              <mat-form-field appearance="outline" style="width:100%;">
+                <mat-label>Modelo</mat-label>
+                <input matInput [(ngModel)]="nuevoModelo" [matAutocomplete]="autoModel"
+                  placeholder="Buscar modelo..." />
+
+                <mat-autocomplete #autoModel="matAutocomplete">
+                  <mat-option *ngFor="let opt of deviceModelOptions" [value]="opt">
+                    {{ opt }}
+                  </mat-option>
+                </mat-autocomplete>
+              </mat-form-field>
+
+              <button mat-flat-button color="primary" (click)="agregarDispositivoUnitario()" [disabled]="!nuevoModelo">
+                Agregar
+              </button>
+
+            </div>
+          </div>
+        </ng-container>
+
+        <div class="panel comentarios-panel" *ngIf="isSupportUser">
+
+          <div class="panel-header">
+            <span class="material-icons">comment</span>
+            <h3>Comentarios</h3>
+          </div>
+
+          <div class="panel-body">
+
+            <textarea class="comments-input" [(ngModel)]="responseComments"
+              placeholder="Escribe comentarios sobre la respuesta de la petición..." rows="4"></textarea>
+
+          </div>
+
+        </div>
+
+        <!-- ================= INVENTARIO ================= -->
+        <ng-container *ngIf="isInventoryUser && !modoValidacion">
+
+          <div class="panel">
+            <div class="panel-header">
+              <span class="material-icons">warehouse</span>
+              <h3>Inventario disponible</h3>
+            </div>
+
+            <div class="panel-body">
+
+              <mat-tab-group class="inventory-tabs" (selectedTabChange)="cambiarTipo($event.index)">
+
+                <mat-tab label="GPS"></mat-tab>
+                <mat-tab label="SIM"></mat-tab>
+                <mat-tab label="Accesorios"></mat-tab>
+
+              </mat-tab-group>
+
+              <div class="inventario-lista" *ngIf="devicesFiltrados.length > 0; else noDevices">
+
+                <div class="inv-item" *ngFor="let d of devicesFiltrados" [class.used]="deviceAlreadyUsed(d._id)">
+
+                  <div class="inv-info">
+                    <span class="model">{{ d.model }}</span>
+                    <span class="id">
+                      {{ getDeviceIdentifier(d) }}
+                    </span>
+                  </div>
+
+                  <button class="add-button" (click)="agregarARespuesta(seleccionIndex, d)"
+                    [disabled]="deviceAlreadyUsed(d._id)">
+                    <span class="material-icons">arrow_back</span>
+                    Agregar
+                  </button>
+
+                </div>
+
+              </div>
+
+              <ng-template #noDevices>
+                <div class="empty-state">
+                  <span class="material-icons">inventory</span>
+                  <p>No hay dispositivos disponibles.</p>
+                </div>
+              </ng-template>
+
+            </div>
+          </div>
+        </ng-container>
+
+      </div>
+    </div>
+
+    <div class="panel comentarios-panel" *ngIf="isInventoryUser">
+
+      <div class="panel-header">
+        <span class="material-icons">comment</span>
+        <h3>Comentarios</h3>
+      </div>
+
+      <div class="panel-body">
+
+        <textarea class="comments-input" [(ngModel)]="responseComments"
+          placeholder="Escribe comentarios sobre la respuesta de la petición..." rows="4"></textarea>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

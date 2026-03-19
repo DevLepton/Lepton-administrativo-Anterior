@@ -4,7 +4,7 @@ import { EventDetailsData, EventDetailsModalComponent } from '../../modals/event
 import { ApiService, EventItem, EventsListResponse } from '../../services/api.service';
 import { EventHistoryModalComponent } from '../../modals/event-history-modal/event-history-modal.component';
 import Swal from 'sweetalert2';
-
+import { PageEvent } from '@angular/material/paginator';
 
 @Component({
   selector: 'app-events',
@@ -24,7 +24,6 @@ export class EventsComponent implements OnInit {
   /** paginación en UI (cliente) */
   perPage = 10;
   currentPage = 1;
-  showAll = true;
 
   /** búsqueda (cliente) */
   search = '';
@@ -37,6 +36,12 @@ export class EventsComponent implements OnInit {
   ngOnInit(): void {
     this.fetchEvents();
   }
+
+  onPage(e: PageEvent) {
+    this.perPage = e.pageSize;
+    this.currentPage = e.pageIndex + 1;
+  }
+
 
   /** Llama a la API: GET /events (usa tu ApiService) */
   fetchEvents(): void {
@@ -120,7 +125,6 @@ export class EventsComponent implements OnInit {
 
   get displayed(): EventItem[] {
     const src = this.filtered;
-    if (this.showAll) return src;
     const start = (this.currentPage - 1) * this.perPage;
     return src.slice(start, start + this.perPage);
   }
@@ -130,14 +134,14 @@ export class EventsComponent implements OnInit {
     return Math.max(1, total);
   }
 
+  onPageChange(e: PageEvent) {
+    this.perPage = e.pageSize;
+    this.currentPage = e.pageIndex + 1;
+  }
+
   setPage(p: number) {
     const total = this.totalPages;
     this.currentPage = Math.min(Math.max(1, p), total);
-  }
-
-  toggleShowAll() {
-    this.showAll = !this.showAll;
-    this.currentPage = 1;
   }
 
   onSearchChange(v: string) {

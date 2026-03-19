@@ -1,0 +1,166 @@
+<div class="modal-backdrop" *ngIf="show" (click)="close()"></div>
+
+<div class="modal" *ngIf="show">
+  <header class="modal__header">
+    <h3>Editar Petición</h3>
+    <button mat-icon-button (click)="close()" aria-label="Cerrar">
+      <mat-icon>close</mat-icon>
+    </button>
+  </header>
+
+  <form [formGroup]="form" (ngSubmit)="submit()" class="modal__form compact">
+    <div class="modal__scroll">
+
+      <div class="grid" style="grid-template-columns: 1fr 1fr; gap: .75rem;">
+
+        <!-- Modelo -->
+        <mat-form-field appearance="outline" class="col-span-2">
+          <mat-label>Dispositivo solicitado (Modelo)</mat-label>
+          <input
+            matInput
+            formControlName="deviceRequested"
+            [matAutocomplete]="modelAuto"
+            placeholder="Ej: Teltonika FMB920 / Queclink GV300..."
+            autocomplete="off"
+          />
+          <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
+            <mat-option *ngFor="let opt of filteredDeviceModels$ | async" [value]="opt">
+              {{ opt }}
+            </mat-option>
+          </mat-autocomplete>
+
+          <mat-error *ngIf="showDeviceError">
+            El modelo es requerido
+          </mat-error>
+        </mat-form-field>
+
+        <!-- Cantidad + Agregar en la misma fila -->
+        <div class="col-span-2 qty-add-row">
+
+          <mat-form-field appearance="outline" class="qty-field">
+            <mat-label>Cantidad</mat-label>
+
+            <button
+              mat-icon-button
+              matPrefix
+              type="button"
+              (click)="decQty()"
+              [disabled]="(form.get('quantity')?.value || 1) <= 1">
+              <mat-icon>remove</mat-icon>
+            </button>
+
+            <input
+              matInput
+              type="number"
+              formControlName="quantity"
+              min="1"
+              max="50"
+              (input)="clampQty()"
+              (change)="clampQty()"
+            />
+
+            <button
+              mat-icon-button
+              matSuffix
+              type="button"
+              (click)="incQty()"
+              [disabled]="(form.get('quantity')?.value || 1) >= 50 || totalRequested >= 50">
+              <mat-icon>add</mat-icon>
+            </button>
+
+            <mat-hint align="start">Total: {{ totalRequested }}/50</mat-hint>
+          </mat-form-field>
+
+          <div class="add-wrap">
+            <button
+              mat-stroked-button
+              type="button"
+              class="add-btn"
+              (click)="addToList()"
+              [disabled]="!canAdd">
+              Agregar
+            </button>
+
+            <div class="add-hint" *ngIf="totalRequested >= 50">
+              Límite alcanzado (50)
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Lista -->
+      <section class="req-table" *ngIf="items.length > 0">
+        <header class="req-table__head">
+          <div class="col-model">Modelo</div>
+          <div class="col-qty">Cantidad</div>
+          <div class="col-actions">Acciones</div>
+        </header>
+
+        <div class="req-table__body">
+          <div class="req-table__row" *ngFor="let it of items; let i = index">
+            <div class="col-model">
+              <span class="model-text" [title]="it.model">{{ it.model }}</span>
+            </div>
+
+            <div class="col-qty">
+              <div class="qty-control">
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="decItem(i)"
+                  [disabled]="it.quantity <= 1"
+                  aria-label="Disminuir">
+                  <mat-icon>remove</mat-icon>
+                </button>
+
+                <span class="qty-num">{{ it.quantity }}</span>
+
+                <button
+                  mat-icon-button
+                  type="button"
+                  (click)="incItem(i)"
+                  [disabled]="totalRequested >= 50"
+                  aria-label="Aumentar">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="col-actions">
+              <button
+                mat-icon-button
+                type="button"
+                class="danger"
+                (click)="removeItem(i)"
+                aria-label="Eliminar">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <footer class="req-table__footer">
+          <div class="total">
+            Total: <b>{{ totalRequested }}</b>/50
+          </div>
+        </footer>
+      </section>
+
+      <!-- Si no hay items: tip -->
+      <div *ngIf="items.length === 0" style="opacity:.8; margin-top:.75rem;">
+        No hay dispositivos en la lista. Si guardas así, se eliminará la petición.
+      </div>
+
+    </div>
+
+    <footer class="modal__footer">
+      <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+
+      <!-- ✅ permitimos guardar incluso si está vacía, para disparar confirmación -->
+      <button type="submit" mat-flat-button color="primary" [disabled]="loading">
+        {{ loading ? 'Guardando...' : 'Guardar cambios' }}
+      </button>
+    </footer>
+  </form>
+</div>

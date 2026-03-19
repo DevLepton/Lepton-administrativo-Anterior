@@ -57,7 +57,6 @@ export interface EventsListResponse {
 /* ====================== Tipos Devices ====================== */
 export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
 
-// 👇 añade este tipo arriba (junto a los demás)
 export type UpdateSimPayload = Partial<{
   iccid: string;
   model: string;
@@ -79,7 +78,7 @@ export interface CreateGpsPayload {
   brand: string;
   model: string;
   status: DeviceStatus;
-  purchaseDate: string | Date;
+  purchaseDate: string | Date | null;
   entryDate: string | Date;
   installationDate?: string | Date | null;
   client?: string | null;
@@ -106,16 +105,57 @@ export type UpdateAccessoryPayload = Partial<Omit<CreateAccessoryPayload, 'type'
 
 /** Query de listado GPS (coincide con filtros del UI) */
 export interface GpsQuery {
-  // filtros de tu UI
   brand?: string;
   model?: string;
   status?: DeviceStatus | '';
   q?: string;            // búsqueda por IMEI/SN
-  from?: string;         // ISO (fecha compra/ingreso si tu backend lo soporta)
+  from?: string;         // ISO
   to?: string;           // ISO
   page?: number;
   limit?: number;
-  sort?: string;         // ej. 'createdAt' | 'purchaseDate' | ...
+  sort?: string;
+  order?: 'asc' | 'desc';
+}
+
+/* ====================== Tipos Peticiones ====================== */
+export type RequestStatus = 'Pendiente' | 'Rechazada' | 'Atendida' | 'Aceptada';
+
+export interface RequestedDeviceItem {
+  model: string;
+  quantity: number;
+
+  response?: {
+    id: string;
+    model: string;
+  }[];
+}
+
+export interface CreateRequestPayload {
+  status?: 'Pendiente' | 'Rechazada' | 'Atendida' | 'Aceptada';
+  requestDate?: string | Date;
+  responseDate?: string | Date | null;
+
+  // ✅ nuevo
+  devicesRequested: RequestedDeviceItem[];
+
+  // ✅ total (opcional enviarlo; backend lo recalcula)
+  quantity?: number;
+
+  comments?: string | null;
+}
+
+/** Payload para actualizar Petición */
+export type UpdateRequestPayload = Partial<CreateRequestPayload>;
+
+/** Query de listado Peticiones (opcional) */
+export interface RequestsQuery {
+  status?: RequestStatus;
+  q?: string;        // si luego agregas búsqueda en backend
+  from?: string;     // ISO (requestDate desde)
+  to?: string;       // ISO (requestDate hasta)
+  page?: number;
+  limit?: number;
+  sort?: string;
   order?: 'asc' | 'desc';
 }
 
@@ -135,15 +175,16 @@ export class ApiService {
     });
     return params;
   }
-  private toIsoDate(v: string | Date | null | undefined): string | undefined {
-    if (v === null || v === undefined || v === '') return undefined;
+
+  private toIsoDate(v: string | Date | null | undefined): string | null {
+    if (v === null || v === undefined || v === '') return null;
     if (v instanceof Date) return v.toISOString();
-    // asume 'YYYY-MM-DD' -> ISO a medianoche local
+
     const d = new Date(v);
-    return isNaN(d.getTime()) ? undefined : d.toISOString();
+    return isNaN(d.getTime()) ? null : d.toISOString();
   }
 
-  /* ====================== Google Geocode (tal cual) ====================== */
+  /* ====================== Google Geocode ====================== */
   getColoniasByCodigoPostalFromGoogle(codigoPostal: string): Observable<any> {
     const apiKey = 'AIzaSyBxD3oEeLRpU9kcilSl2dl1aNzbEe9afyg';
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${codigoPostal},Mexico&key=${apiKey}`;
@@ -183,10 +224,21 @@ export class ApiService {
   updateUser(id: number, user: any): Observable<any> { return this.http.put(`${this.baseUrl}/users/${id}`, user); }
   deleteUser(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/users/${id}`); }
 
+  /* ====================== DEVICES (todos) ====================== */
+  getDevices(query?: {
+    type?: string;
+    status?: string;
+    includeIds?: string[];
+  }): Observable<any> {
+    const params = this.buildHttpParams(query);
+    return this.http.get(`${this.baseUrl}/devices`, { params });
+  }
+
   /* ====================== SIMs (devices?type=sim) ====================== */
   getSims(): Observable<any> {
     return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'sim' } });
   }
+
   createSim(payload: {
     iccid: string;
     model: string;
@@ -210,62 +262,42 @@ export class ApiService {
   updateSim(id: string, payload: UpdateSimPayload): Observable<any> {
     const body: any = { ...payload };
 
-    if (body.purchaseDate !== undefined) {
-      body.purchaseDate = this.toIsoDate(body.purchaseDate);
-    }
-    if (body.entryDate !== undefined) {
-      body.entryDate = this.toIsoDate(body.entryDate);
-    }
-    if (body.installationDate !== undefined) {
-      body.installationDate = this.toIsoDate(body.installationDate);
-    }
+    if (body.purchaseDate !== undefined) body.purchaseDate = this.toIsoDate(body.purchaseDate);
+    if (body.entryDate !== undefined) body.entryDate = this.toIsoDate(body.entryDate);
+    if (body.installationDate !== undefined) body.installationDate = this.toIsoDate(body.installationDate);
 
     return this.http.put(`${this.baseUrl}/devices/${id}`, body);
   }
-
   deleteSim(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/devices/${id}`);
   }
 
   /* ====================== GPS (devices?type=gps) ====================== */
-  /** Lista de GPS con filtros (marca, modelo, estatus, búsqueda por IMEI/SN, fechas, etc.) */
   getGps(query?: GpsQuery): Observable<any> {
     const params = this.buildHttpParams({ type: 'gps', ...query });
     return this.http.get(`${this.baseUrl}/devices`, { params });
   }
-
-  /** Obtiene un GPS por id */
   getGpsById(id: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/devices/${id}`);
   }
-
-  /** Crea un GPS (alineado al schema: name, brand, model, imei, sn, …) */
   createGps(payload: Omit<CreateGpsPayload, 'type'>): Observable<any> {
     const body: CreateGpsPayload = {
       type: 'gps',
       ...payload,
-      purchaseDate: this.toIsoDate(payload.purchaseDate)!,
+      purchaseDate: this.toIsoDate(payload.purchaseDate),
       entryDate: this.toIsoDate(payload.entryDate)!,
       installationDate: this.toIsoDate(payload.installationDate ?? null),
     };
     return this.http.post(`${this.baseUrl}/devices`, body);
   }
-
-  /** Actualiza un GPS por id (no cambia 'type') */
-  updateGps(
-    id: string,
-    payload: Partial<Omit<CreateGpsPayload, 'type'>>
-  ): Observable<any> {
+  updateGps(id: string, payload: Partial<Omit<CreateGpsPayload, 'type'>>): Observable<any> {
     const body: any = { ...payload };
-    const toIso = (v: any) => v == null ? null : new Date(v).toISOString();
+    const toIso = (v: any) => (v == null ? null : new Date(v).toISOString());
     if ('purchaseDate' in body) body.purchaseDate = toIso(body.purchaseDate);
     if ('entryDate' in body) body.entryDate = toIso(body.entryDate);
     if ('installationDate' in body) body.installationDate = toIso(body.installationDate);
     return this.http.put(`${this.baseUrl}/devices/${id}`, body);
   }
-
-
-  /** Elimina un GPS por id */
   deleteGps(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/devices/${id}`);
   }
@@ -281,8 +313,9 @@ export class ApiService {
   deleteEventById(id: string): Observable<{ message: string; data: EventItem }> {
     return this.http.delete<{ message: string; data: EventItem }>(`${this.baseUrl}/events/${id}`);
   }
-  bulkDeleteEvents(filters?: Pick<EventsQuery, 'identifier' | 'collectionName' | 'operation' | 'userId' | 'q' | 'from' | 'to'>):
-    Observable<{ message: string; deletedCount: number }> {
+  bulkDeleteEvents(
+    filters?: Pick<EventsQuery, 'identifier' | 'collectionName' | 'operation' | 'userId' | 'q' | 'from' | 'to'>
+  ): Observable<{ message: string; deletedCount: number }> {
     const params = this.buildHttpParams(filters as any);
     return this.http.delete<{ message: string; deletedCount: number }>(`${this.baseUrl}/events`, { params });
   }
@@ -291,11 +324,9 @@ export class ApiService {
   getAccessories(): Observable<any> {
     return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'accessory' } });
   }
-
   getAccessoryById(id: string): Observable<any> {
     return this.http.get(`${this.baseUrl}/devices/${id}`);
   }
-
   createAccessory(payload: Omit<CreateAccessoryPayload, 'type'>): Observable<any> {
     const body: CreateAccessoryPayload = {
       type: 'accessory',
@@ -306,19 +337,52 @@ export class ApiService {
     };
     return this.http.post(`${this.baseUrl}/devices`, body);
   }
-
   updateAccessory(id: string, payload: UpdateAccessoryPayload): Observable<any> {
     const body: any = { ...payload };
-
     if ('purchaseDate' in body) body.purchaseDate = this.toIsoDate(body.purchaseDate);
     if ('entryDate' in body) body.entryDate = this.toIsoDate(body.entryDate);
     if ('installationDate' in body) body.installationDate = this.toIsoDate(body.installationDate);
-
     return this.http.put(`${this.baseUrl}/devices/${id}`, body);
   }
-
   deleteAccessory(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/devices/${id}`);
   }
 
+  /* ====================== PETICIONES (requests) ====================== */
+
+  /** Lista peticiones (si tu backend solo filtra por status, manda { status } ) */
+  getRequests(query?: RequestsQuery): Observable<any> {
+    const params = this.buildHttpParams(query as any);
+    return this.http.get(`${this.baseUrl}/requests`, { params });
+  }
+
+  /** Obtiene una petición por id */
+  getRequestById(id: string): Observable<any> {
+    return this.http.get(`${this.baseUrl}/requests/${id}`);
+  }
+
+  /** Crea una petición */
+  createRequest(payload: CreateRequestPayload): Observable<any> {
+    const body: any = {
+      ...payload,
+      requestDate: this.toIsoDate(payload.requestDate),
+      responseDate: this.toIsoDate(payload.responseDate ?? null),
+    };
+    return this.http.post(`${this.baseUrl}/requests`, body);
+  }
+
+  /** Actualiza una petición */
+  updateRequest(id: string, payload: UpdateRequestPayload): Observable<any> {
+    const body: any = { ...payload };
+
+    if (body.requestDate !== undefined) body.requestDate = this.toIsoDate(body.requestDate);
+    if (body.responseDate !== undefined) body.responseDate = this.toIsoDate(body.responseDate);
+
+    return this.http.put(`${this.baseUrl}/requests/${id}`, body);
+  }
+
+  /** Elimina una petición */
+  deleteRequest(id: string): Observable<any> {
+    return this.http.delete(`${this.baseUrl}/requests/${id}`);
+  }
 }

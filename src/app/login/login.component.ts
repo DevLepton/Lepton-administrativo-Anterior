@@ -87,8 +87,10 @@ export class LoginComponent implements OnInit {
           this.loginSuccess.emit();
           if (userRole === 'admin') {
             this.router.navigate(['/usuarios']);
+          } else if (userRole === 'soporte') {
+            this.router.navigate(['/peticiones']);
           } else if (userRole === 'inventario') {
-            this.router.navigate(['/almacen']);
+            this.router.navigate(['/peticiones']);
           } else if (userRole === 'finanzas') {
             this.router.navigate(['/dashboard']);
           } else {

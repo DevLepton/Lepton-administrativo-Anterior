@@ -80,26 +80,10 @@
         </div>
 
         <div class="filter-bar">
-            <div class="filter-container" style="display: flex; flex: 1; justify-content: space-between;">
-                <div class="pagination-container">
-                    <button class="filter-btn" (click)="toggleGpsShowAll()">
-                        {{ gpsShowAll ? 'Paginado' : 'Mostrar todos' }}
-                    </button>
-
-                    <div class="pagination" *ngIf="!gpsShowAll && gpsFiltered.length > 0 && gpsTotalPages > 1">
-                        <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage - 1)"
-                            [disabled]="gpsCurrentPage === 1">«</button>
-                        <button *ngFor="let p of [].constructor(gpsTotalPages); let i = index" class="pagination-btn"
-                            [class.active]="gpsCurrentPage === (i + 1)" (click)="setGpsPage(i + 1)">
-                            {{ i + 1 }}
-                        </button>
-                        <button class="pagination-btn" (click)="setGpsPage(gpsCurrentPage + 1)"
-                            [disabled]="gpsCurrentPage === gpsTotalPages">»</button>
-                    </div>
-                </div>
+            <div class="filter-container" style="display: flex; flex: 1; justify-content: flex-end;">
                 <!-- ✅ Barra de acciones -->
                 <div class="actions-top">
-                    <button class="new-button" (click)="nuevoGps()">
+                    <button *ngIf="isInventoryUser" class="new-button" (click)="nuevoGps()">
                         <span class="material-icons">gps_fixed</span> Nuevo GPS
                     </button>
 
@@ -119,7 +103,7 @@
                         </button>
                     </span>
 
-                    <span class="tooltip-wrap"
+                    <span *ngIf="isInventoryUser" class="tooltip-wrap"
                         [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para eliminar'"
                         [matTooltipDisabled]="gpsSelectedCount > 0" matTooltipPosition="above">
                         <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedGps()"
@@ -136,96 +120,112 @@
 
     <!-- ===== Tabla GPS ===== -->
     <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <!-- ✅ checkbox seleccionar todo -->
-                    <th class="th-check">
-                        <input type="checkbox" [checked]="isAllGpsVisibleSelected"
-                            [indeterminate]="isSomeGpsVisibleSelected"
-                            (change)="toggleSelectAllGpsVisible($any($event.target).checked)"
-                            aria-label="Seleccionar todos" />
-                    </th>
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <!-- ✅ checkbox seleccionar todo -->
+                        <th class="th-check">
+                            <input type="checkbox" [checked]="isAllGpsVisibleSelected"
+                                [indeterminate]="isSomeGpsVisibleSelected"
+                                (change)="toggleSelectAllGpsVisible($any($event.target).checked)"
+                                aria-label="Seleccionar todos" />
+                        </th>
 
-                    <th>No.</th>
+                        <th>No.</th>
 
-                    <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow">{{ arrowForGps('imei')
-                            }}</span></th>
-                    <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow">{{ arrowForGps('sn') }}</span>
-                    </th>
-                    <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow">{{
-                            arrowForGps('nombre') }}</span></th>
-                    <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow">{{ arrowForGps('marca')
-                            }}</span></th>
-                    <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow">{{
-                            arrowForGps('modelo') }}</span></th>
-                    <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow">{{
-                            arrowForGps('estatus') }}</span></th>
-                    <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow">{{
-                            arrowForGps('fechaCompra') }}</span></th>
-                    <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span
-                            class="arrow">{{ arrowForGps('fechaIngresoLepton') }}</span></th>
-                    <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow">{{
-                            arrowForGps('cliente') }}</span></th>
+                        <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow material-icons">{{ arrowForGps('imei')
+                                }}</span></th>
+                        <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow material-icons">{{ arrowForGps('sn')
+                                }}</span>
+                        </th>
+                        <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow material-icons">{{
+                                arrowForGps('nombre') }}</span></th>
+                        <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow material-icons">{{
+                                arrowForGps('marca')
+                                }}</span></th>
+                        <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow material-icons">{{
+                                arrowForGps('modelo') }}</span></th>
+                        <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow material-icons">{{
+                                arrowForGps('estatus') }}</span></th>
+                        <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span class="arrow material-icons">{{
+                                arrowForGps('fechaCompra') }}</span></th>
+                        <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span
+                                class="arrow material-icons">{{ arrowForGps('fechaIngresoLepton') }}</span></th>
+                        <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow material-icons">{{
+                                arrowForGps('cliente') }}</span></th>
 
-                    <!-- ❌ ya no hay acciones por fila -->
-                </tr>
-            </thead>
+                        <!-- ❌ ya no hay acciones por fila -->
+                    </tr>
+                </thead>
 
-            <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
-                <tr *ngFor="let g of displayedGps; let idx = index" (click)="toggleGpsRowByClick(g)"
-                    [class.row-selected]="isGpsSelected(g.id)" style="cursor:pointer;">
+                <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
+                    <tr *ngFor="let g of displayedGps; let idx = index" (click)="toggleGpsRowByClick(g)"
+                        [class.row-selected]="isGpsSelected(g.id)" style="cursor:pointer;">
 
-                    <!-- ✅ celda checkbox clickable -->
-                    <td class="td-check" (click)="toggleGpsRowByClick(g); $event.stopPropagation()">
-                        <input type="checkbox" [checked]="isGpsSelected(g.id)"
-                            (change)="toggleGpsRowSelection(g, $any($event.target).checked)"
-                            (click)="$event.stopPropagation()" aria-label="Seleccionar GPS" />
-                    </td>
+                        <!-- ✅ celda checkbox clickable -->
+                        <td class="td-check" (click)="toggleGpsRowByClick(g); $event.stopPropagation()">
+                            <input type="checkbox" [checked]="isGpsSelected(g.id)"
+                                (change)="toggleGpsRowSelection(g, $any($event.target).checked)"
+                                (click)="$event.stopPropagation()" aria-label="Seleccionar GPS" />
+                        </td>
 
-                    <td>{{ gpsShowAll ? (idx + 1) : ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
-                    <td>{{ g.imei }}</td>
-                    <td>{{ g.sn }}</td>
-                    <td>{{ g.nombre }}</td>
-                    <td>{{ g.marca }}</td>
-                    <td>{{ g.modelo }}</td>
-                    <td>
-                        <span class="status-badge" [ngClass]="{
+                        <td>{{ ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
+                        <td>{{ g.imei }}</td>
+                        <td>{{ g.sn }}</td>
+                        <td>{{ g.nombre }}</td>
+                        <td>{{ g.marca }}</td>
+                        <td>{{ g.modelo }}</td>
+                        <td>
+                            <span class="status-badge" [ngClass]="{
               inv:  g.estatus === 'En inventario',
               cfg:  g.estatus === 'En configuración',
               inst: g.estatus === 'Instalado'
             }">
-                            {{ g.estatus }}
-                        </span>
-                    </td>
-                    <td>{{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
-                    <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-                    <td>{{ g.cliente || '—' }}</td>
-                </tr>
+                                {{ g.estatus }}
+                            </span>
+                        </td>
+                        <td>
+                            <ng-container *ngIf="g.fechaCompra; else externoTpl">
+                                {{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}
+                            </ng-container>
 
-                <tr *ngIf="displayedGps.length === 0">
-                    <td colspan="11" style="text-align:center; padding:1rem;">Sin GPS para mostrar.</td>
-                </tr>
-            </tbody>
+                            <ng-template #externoTpl>
+                                <span class="external-text">Externo a Leptón</span>
+                            </ng-template>
+                        </td>
 
-            <ng-template #gpsLoadingTpl>
-                <tbody>
-                    <tr>
-                        <td colspan="11" style="text-align:center; padding:1rem;">Cargando GPS…</td>
+                        <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ g.cliente || 'Sin asignar' }}</td>
+                    </tr>
+
+                    <tr *ngIf="displayedGps.length === 0">
+                        <td colspan="11" style="text-align:center; padding:1rem;">Sin GPS para mostrar.</td>
                     </tr>
                 </tbody>
-            </ng-template>
-        </table>
 
-        <!-- Modales GPS -->
-        <app-new-gps-modal (gpsCreated)="onGpsCreated($event)" (gpsBulkCreated)="onGpsBulkCreated($event)"
-            [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
-        </app-new-gps-modal>
-
-        <app-view-gps-modal></app-view-gps-modal>
-
-        <app-edit-gps-modal (gpsUpdated)="onGpsUpdated($event)" [modelOptions]="gpsModelOptions"
-            [brandOptions]="gpsBrandOptions">
-        </app-edit-gps-modal>
+                <ng-template #gpsLoadingTpl>
+                    <tbody>
+                        <tr>
+                            <td colspan="11" style="text-align:center; padding:1rem;">Cargando GPS…</td>
+                        </tr>
+                    </tbody>
+                </ng-template>
+            </table>
+        </div>
+        <mat-paginator *ngIf="gpsFiltered.length > 0" [length]="gpsFiltered.length" [pageIndex]="gpsCurrentPage - 1"
+            [pageSize]="gpsPerPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+            (page)="onPageChange($event)">
+        </mat-paginator>
     </div>
+    <!-- Modales GPS -->
+    <app-new-gps-modal *ngIf="isInventoryUser" (gpsCreated)="onGpsCreated($event)" (gpsBulkCreated)="onGpsBulkCreated($event)"
+        [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
+    </app-new-gps-modal>
+
+    <app-view-gps-modal></app-view-gps-modal>
+
+    <app-edit-gps-modal (gpsUpdated)="onGpsUpdated($event)" [modelOptions]="gpsModelOptions"
+        [brandOptions]="gpsBrandOptions">
+    </app-edit-gps-modal>
 </div>

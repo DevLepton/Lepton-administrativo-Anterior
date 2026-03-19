@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild } from '@angular/core';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -6,6 +6,7 @@ import { NewGpsModalComponent } from '../../../modals/new-gps-modal/new-gps-moda
 import { ViewGpsModalComponent } from '../../../modals/view-gps-modal/view-gps-modal.component';
 import { EditGpsModalComponent } from '../../../modals/edit-gps-modal/edit-gps-modal.component';
 import { ApiService, CreateGpsPayload } from '../../../services/api.service';
+import { PageEvent } from '@angular/material/paginator';
 
 interface GpsItem {
   id: string;                         // _id de Mongo
@@ -27,12 +28,17 @@ interface GpsItem {
   templateUrl: './gps-tab.component.html',
   styleUrl: '../almacen.component.scss'
 })
-export class GpsTabComponent implements OnInit {
-  @ViewChild(NewGpsModalComponent) newGpsModal!: NewGpsModalComponent;
+export class GpsTabComponent implements OnChanges {
+  @Input() gpsData: any[] = [];
+  @Input() isInventoryUser = false;
+
+  @Output() refreshRequested = new EventEmitter<void>();
+
+  @ViewChild(NewGpsModalComponent) newGpsModal?: NewGpsModalComponent;
   @ViewChild(ViewGpsModalComponent) viewGpsModal!: ViewGpsModalComponent;
   @ViewChild(EditGpsModalComponent) editGpsModal!: EditGpsModalComponent;
 
-  constructor(private apiService: ApiService, private toast: NgToastService) {}
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   // ===== DATA =====
   gps: GpsItem[] = [];
@@ -42,7 +48,6 @@ export class GpsTabComponent implements OnInit {
   // paginado/filtros
   gpsPerPage = 10;
   gpsCurrentPage = 1;
-  gpsShowAll = true;
 
   gpsSearch = '';
   gpsFilterBrand = '';
@@ -56,8 +61,16 @@ export class GpsTabComponent implements OnInit {
   gpsSortKey: keyof GpsItem | 'no' = 'no';
   gpsSortDir: 'asc' | 'desc' = 'desc';
 
-  ngOnInit(): void {
-    this.loadGps();
+  ngOnChanges() {
+    if (this.gpsData.length > 0) {
+      this.gps = this.gpsData.map(d => this.mapDeviceToGpsItem(d));
+      this.gpsInitial = [...this.gps];
+    }
+  }
+
+  onPage(e: PageEvent) {
+    this.gpsPerPage = e.pageSize;
+    this.gpsCurrentPage = e.pageIndex + 1;
   }
 
   // ===== Helpers =====
@@ -159,7 +172,6 @@ export class GpsTabComponent implements OnInit {
 
   get displayedGps(): GpsItem[] {
     const src = this.gpsFiltered;
-    if (this.gpsShowAll) return src;
     const start = (this.gpsCurrentPage - 1) * this.gpsPerPage;
     return src.slice(start, start + this.gpsPerPage);
   }
@@ -169,10 +181,14 @@ export class GpsTabComponent implements OnInit {
     return Math.max(1, total);
   }
 
+  onPageChange(e: PageEvent) {
+    this.gpsPerPage = e.pageSize;
+    this.gpsCurrentPage = e.pageIndex + 1;
+  }
+
   updateGpsSearch(v: string) { this.gpsSearch = (v ?? '').trim(); this.gpsCurrentPage = 1; }
   onGpsFilterChange() { this.gpsCurrentPage = 1; }
   setGpsPage(p: number) { this.gpsCurrentPage = Math.min(Math.max(1, p), this.gpsTotalPages); }
-  toggleGpsShowAll() { this.gpsShowAll = !this.gpsShowAll; this.gpsCurrentPage = 1; }
 
   onGpsPurchaseDateChange(d: Date | null) { this.gpsPurchaseDateFilter = d; this.gpsCurrentPage = 1; }
   clearGpsPurchaseDate() { this.onGpsPurchaseDateChange(null); }
@@ -218,7 +234,7 @@ export class GpsTabComponent implements OnInit {
 
   arrowForGps(key: keyof GpsItem | 'no'): string {
     if (this.gpsSortKey !== key) return '';
-    return this.gpsSortDir === 'asc' ? '▲' : '▼';
+    return this.gpsSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
   // ===== Unique options para filtros/modales =====
@@ -239,7 +255,7 @@ export class GpsTabComponent implements OnInit {
   get gpsBrandOptions(): string[] { return this.uniqueGpsBrands; }
 
   // ===== CRUD =====
-  nuevoGps() { this.newGpsModal.open(); }
+  nuevoGps() { this.newGpsModal?.open(); }
 
   onGpsCreated(evt: {
     type: 'gps';
@@ -249,14 +265,15 @@ export class GpsTabComponent implements OnInit {
     brand: string;
     model: string;
     status: 'En inventario' | 'En configuración' | 'Instalado';
-    purchaseDate: string;
+    purchaseDate: string | null;
     entryDate: string;
     installationDate?: string | null;
     client?: string | null;
     comments?: string | null;
   }) {
+    if (!this.isInventoryUser) return;
     this.apiService.createGps(evt as any).subscribe({
-      next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS registrado', duration: 4000 }); this.loadGps(); },
+      next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS registrado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
         const msg = err?.error?.error || 'Error al registrar GPS';
         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
@@ -265,6 +282,7 @@ export class GpsTabComponent implements OnInit {
   }
 
   onGpsBulkCreated(list: Array<any>) {
+    if (!this.isInventoryUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay GPS para registrar.', duration: 3000 });
       return;
@@ -286,11 +304,11 @@ export class GpsTabComponent implements OnInit {
         const ko = res.length - ok;
         if (ok) this.toast.success({ detail: 'Éxito', summary: `${ok} GPS registrado(s).`, duration: 5000 });
         if (ko) this.toast.error({ detail: 'Error', summary: `${ko} GPS no se registraron.`, duration: 6000 });
-        this.loadGps();
+        this.refreshRequested.emit();
       },
       error: () => {
         this.toast.error({ detail: 'Error', summary: 'Falló el registro masivo.', duration: 6000 });
-        this.loadGps();
+        this.refreshRequested.emit();
       }
     });
   }
@@ -317,7 +335,7 @@ export class GpsTabComponent implements OnInit {
 
   onGpsUpdated(evt: { id: string; payload: Partial<Omit<CreateGpsPayload, 'type'>> }) {
     this.apiService.updateGps(evt.id, evt.payload).subscribe({
-      next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS actualizado', duration: 4000 }); this.loadGps(); },
+      next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS actualizado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
         const msg = err?.error?.error || 'Error al actualizar GPS';
         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
@@ -326,6 +344,7 @@ export class GpsTabComponent implements OnInit {
   }
 
   eliminarGps(g: GpsItem) {
+    if (!this.isInventoryUser) return;
     Swal.fire({
       title: '¿Eliminar GPS?',
       html: `
@@ -354,10 +373,8 @@ export class GpsTabComponent implements OnInit {
           this.gps = this.gps.filter(x => x.id !== g.id);
           this.gpsInitial = this.gpsInitial.filter(x => x.id !== g.id);
 
-          if (!this.gpsShowAll) {
-            const totalPages = Math.max(1, Math.ceil(this.gps.length / this.gpsPerPage));
-            if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
-          }
+          const totalPages = Math.max(1, Math.ceil(this.gpsFiltered.length / this.gpsPerPage));
+          if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
 
           this.toast.success({ detail: 'Éxito', summary: 'GPS eliminado', duration: 4000 });
         },
@@ -390,135 +407,136 @@ export class GpsTabComponent implements OnInit {
   }
 
   // ✅ NUEVO: selección
-selectedGpsIds = new Set<string>();
+  selectedGpsIds = new Set<string>();
 
-private clearGpsSelection() {
-  this.selectedGpsIds.clear();
-}
+  private clearGpsSelection() {
+    this.selectedGpsIds.clear();
+  }
 
-isGpsSelected(id: string): boolean {
-  return this.selectedGpsIds.has(id);
-}
+  isGpsSelected(id: string): boolean {
+    return this.selectedGpsIds.has(id);
+  }
 
-toggleGpsRowSelection(g: GpsItem, checked: boolean) {
-  if (checked) this.selectedGpsIds.add(g.id);
-  else this.selectedGpsIds.delete(g.id);
-}
+  toggleGpsRowSelection(g: GpsItem, checked: boolean) {
+    if (checked) this.selectedGpsIds.add(g.id);
+    else this.selectedGpsIds.delete(g.id);
+  }
 
-toggleGpsRowByClick(g: GpsItem) {
-  this.toggleGpsRowSelection(g, !this.isGpsSelected(g.id));
-}
+  toggleGpsRowByClick(g: GpsItem) {
+    this.toggleGpsRowSelection(g, !this.isGpsSelected(g.id));
+  }
 
-// Seleccionar todo lo visible (según paginado)
-toggleSelectAllGpsVisible(checked: boolean) {
-  const visible = this.displayedGps;
-  if (checked) visible.forEach(x => this.selectedGpsIds.add(x.id));
-  else visible.forEach(x => this.selectedGpsIds.delete(x.id));
-}
+  // Seleccionar todo lo visible (según paginado)
+  toggleSelectAllGpsVisible(checked: boolean) {
+    const visible = this.displayedGps;
+    if (checked) visible.forEach(x => this.selectedGpsIds.add(x.id));
+    else visible.forEach(x => this.selectedGpsIds.delete(x.id));
+  }
 
-get isAllGpsVisibleSelected(): boolean {
-  const visible = this.displayedGps;
-  return visible.length > 0 && visible.every(x => this.selectedGpsIds.has(x.id));
-}
+  get isAllGpsVisibleSelected(): boolean {
+    const visible = this.displayedGps;
+    return visible.length > 0 && visible.every(x => this.selectedGpsIds.has(x.id));
+  }
 
-get isSomeGpsVisibleSelected(): boolean {
-  const visible = this.displayedGps;
-  return visible.some(x => this.selectedGpsIds.has(x.id)) && !this.isAllGpsVisibleSelected;
-}
+  get isSomeGpsVisibleSelected(): boolean {
+    const visible = this.displayedGps;
+    return visible.some(x => this.selectedGpsIds.has(x.id)) && !this.isAllGpsVisibleSelected;
+  }
 
-get gpsSelectedCount(): number {
-  return this.selectedGpsIds.size;
-}
+  get gpsSelectedCount(): number {
+    return this.selectedGpsIds.size;
+  }
 
-get canViewOrEditGps(): boolean {
-  return this.gpsSelectedCount === 1;
-}
+  get canViewOrEditGps(): boolean {
+    return this.gpsSelectedCount === 1;
+  }
 
-get selectedGpsItems(): GpsItem[] {
-  const map = new Map(this.gps.map(x => [x.id, x] as const));
-  return Array.from(this.selectedGpsIds)
-    .map(id => map.get(id))
-    .filter(Boolean) as GpsItem[];
-}
+  get selectedGpsItems(): GpsItem[] {
+    const map = new Map(this.gps.map(x => [x.id, x] as const));
+    return Array.from(this.selectedGpsIds)
+      .map(id => map.get(id))
+      .filter(Boolean) as GpsItem[];
+  }
 
-viewSelectedGps() {
-  if (!this.canViewOrEditGps) return;
-  this.verGps(this.selectedGpsItems[0]);
-}
+  viewSelectedGps() {
+    if (!this.canViewOrEditGps) return;
+    this.verGps(this.selectedGpsItems[0]);
+  }
 
-editSelectedGps() {
-  if (!this.canViewOrEditGps) return;
-  this.editarGps(this.selectedGpsItems[0]);
-}
+  editSelectedGps() {
+    if (!this.canViewOrEditGps) return;
+    this.editarGps(this.selectedGpsItems[0]);
+  }
 
-deleteSelectedGps() {
-  if (this.gpsSelectedCount === 0) return;
+  deleteSelectedGps() {
+    if (!this.isInventoryUser) return;
+    if (this.gpsSelectedCount === 0) return;
 
-  const selected = this.selectedGpsItems;
+    const selected = this.selectedGpsItems;
 
-  const htmlList = selected.slice(0, 8).map(g => `
+    const htmlList = selected.slice(0, 8).map(g => `
     <div><b>${g.imei}</b> — ${g.sn} — ${g.modelo}</div>
   `).join('');
 
-  Swal.fire({
-    title: `¿Eliminar ${selected.length} GPS(s)?`,
-    html: `
+    Swal.fire({
+      title: `¿Eliminar ${selected.length} GPS(s)?`,
+      html: `
       <div style="text-align:center">
         ${htmlList}
         ${selected.length > 8 ? `<div style="margin-top:.5rem; opacity:.8">…y ${selected.length - 8} más</div>` : ''}
       </div>
       <br>Esta acción no se puede deshacer.
     `,
-    icon: 'warning',
-    showCancelButton: true,
-    cancelButtonColor: 'var(--color-primary)',
-    confirmButtonColor: 'var(--color-danger)',
-    cancelButtonText: 'Cancelar',
-    confirmButtonText: 'Sí, eliminar',
-    reverseButtons: true,
-  }).then(result => {
-    if (!result.isConfirmed) return;
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonColor: 'var(--color-primary)',
+      confirmButtonColor: 'var(--color-danger)',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar',
+      reverseButtons: true,
+    }).then(result => {
+      if (!result.isConfirmed) return;
 
-    const reqs = selected.map(item =>
-      this.apiService.deleteGps(item.id).pipe(catchError(err => of({ __error: err, id: item.id })))
-    );
+      const reqs = selected.map(item =>
+        this.apiService.deleteGps(item.id).pipe(catchError(err => of({ __error: err, id: item.id })))
+      );
 
-    this.gpsDeletingId = '__bulk__';
+      this.gpsDeletingId = '__bulk__';
 
-    forkJoin(reqs).subscribe({
-      next: (res: any[]) => {
-        const okIds: string[] = [];
-        res.forEach((r, i) => { if (!r?.__error) okIds.push(selected[i].id); });
+      forkJoin(reqs).subscribe({
+        next: (res: any[]) => {
+          const okIds: string[] = [];
+          res.forEach((r, i) => { if (!r?.__error) okIds.push(selected[i].id); });
 
-        const failures = res.length - okIds.length;
+          const failures = res.length - okIds.length;
 
-        if (okIds.length) {
-          const okSet = new Set(okIds);
+          if (okIds.length) {
+            const okSet = new Set(okIds);
 
-          this.gps = this.gps.filter(x => !okSet.has(x.id));
-          this.gpsInitial = this.gpsInitial.filter(x => !okSet.has(x.id));
-          okIds.forEach(id => this.selectedGpsIds.delete(id));
+            this.gps = this.gps.filter(x => !okSet.has(x.id));
+            this.gpsInitial = this.gpsInitial.filter(x => !okSet.has(x.id));
+            okIds.forEach(id => this.selectedGpsIds.delete(id));
 
-          if (!this.gpsShowAll) {
             const totalPages = Math.max(1, Math.ceil(this.gpsFiltered.length / this.gpsPerPage));
             if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
+
+            this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${okIds.length} GPS(s).`, duration: 5000 });
           }
 
-          this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${okIds.length} GPS(s).`, duration: 5000 });
-        }
+          if (failures) {
+            this.toast.error({ detail: 'Error', summary: `No se pudieron eliminar ${failures} GPS(s).`, duration: 6000 });
+          }
 
-        if (failures) {
-          this.toast.error({ detail: 'Error', summary: `No se pudieron eliminar ${failures} GPS(s).`, duration: 6000 });
+          this.refreshRequested.emit();
+        },
+        error: () => {
+          this.toast.error({ detail: 'Error', summary: 'Falló la eliminación masiva.', duration: 6000 });
+        },
+        complete: () => {
+          this.gpsDeletingId = null;
         }
-      },
-      error: () => {
-        this.toast.error({ detail: 'Error', summary: 'Falló la eliminación masiva.', duration: 6000 });
-      },
-      complete: () => {
-        this.gpsDeletingId = null;
-      }
+      });
     });
-  });
-}
+  }
 
 }

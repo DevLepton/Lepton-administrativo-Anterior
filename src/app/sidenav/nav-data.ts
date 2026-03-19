@@ -12,21 +12,18 @@ export const navbarData: NavItem[] = [
     label: 'Usuarios',
     roles: ['admin']
   },
-
+  {
+    RouteLink: 'peticiones',
+    icon: 'fal fa-bell',
+    label: 'Peticiones',
+    roles: ['inventario', 'soporte']
+  },
   {
     RouteLink: 'almacen',
     icon: 'fal fa-dolly',
     label: 'Inventario',
-    roles: ['inventario']
+    roles: ['inventario', 'soporte']
   },
-
-  {
-    RouteLink: 'eventos',
-    icon: 'fal fa-clipboard-list',
-    label: 'Eventos',
-    roles: ['admin', 'inventario']
-  },
-  
   {
     RouteLink: 'dashboard',
     icon: 'fal fa-home',
@@ -62,5 +59,11 @@ export const navbarData: NavItem[] = [
     icon: 'fal fa-desktop',
     label: 'Dispositivos',
     roles: ['finanzas']
+  },
+  {
+    RouteLink: 'eventos',
+    icon: 'fal fa-clipboard-list',
+    label: 'Eventos',
+    roles: ['admin', 'soporte', 'inventario']
   },
 ];

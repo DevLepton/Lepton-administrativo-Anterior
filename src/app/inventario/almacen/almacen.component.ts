@@ -1,6 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { ApiService } from '../../services/api.service';
-import { forkJoin } from 'rxjs';
+import { ApiService, CreateRequestPayload, RequestedDeviceItem } from '../../services/api.service';
+import { catchError, forkJoin, of } from 'rxjs';
+import { NgToastService } from 'ng-angular-popup';
+import Swal from 'sweetalert2';
 
 type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | string;
 
@@ -9,12 +11,20 @@ interface MiniItem {
   estatus: DeviceStatus;
 }
 
+interface RequestedItemUI {
+  model: string;
+  quantity: number;
+}
+
 @Component({
   selector: 'app-almacen',
   templateUrl: './almacen.component.html',
   styleUrl: './almacen.component.scss'
 })
 export class AlmacenComponent implements OnInit {
+  isInventoryUser = false;
+  isSupportUser = false;
+
   activeTabIndex = 0;
 
   // Solo para resumen
@@ -22,9 +32,25 @@ export class AlmacenComponent implements OnInit {
   simsResumen: MiniItem[] = [];
   accessoriesResumen: MiniItem[] = [];
 
-  constructor(private apiService: ApiService) {}
+  // Nuevas listas completas
+  gpsFull: any[] = [];
+  simsFull: any[] = [];
+  accessoriesFull: any[] = [];
+
+  constructor(private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
+    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+
+    this.isInventoryUser = role === 'inventario';
+    this.isSupportUser = role === 'soporte';
+
+    // por seguridad/UX:
+    if (!this.isSupportUser) {
+      this.requestSidebarOpen = false;
+      this.requestedItems = [];
+    }
+
     this.loadResumen();
   }
 
@@ -32,20 +58,33 @@ export class AlmacenComponent implements OnInit {
     this.activeTabIndex = index;
   }
 
-  private loadResumen() {
-    forkJoin({
-      gps: this.apiService.getGps(),
-      sims: this.apiService.getSims(),
-      accessories: this.apiService.getAccessories()
-    }).subscribe(({ gps, sims, accessories }: any) => {
-      const gpsList = Array.isArray(gps?.data) ? gps.data : (Array.isArray(gps) ? gps : []);
-      const simsList = Array.isArray(sims?.data) ? sims.data : (Array.isArray(sims) ? sims : []);
-      const accList = Array.isArray(accessories?.data) ? accessories.data : (Array.isArray(accessories) ? accessories : []);
+  loadResumen() {
+    this.apiService.getDevices({})
+      .subscribe((res: any) => {
 
-      this.gpsResumen = gpsList.map((d: any) => ({ modelo: d.model ?? '—', estatus: d.status ?? '' }));
-      this.simsResumen = simsList.map((d: any) => ({ modelo: d.model ?? '—', estatus: d.status ?? '' }));
-      this.accessoriesResumen = accList.map((d: any) => ({ modelo: d.model ?? '—', estatus: d.status ?? '' }));
-    });
+        const all = Array.isArray(res?.data) ? res.data : [];
+
+        // Filtrado por tipo
+        this.gpsFull = all.filter((d: { type: string; }) => d.type === 'gps');
+        this.simsFull = all.filter((d: { type: string; }) => d.type === 'sim');
+        this.accessoriesFull = all.filter((d: { type: string; }) => d.type === 'accessory');
+
+        // Map para el resumen
+        this.gpsResumen = this.gpsFull.map(d => ({
+          modelo: d.model ?? '—',
+          estatus: d.status ?? ''
+        }));
+
+        this.simsResumen = this.simsFull.map(d => ({
+          modelo: d.model ?? '—',
+          estatus: d.status ?? ''
+        }));
+
+        this.accessoriesResumen = this.accessoriesFull.map(d => ({
+          modelo: d.model ?? '—',
+          estatus: d.status ?? ''
+        }));
+      });
   }
 
   // ===== Resumen helpers =====
@@ -102,4 +141,148 @@ export class AlmacenComponent implements OnInit {
     if (qty < 5) return 'low';
     return 'ok';
   }
+
+  // ===== Sidebar Solicitud (push) =====
+  requestSidebarOpen = false;
+  creatingRequest = false;
+
+  requestedItems: RequestedItemUI[] = [];
+
+  toggleRequestSidebar() {
+    if (!this.isSupportUser) return;
+    this.requestSidebarOpen = !this.requestSidebarOpen;
+  }
+
+  openRequestSidebar() {
+    if (!this.isSupportUser) return;
+    this.requestSidebarOpen = true;
+  }
+
+  closeRequestSidebar() {
+    this.requestSidebarOpen = false;
+  }
+
+  get requestedTotal(): number {
+    return this.requestedItems.reduce((s, x) => s + (Number(x.quantity) || 0), 0);
+  }
+
+  addRequestedModel(modelRaw: string) {
+    if (!this.isSupportUser) return;
+    const model = (modelRaw ?? '').toString().trim();
+    if (!model) return;
+
+    // Límite total 50 (igual que modal)
+    const allowed = 50 - this.requestedTotal;
+    if (allowed <= 0) {
+      this.toast.warning({ detail: 'Aviso', summary: 'Límite alcanzado (50)', duration: 2500 });
+      return;
+    }
+
+    const idx = this.requestedItems.findIndex(x => x.model.toLowerCase() === model.toLowerCase());
+    if (idx >= 0) {
+      this.requestedItems[idx] = { ...this.requestedItems[idx], quantity: this.requestedItems[idx].quantity + 1 };
+    } else {
+      this.requestedItems.push({ model, quantity: 1 });
+    }
+
+    this.requestedItems = [...this.requestedItems];
+  }
+
+  incRequested(i: number) {
+    if (!this.isSupportUser) return;
+    if (this.requestedTotal >= 50) return;
+    this.requestedItems[i] = { ...this.requestedItems[i], quantity: this.requestedItems[i].quantity + 1 };
+    this.requestedItems = [...this.requestedItems];
+  }
+
+  decRequested(i: number) {
+    if (!this.isSupportUser) return;
+    const q = this.requestedItems[i].quantity - 1;
+    if (q < 1) return;
+    this.requestedItems[i] = { ...this.requestedItems[i], quantity: q };
+    this.requestedItems = [...this.requestedItems];
+  }
+
+  removeRequested(i: number) {
+    if (!this.isSupportUser) return;
+    this.requestedItems.splice(i, 1);
+    this.requestedItems = [...this.requestedItems];
+  }
+
+  clearRequestedList() {
+    if (!this.isSupportUser) return;
+    this.requestedItems = [];
+  }
+
+  createRequestFromSidebar() {
+    if (!this.isSupportUser) return;
+    if (this.requestedItems.length === 0) return;
+
+    const total = this.requestedTotal;
+    if (total < 1 || total > 50) {
+      this.toast.warning({ detail: 'Aviso', summary: 'La cantidad total debe estar entre 1 y 50', duration: 3000 });
+      return;
+    }
+
+    Swal.fire({
+      title: '¿Crear petición?',
+      icon: 'question',
+      html: `
+        <div style="text-align:left">
+          ${this.requestedItems
+          .slice(0, 12)
+          .map(x => `<div><b>${x.model}</b> — ${x.quantity}</div>`)
+          .join('')}
+          ${this.requestedItems.length > 12 ? `<div style="margin-top:.5rem;opacity:.8">…y ${this.requestedItems.length - 12} más</div>` : ''}
+          <hr style="margin: .75rem 0;">
+          <div>Total: <b>${total}</b>/50</div>
+        </div>
+      `,
+      showCancelButton: true,
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Crear',
+      reverseButtons: true,
+      confirmButtonColor: 'var(--color-primary)',
+      cancelButtonColor: 'var(--color-primary)',
+    }).then(result => {
+      if (!result.isConfirmed) return;
+
+      this.creatingRequest = true;
+
+      const devicesRequested: RequestedDeviceItem[] = this.requestedItems.map(x => ({
+        model: x.model,
+        quantity: x.quantity
+      }));
+
+      const payload: CreateRequestPayload = {
+        status: 'Pendiente',
+        requestDate: new Date(),
+        responseDate: null,
+        devicesRequested,
+        quantity: total,
+        comments: null,
+      };
+
+      this.apiService.createRequest(payload).pipe(
+        catchError(err => {
+          const msg = err?.error?.error || err?.error?.message || 'No se pudo crear la petición';
+          this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+          return of({ __error: true });
+        })
+      ).subscribe((resp: any) => {
+        if (resp?.__error) {
+          this.creatingRequest = false;
+          return;
+        }
+
+        this.toast.success({ detail: 'Éxito', summary: 'Petición creada', duration: 3500 });
+        this.creatingRequest = false;
+
+        // limpia lista y (opcional) cierra sidebar
+        this.clearRequestedList();
+        this.closeRequestSidebar();
+      });
+    });
+  }
+
 }

@@ -40,18 +40,25 @@ export class ViewAccessoryModalComponent {
     this.show = true;
     this.lockBodyScroll();
   }
-  close() { this.show = false; this.unlockBodyScroll();}
+  close() { this.show = false; this.unlockBodyScroll(); }
 
-  fmtDate(v: any): string {
+  fmtDate(v: string | Date | null | undefined): string {
+    // 👇 caso especial: externo
+    if (v === null) return 'Externo a Leptón';
+
+    // sin valor (undefined, vacío)
     if (!v) return '—';
+
     const d = v instanceof Date ? v : new Date(v);
     if (isNaN(d.getTime())) return '—';
+
     const fmt = new Intl.DateTimeFormat('es', {
       day: '2-digit',
       month: 'short',
       year: 'numeric',
       timeZone: 'UTC'
     });
+
     return fmt.format(d).replace(/\./g, '');
   }
 }

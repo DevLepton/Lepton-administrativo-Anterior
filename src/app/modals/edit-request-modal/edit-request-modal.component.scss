@@ -1,0 +1,297 @@
+/* ===== Backdrop ===== */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  background: rgba(0, 0, 0, .35);
+}
+
+/* ===== Modal base ===== */
+.modal {
+  position: fixed;
+  z-index: 901;
+  width: 640px;
+  max-width: calc(100% - 2rem);
+  height: 60vh;
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+/* ===== Header / Body / Footer ===== */
+.modal__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: .9rem 1.2rem;
+  border-bottom: 1px solid #eceff3;
+}
+
+.modal__form {
+  height: 100%;
+  min-height: 0;
+  /* clave para overflow */
+  display: flex;
+  flex-direction: column;
+}
+
+.modal__scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  /* clave */
+  overflow-y: auto;
+  padding: 1rem 1.2rem;
+}
+
+.modal__footer {
+  flex: 0 0 auto;
+  display: flex;
+  justify-content: flex-end;
+  gap: .5rem;
+  padding: .8rem 1.2rem;
+  border-top: 1px solid #eceff3;
+  background: #fff;
+}
+
+.modal__footer button {
+  border-radius: 10px;
+}
+
+/* ===== Grid / spans ===== */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: .75rem;
+}
+
+.col-span-2 {
+  grid-column: span 2 / span 2;
+}
+
+/* ===== Compact (Angular Material tweaks) ===== */
+:host ::ng-deep .compact {
+  .mat-mdc-text-field-wrapper {
+    min-height: 36px;
+    padding: 0 12px;
+  }
+
+  .mdc-text-field__input {
+    height: 24px;
+    padding: 0 !important;
+  }
+
+  .mat-mdc-select-trigger {
+    min-height: 24px;
+    display: flex;
+    align-items: center;
+  }
+
+  .mat-mdc-form-field-icon-suffix,
+  .mat-mdc-form-field-icon-prefix {
+    align-self: center;
+  }
+
+  .mat-mdc-form-field .mat-datepicker-toggle-default-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mat-mdc-form-field-subscript-wrapper {
+    margin-top: 2px;
+  }
+
+  .grid {
+    gap: .6rem;
+  }
+}
+
+/* ===== Incremental (qty-field) ===== */
+:host ::ng-deep .qty-field {
+  .mat-mdc-text-field-wrapper {
+    min-height: 40px;
+  }
+
+  .mat-mdc-form-field-infix {
+    display: flex;
+    align-items: center;
+    gap: .25rem;
+  }
+
+  .mat-mdc-icon-button {
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    vertical-align: middle;
+  }
+
+  input[type="number"] {
+    text-align: center;
+    -moz-appearance: textfield;
+  }
+
+  input[type="number"]::-webkit-outer-spin-button,
+  input[type="number"]::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+
+  .mat-mdc-icon-button[disabled] {
+    opacity: .45;
+    cursor: default;
+  }
+
+  .mat-mdc-form-field-subscript-wrapper {
+    margin-top: 2px;
+  }
+}
+
+:host ::ng-deep .compact .qty-field {
+  .mat-mdc-icon-button {
+    width: 32px;
+    height: 32px;
+  }
+
+  .mat-mdc-icon-button .mat-mdc-button-touch-target {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ===================== Tabla de items solicitados ===================== */
+.req-table {
+  margin-top: .75rem;
+  border: 1px solid rgba(0, 0, 0, .10);
+  border-radius: 12px;
+  overflow: hidden;
+  background: #fff;
+}
+
+.req-table__head {
+  display: grid;
+  grid-template-columns: 1fr 170px 90px;
+  gap: .75rem;
+  padding: .65rem .85rem;
+  font-weight: 700;
+  font-size: .85rem;
+  background: #f6f8fb;
+  border-bottom: 1px solid rgba(0, 0, 0, .08);
+}
+
+.req-table__body {
+  max-height: 220px;
+  /* scroll interno si crece */
+  overflow: auto;
+}
+
+.req-table__row {
+  display: grid;
+  grid-template-columns: 1fr 170px 90px;
+  gap: .75rem;
+  align-items: center;
+  padding: .55rem .85rem;
+  border-bottom: 1px solid rgba(0, 0, 0, .06);
+}
+
+.req-table__row:nth-child(even) {
+  background: rgba(0, 0, 0, .02);
+}
+
+.req-table__row:last-child {
+  border-bottom: none;
+}
+
+.col-model {
+  min-width: 0;
+}
+
+.model-text {
+  display: block;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.col-qty {
+  display: flex;
+  justify-content: center;
+}
+
+.qty-control {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  padding: .2rem .35rem;
+  border: 1px solid rgba(0, 0, 0, .10);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.qty-num {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 700;
+}
+
+/* fila de cantidad + agregar */
+.qty-add-row {
+  display: flex;
+  align-items: baseline;
+  /* ✅ centra verticalmente el botón */
+  gap: .75rem;
+}
+
+/* la cantidad puede crecer */
+.qty-add-row .qty-field {
+  flex: 1 1 auto;
+  min-width: 260px;
+}
+
+/* el botón solo ocupa su ancho */
+.add-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  /* ✅ centra verticalmente respecto a la fila */
+  gap: .35rem;
+  flex: 0 0 auto;
+}
+
+/* opcional: que el botón no se estire */
+.add-btn {
+  white-space: nowrap;
+  padding: .55rem 1rem;
+  border-radius: 10px;
+}
+
+.col-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+:host ::ng-deep .col-actions .mat-mdc-icon-button.danger {
+  color: #b42318;
+}
+
+.req-table__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: .55rem .85rem;
+  background: #fafbfc;
+  border-top: 1px solid rgba(0, 0, 0, .06);
+}
+
+.total {
+  font-size: .85rem;
+  opacity: .9;
+}

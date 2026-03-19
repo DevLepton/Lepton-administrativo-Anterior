@@ -76,25 +76,9 @@
             </div>
         </div>
         <div class="filter-bar">
-            <div class="filter-container" style="display: flex; flex: 1; justify-content: space-between;">
-                <div class="pagination-container">
-                    <button class="filter-btn" (click)="toggleSimsShowAll()">
-                        {{ simsShowAll ? 'Paginado' : 'Mostrar todos' }}
-                    </button>
-
-                    <div class="pagination" *ngIf="!simsShowAll && simsFiltered.length > 0 && simsTotalPages > 1">
-                        <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage - 1)"
-                            [disabled]="simsCurrentPage === 1">«</button>
-                        <button *ngFor="let p of [].constructor(simsTotalPages); let i = index" class="pagination-btn"
-                            [class.active]="simsCurrentPage === (i + 1)" (click)="setSimsPage(i + 1)">
-                            {{ i + 1 }}
-                        </button>
-                        <button class="pagination-btn" (click)="setSimsPage(simsCurrentPage + 1)"
-                            [disabled]="simsCurrentPage === simsTotalPages">»</button>
-                    </div>
-                </div>
+            <div class="filter-container" style="display: flex; flex: 1; justify-content: flex-end;">
                 <div class="actions-top">
-                    <button class="new-button" (click)="nuevoSim()">
+                    <button *ngIf="isInventoryUser" class="new-button" (click)="nuevoSim()">
                         <span class="material-icons">sim_card</span> Nuevo SIM
                     </button>
 
@@ -115,7 +99,7 @@
                     </span>
 
 
-                    <span class="tooltip-wrap"
+                    <span *ngIf="isInventoryUser" class="tooltip-wrap"
                         [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 SIM para eliminar'"
                         [matTooltipDisabled]="selectedCount > 0" matTooltipPosition="above">
                         <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelected()"
@@ -131,92 +115,97 @@
     </div>
 
     <div class="table-container">
-        <table class="table">
-            <thead>
-                <tr>
-                    <!-- ✅ seleccionar todo -->
-                    <th class="th-check">
-                        <input type="checkbox" [checked]="isAllVisibleSelected" [indeterminate]="isSomeVisibleSelected"
-                            (change)="toggleSelectAllVisible($any($event.target).checked)"
-                            aria-label="Seleccionar todos" />
-                    </th>
+        <div class="table-scroll">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <!-- ✅ seleccionar todo -->
+                        <th class="th-check">
+                            <input type="checkbox" [checked]="isAllVisibleSelected"
+                                [indeterminate]="isSomeVisibleSelected"
+                                (change)="toggleSelectAllVisible($any($event.target).checked)"
+                                aria-label="Seleccionar todos" />
+                        </th>
 
-                    <th>No.</th>
+                        <th>No.</th>
 
-                    <th (click)="sortBy('iccid')" class="th-sort">
-                        ICCID <span class="arrow">{{ arrowFor('iccid') }}</span>
-                    </th>
-                    <th (click)="sortBy('modelo')" class="th-sort">
-                        Modelo <span class="arrow">{{ arrowFor('modelo') }}</span>
-                    </th>
-                    <th (click)="sortBy('compania')" class="th-sort">
-                        Compañía <span class="arrow">{{ arrowFor('compania') }}</span>
-                    </th>
-                    <th (click)="sortBy('estatus')" class="th-sort">
-                        Estatus <span class="arrow">{{ arrowFor('estatus') }}</span>
-                    </th>
-                    <th (click)="sortBy('fechaCompra')" class="th-sort">
-                        Fecha de compra <span class="arrow">{{ arrowFor('fechaCompra') }}</span>
-                    </th>
-                    <th (click)="sortBy('fechaIngresoLepton')" class="th-sort">
-                        Fecha ingreso Leptón <span class="arrow">{{ arrowFor('fechaIngresoLepton') }}</span>
-                    </th>
-                    <th (click)="sortBy('cliente')" class="th-sort">
-                        Cliente <span class="arrow">{{ arrowFor('cliente') }}</span>
-                    </th>
+                        <th (click)="sortBy('iccid')" class="th-sort">
+                            ICCID <span class="arrow material-icons">{{ arrowFor('iccid') }}</span>
+                        </th>
+                        <th (click)="sortBy('modelo')" class="th-sort">
+                            Modelo <span class="arrow material-icons">{{ arrowFor('modelo') }}</span>
+                        </th>
+                        <th (click)="sortBy('compania')" class="th-sort">
+                            Compañía <span class="arrow material-icons">{{ arrowFor('compania') }}</span>
+                        </th>
+                        <th (click)="sortBy('estatus')" class="th-sort">
+                            Estatus <span class="arrow material-icons">{{ arrowFor('estatus') }}</span>
+                        </th>
+                        <th (click)="sortBy('fechaCompra')" class="th-sort">
+                            Fecha de compra <span class="arrow material-icons">{{ arrowFor('fechaCompra') }}</span>
+                        </th>
+                        <th (click)="sortBy('fechaIngresoLepton')" class="th-sort">
+                            Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowFor('fechaIngresoLepton') }}</span>
+                        </th>
+                        <th (click)="sortBy('cliente')" class="th-sort">
+                            Cliente <span class="arrow material-icons">{{ arrowFor('cliente') }}</span>
+                        </th>
 
-                    <!-- ❌ QUITAR: <th>Acciones</th> -->
-                </tr>
-            </thead>
+                    </tr>
+                </thead>
 
-            <tbody *ngIf="!simsLoading; else simsLoadingTpl">
-                <tr *ngFor="let sim of displayedSims; let idx = index" (click)="toggleRowByClick(sim)"
-                    [class.row-selected]="isSelected(sim.id)" style="cursor:pointer;">
-                    <td class="td-check" (click)="toggleRowByClick(sim); $event.stopPropagation()">
+                <tbody *ngIf="!simsLoading; else simsLoadingTpl">
+                    <tr *ngFor="let sim of displayedSims; let idx = index" (click)="toggleRowByClick(sim)"
+                        [class.row-selected]="isSelected(sim.id)" style="cursor:pointer;">
+                        <td class="td-check" (click)="toggleRowByClick(sim); $event.stopPropagation()">
 
-                        <input type="checkbox" [checked]="isSelected(sim.id)"
-                            (change)="toggleRowSelection(sim, $any($event.target).checked)"
-                            (click)="$event.stopPropagation()" aria-label="Seleccionar SIM" />
-                    </td>
+                            <input type="checkbox" [checked]="isSelected(sim.id)"
+                                (change)="toggleRowSelection(sim, $any($event.target).checked)"
+                                (click)="$event.stopPropagation()" aria-label="Seleccionar SIM" />
+                        </td>
 
 
-                    <td>{{ simsShowAll ? (idx + 1) : ((simsCurrentPage - 1) * simsPerPage + idx + 1) }}</td>
-                    <td>{{ sim.iccid }}</td>
-                    <td>{{ sim.modelo }}</td>
-                    <td>{{ sim.compania }}</td>
-                    <td>
-                        <span class="status-badge" [ngClass]="{
+                        <td>{{ ((simsCurrentPage - 1) * simsPerPage + idx + 1) }}</td>
+                        <td>{{ sim.iccid }}</td>
+                        <td>{{ sim.modelo }}</td>
+                        <td>{{ sim.compania }}</td>
+                        <td>
+                            <span class="status-badge" [ngClass]="{
       inv:  sim.estatus === 'En inventario',
       cfg:  sim.estatus === 'En configuración',
       inst: sim.estatus === 'Instalado'
     }">
-                            {{ sim.estatus }}
-                        </span>
-                    </td>
-                    <td>{{ sim.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
-                    <td>{{ sim.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-                    <td>{{ sim.cliente || '—' }}</td>
-                </tr>
+                                {{ sim.estatus }}
+                            </span>
+                        </td>
+                        <td>{{ sim.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ sim.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ sim.cliente || 'Sin asignar' }}</td>
+                    </tr>
 
 
-                <tr *ngIf="displayedSims.length === 0">
-                    <td colspan="9" style="text-align:center; padding:1rem;">Sin SIM's para mostrar.</td>
-                </tr>
-            </tbody>
-
-            <ng-template #simsLoadingTpl>
-                <tbody>
-                    <tr>
-                        <td colspan="9" style="text-align:center; padding:1rem;">Cargando SIM's…</td>
+                    <tr *ngIf="displayedSims.length === 0">
+                        <td colspan="9" style="text-align:center; padding:1rem;">Sin SIM's para mostrar.</td>
                     </tr>
                 </tbody>
-            </ng-template>
-        </table>
 
-        <app-new-sim-modal (simCreated)="onSimCreated($event)" (simsBulkCreated)="onSimsBulkCreated($event)"
-            [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
-        <app-view-sim-modal></app-view-sim-modal>
-        <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
-            [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>
+                <ng-template #simsLoadingTpl>
+                    <tbody>
+                        <tr>
+                            <td colspan="9" style="text-align:center; padding:1rem;">Cargando SIM's…</td>
+                        </tr>
+                    </tbody>
+                </ng-template>
+            </table>
+        </div>
+        <mat-paginator *ngIf="simsFiltered.length > 0" [length]="simsFiltered.length" [pageIndex]="simsCurrentPage - 1"
+            [pageSize]="simsPerPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+            (page)="onPageChange($event)">
+        </mat-paginator>
     </div>
+    <app-new-sim-modal *ngIf="isInventoryUser" (simCreated)="onSimCreated($event)" (simsBulkCreated)="onSimsBulkCreated($event)"
+        [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
+    <app-view-sim-modal></app-view-sim-modal>
+    <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
+        [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>
 </div>

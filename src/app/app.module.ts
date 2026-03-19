@@ -73,6 +73,13 @@ import { GpsTabComponent } from './inventario/almacen/gps-tab/gps-tab.component'
 import { SimsTabComponent } from './inventario/almacen/sims-tab/sims-tab.component';
 import { AccessoriesTabComponent } from './inventario/almacen/accessories-tab/accessories-tab.component';
 import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatSlideToggleModule } from '@angular/material/slide-toggle';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { MatPaginatorIntl } from '@angular/material/paginator';
+import { getSpanishPaginatorIntl } from './utils/mat-paginator-es';
+import { PeticionesComponent } from './soporte/peticiones/peticiones.component';
+import { NewRequestModalComponent } from './modals/new-request-modal/new-request-modal.component';
+import { EditRequestModalComponent } from './modals/edit-request-modal/edit-request-modal.component';
 
 registerLocaleData(es);
 
@@ -123,6 +130,9 @@ registerLocaleData(es);
     GpsTabComponent,
     SimsTabComponent,
     AccessoriesTabComponent,
+    PeticionesComponent,
+    NewRequestModalComponent,
+    EditRequestModalComponent,
   ],
   imports: [
     BrowserModule,
@@ -147,7 +157,9 @@ registerLocaleData(es);
     MatMenuModule,
     MatDivider,
     MatProgressBar,
-    MatTooltipModule
+    MatTooltipModule,
+    MatSlideToggleModule,
+    MatPaginatorModule
 ],
   providers: [
     provideClientHydration(),
@@ -156,6 +168,7 @@ registerLocaleData(es);
     { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
     { provide: LOCALE_ID, useValue: 'es' },          // 👈 DatePipe y pipes en español
     { provide: MAT_DATE_LOCALE, useValue: 'es-MX' },
+    { provide: MatPaginatorIntl, useFactory: getSpanishPaginatorIntl }
   ],
   bootstrap: [AppComponent]
 })

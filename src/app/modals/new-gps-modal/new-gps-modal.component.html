@@ -74,13 +74,20 @@
             </mat-form-field>
 
             <!-- Fecha de compra -->
-            <mat-form-field appearance="outline">
-              <mat-label>Fecha de compra</mat-label>
-              <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
-              <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
-              <mat-datepicker #pd></mat-datepicker>
-              <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
-            </mat-form-field>
+            <div class="purchase-row">
+              <mat-form-field appearance="outline" class="purchase-field">
+                <mat-label>Fecha de compra</mat-label>
+                <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
+                <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
+                <mat-datepicker #pd></mat-datepicker>
+                <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+              </mat-form-field>
+
+              <mat-slide-toggle formControlName="purchaseExternal">
+                Externo
+              </mat-slide-toggle>
+            </div>
+
 
             <!-- Fecha de ingreso -->
             <mat-form-field appearance="outline">
@@ -172,13 +179,19 @@
               </mat-form-field>
 
               <!-- Fecha de compra -->
-              <mat-form-field appearance="outline">
-                <mat-label>Fecha de compra</mat-label>
-                <input matInput [matDatepicker]="pdb" formControlName="purchaseDate" />
-                <mat-datepicker-toggle matSuffix [for]="pdb"></mat-datepicker-toggle>
-                <mat-datepicker #pdb></mat-datepicker>
-                <mat-error *ngIf="bulkForm.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
-              </mat-form-field>
+              <div class="purchase-row">
+                <mat-form-field appearance="outline" class="purchase-field">
+                  <mat-label>Fecha de compra</mat-label>
+                  <input matInput [matDatepicker]="pdb" formControlName="purchaseDate" />
+                  <mat-datepicker-toggle matSuffix [for]="pdb"></mat-datepicker-toggle>
+                  <mat-datepicker #pdb></mat-datepicker>
+                  <mat-error *ngIf="bulkForm.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+                </mat-form-field>
+
+                <mat-slide-toggle formControlName="purchaseExternal">
+                  Externo
+                </mat-slide-toggle>
+              </div>
 
               <!-- Fecha de ingreso -->
               <mat-form-field appearance="outline">

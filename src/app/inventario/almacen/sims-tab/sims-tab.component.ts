@@ -1,4 +1,4 @@
-import { Component, OnInit, ViewChild } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild } from '@angular/core';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, of } from 'rxjs';
@@ -6,6 +6,7 @@ import { NewSimModalComponent } from '../../../modals/new-sim-modal/new-sim-moda
 import { ViewSimModalComponent } from '../../../modals/view-sim-modal/view-sim-modal.component';
 import { EditSimModalComponent } from '../../../modals/edit-sim-modal/edit-sim-modal.component';
 import { ApiService } from '../../../services/api.service';
+import { PageEvent } from '@angular/material/paginator';
 
 interface SimItem {
   id: string;            // _id
@@ -24,8 +25,13 @@ interface SimItem {
   templateUrl: './sims-tab.component.html',
   styleUrl: '../almacen.component.scss'
 })
-export class SimsTabComponent implements OnInit {
-  @ViewChild(NewSimModalComponent) newSimModal!: NewSimModalComponent;
+export class SimsTabComponent implements OnChanges {
+  @Input() simsData: any[] = [];
+  @Input() isInventoryUser = false;
+
+  @Output() refreshRequested = new EventEmitter<void>();
+
+  @ViewChild(NewSimModalComponent) newSimModal?: NewSimModalComponent;
   @ViewChild(ViewSimModalComponent) viewSimModal!: ViewSimModalComponent;
   @ViewChild(EditSimModalComponent) editSimModal!: EditSimModalComponent;
 
@@ -40,7 +46,6 @@ export class SimsTabComponent implements OnInit {
   // paginado
   simsPerPage = 10;
   simsCurrentPage = 1;
-  simsShowAll = true;
 
   // filtros
   simsSearch = '';
@@ -54,8 +59,16 @@ export class SimsTabComponent implements OnInit {
   sortKey: keyof SimItem | 'no' = 'no';
   sortDir: 'asc' | 'desc' = 'desc';
 
-  ngOnInit(): void {
-    this.loadSims();
+  ngOnChanges() {
+    if (this.simsData.length > 0) {
+      this.sims = this.simsData.map(d => this.mapDeviceToSimItem(d));
+      this.simsInitial = [...this.sims];
+    }
+  }
+
+  onPage(e: PageEvent) {
+    this.simsPerPage = e.pageSize;
+    this.simsCurrentPage = e.pageIndex + 1;
   }
 
   // ===== Helpers =====
@@ -183,9 +196,13 @@ export class SimsTabComponent implements OnInit {
     return Math.max(1, total);
   }
 
+  onPageChange(e: PageEvent) {
+    this.simsPerPage = e.pageSize;
+    this.simsCurrentPage = e.pageIndex + 1;
+  }
+
   get displayedSims(): SimItem[] {
     const src = this.simsFiltered;
-    if (this.simsShowAll) return src;
     const start = (this.simsCurrentPage - 1) * this.simsPerPage;
     return src.slice(start, start + this.simsPerPage);
   }
@@ -195,15 +212,10 @@ export class SimsTabComponent implements OnInit {
     this.simsCurrentPage = Math.min(Math.max(1, p), total);
   }
 
-  toggleSimsShowAll() {
-    this.simsShowAll = !this.simsShowAll;
-    this.simsCurrentPage = 1;
-  }
-
   toggleRowByClick(sim: SimItem) {
-  const currentlySelected = this.isSelected(sim.id);
-  this.toggleRowSelection(sim, !currentlySelected);
-}
+    const currentlySelected = this.isSelected(sim.id);
+    this.toggleRowSelection(sim, !currentlySelected);
+  }
 
   // ===== Filtros =====
   updateSimSearch(v: string) {
@@ -289,7 +301,7 @@ export class SimsTabComponent implements OnInit {
 
   arrowFor(key: keyof SimItem | 'no'): string {
     if (this.sortKey !== key) return '';
-    return this.sortDir === 'asc' ? '▲' : '▼';
+    return this.sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward';
   }
 
   // ===== Uniques =====
@@ -310,14 +322,15 @@ export class SimsTabComponent implements OnInit {
 
   // ===== Acciones =====
   nuevoSim() {
-    this.newSimModal.open();
+    this.newSimModal?.open();
   }
 
   onSimCreated(evt: any) {
+    if (!this.isInventoryUser) return;
     this.apiService.createSim(evt).subscribe({
       next: () => {
         this.toast.success({ detail: 'Éxito', summary: 'SIM registrado con éxito', duration: 4000 });
-        this.loadSims();
+        this.refreshRequested.emit();
       },
       error: (err) => {
         const msg = err?.error?.error || 'Error al registrar SIM';
@@ -327,6 +340,7 @@ export class SimsTabComponent implements OnInit {
   }
 
   onSimsBulkCreated(list: any[]) {
+    if (!this.isInventoryUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay SIMs para registrar.', duration: 3000 });
       return;
@@ -346,11 +360,11 @@ export class SimsTabComponent implements OnInit {
         if (failures > 0) {
           this.toast.error({ detail: 'Error', summary: `No se pudieron registrar ${failures} SIM(s).`, duration: 6000 });
         }
-        this.loadSims();
+        this.refreshRequested.emit();
       },
       error: () => {
         this.toast.error({ detail: 'Error', summary: 'Falló el registro masivo.', duration: 6000 });
-        this.loadSims();
+        this.refreshRequested.emit();
       }
     });
   }
@@ -394,7 +408,7 @@ export class SimsTabComponent implements OnInit {
     this.apiService.updateSim(evt.id, evt.payload).subscribe({
       next: () => {
         this.toast.success({ detail: 'Éxito', summary: 'SIM actualizado con éxito', duration: 4000 });
-        this.loadSims();
+        this.refreshRequested.emit();
       },
       error: (err) => {
         const msg = err?.error?.error || 'Error al actualizar SIM';
@@ -416,6 +430,7 @@ export class SimsTabComponent implements OnInit {
   }
 
   deleteSelected() {
+    if (!this.isInventoryUser) return;
     if (this.selectedCount === 0) return;
 
     const selected = this.selectedSims;
@@ -476,13 +491,10 @@ export class SimsTabComponent implements OnInit {
           }
 
           // ajusta paginado si aplica
-          if (!this.simsShowAll) {
-            const totalPages = Math.max(1, Math.ceil(this.simsFiltered.length / this.simsPerPage));
-            if (this.simsCurrentPage > totalPages) this.simsCurrentPage = totalPages;
-          }
+          const totalPages = Math.max(1, Math.ceil(this.simsFiltered.length / this.simsPerPage));
+          if (this.simsCurrentPage > totalPages) this.simsCurrentPage = totalPages;
 
-          // refresco opcional (si quieres consistencia con backend)
-          // this.loadSims();
+          this.refreshRequested.emit();
         },
         error: () => {
           this.toast.error({ detail: 'Error', summary: 'Falló la eliminación masiva.', duration: 6000 });
@@ -522,12 +534,11 @@ export class SimsTabComponent implements OnInit {
           this.sims = this.sims.filter(s => s.id !== sim.id);
           this.simsInitial = this.simsInitial.filter(s => s.id !== sim.id);
 
-          if (!this.simsShowAll) {
-            const totalPages = Math.max(1, Math.ceil(this.sims.length / this.simsPerPage));
-            if (this.simsCurrentPage > totalPages) this.simsCurrentPage = totalPages;
-          }
+          const totalPages = Math.max(1, Math.ceil(this.sims.length / this.simsPerPage));
+          if (this.simsCurrentPage > totalPages) this.simsCurrentPage = totalPages;
 
           this.toast.success({ detail: 'Éxito', summary: 'SIM eliminado correctamente', duration: 4000 });
+          this.refreshRequested.emit();
         },
         error: (err) => {
           const msg = err?.error?.error || 'No se pudo eliminar el SIM';
