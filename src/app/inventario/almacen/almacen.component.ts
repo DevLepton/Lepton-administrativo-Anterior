@@ -58,18 +58,16 @@ export class AlmacenComponent implements OnInit {
     this.activeTabIndex = index;
   }
 
-  loadResumen() {
-    this.apiService.getDevices({})
+  loadResumen(forceRefresh = false) {
+    this.apiService.getDevicesCached({}, forceRefresh)
       .subscribe((res: any) => {
 
         const all = Array.isArray(res?.data) ? res.data : [];
 
-        // Filtrado por tipo
-        this.gpsFull = all.filter((d: { type: string; }) => d.type === 'gps');
-        this.simsFull = all.filter((d: { type: string; }) => d.type === 'sim');
-        this.accessoriesFull = all.filter((d: { type: string; }) => d.type === 'accessory');
+        this.gpsFull = all.filter((d: { type: any; }) => d.type === 'gps');
+        this.simsFull = all.filter((d: { type: any; }) => d.type === 'sim');
+        this.accessoriesFull = all.filter((d: { type: any; }) => d.type === 'accessory');
 
-        // Map para el resumen
         this.gpsResumen = this.gpsFull.map(d => ({
           modelo: d.model ?? '—',
           estatus: d.status ?? ''
@@ -85,6 +83,10 @@ export class AlmacenComponent implements OnInit {
           estatus: d.status ?? ''
         }));
       });
+  }
+
+  refreshDevices() {
+    this.loadResumen(true);
   }
 
   // ===== Resumen helpers =====

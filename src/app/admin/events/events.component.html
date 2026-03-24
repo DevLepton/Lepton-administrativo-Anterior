@@ -1,6 +1,11 @@
 ﻿<div>
-    <div class="header">
-        <h2>Eventos</h2>
+    <div class="section-header">
+        <div>
+            <h2>Eventos</h2>
+            <button mat-icon-button class="refresh-btn" (click)="refreshEvents()" matTooltip="Recargar">
+                <mat-icon>refresh</mat-icon>
+            </button>
+        </div>
         <hr class="divider">
 
         <div class="filter-bar">

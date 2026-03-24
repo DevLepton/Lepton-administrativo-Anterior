@@ -1,4 +1,15 @@
 /* ================= RESUMEN ================= */
+.tabs-header {
+  position: relative;
+}
+
+.tabs-refresh-btn {
+  position: absolute;
+  top: 0;
+  right: 10px;
+  z-index: 5;
+}
+
 .resumen-pane {
   position: relative;
   padding: 14px 8px;

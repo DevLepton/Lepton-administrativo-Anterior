@@ -180,12 +180,13 @@ mat-paginator {
   cursor: pointer;
   font-weight: 600;
   text-decoration: none;
-  width: 100%;
+  width: 50%;
   text-align: left;
+  transition: all 0.3s ease;
 }
 
 .req-details-link:hover {
-  opacity: .85;
+  color: var(--color-primary-hover);
 }
 
 /* ================= LAYOUT: tabla + sidebar (push) ================= */
@@ -743,13 +744,20 @@ mat-paginator {
   border: none;
   border-radius: 6px;
 
-  background: #1f9d84;
   color: #fff;
   font-size: 14px;
   font-weight: 600;
-
+  
   cursor: pointer;
   transition: all 0.2s ease;
+  
+  &.return {
+    background: var(--color-warning);
+  }
+  
+  &:not(.return) {
+    background: #1f9d84;
+  }
 }
 
 /* icono */
@@ -758,8 +766,13 @@ mat-paginator {
 }
 
 /* hover */
-.send-button:hover:not(:disabled) {
+.send-button:hover:not(:disabled, .return) {
   background: #17806d;
+  transform: translateY(-1px);
+}
+
+.send-button.return:hover:not(:disabled) {
+  background: var(--color-warning-hover);
   transform: translateY(-1px);
 }
 

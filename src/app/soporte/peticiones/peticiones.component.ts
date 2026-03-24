@@ -83,6 +83,8 @@ export class PeticionesComponent implements OnInit {
   deviceModelOptions: string[] = [];
   filteredDeviceModels$!: Observable<string[]>;
 
+  hayCambiosFlag = false;
+
   ngOnInit(): void {
     const role = (localStorage.getItem('user_role') || '').toLowerCase();
 
@@ -150,10 +152,10 @@ export class PeticionesComponent implements OnInit {
     };
   }
 
-  loadRequests(): void {
+  loadRequests(forceRefresh = false): void {
     this.requestsLoading = true;
 
-    this.apiService.getRequests().subscribe({
+    this.apiService.getRequestsCached(forceRefresh).subscribe({
       next: (res: any) => {
         const list = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
 
@@ -170,6 +172,10 @@ export class PeticionesComponent implements OnInit {
       },
       complete: () => (this.requestsLoading = false),
     });
+  }
+
+  refreshRequests() {
+    this.loadRequests(true);
   }
 
   loadDeviceModels() {
@@ -343,10 +349,6 @@ export class PeticionesComponent implements OnInit {
     this.newRequestModal.open();
   }
 
-  onRequestCreated(_: any) {
-    this.loadRequests(); // refresca tabla
-  }
-
   viewSelectedRequest() {
     if (!this.canViewOrEditRequest) return;
     const r = this.selectedRequestsItems[0];
@@ -411,13 +413,9 @@ export class PeticionesComponent implements OnInit {
 
   }
 
-  onRequestUpdated(_: any) {
-    this.loadRequests();
-  }
-
   onRequestDeleted(id: string) {
     // opcional: actualiza sin recargar
-    this.requests = this.requests.filter(x => x.id !== id);
+    this.refreshRequests();
     this.selectedRequestIds.delete(id);
 
     const totalPages = Math.max(1, Math.ceil(this.requestsFiltered.length / this.requestsPerPage));
@@ -493,7 +491,7 @@ export class PeticionesComponent implements OnInit {
           if (okIds.length) {
             const okSet = new Set(okIds);
 
-            this.requests = this.requests.filter(x => !okSet.has(x.id));
+            this.refreshRequests();
             okIds.forEach(id => this.selectedRequestIds.delete(id));
 
             const totalPages = Math.max(1, Math.ceil(this.requestsFiltered.length / this.requestsPerPage));
@@ -578,6 +576,8 @@ export class PeticionesComponent implements OnInit {
 
       this.syncListaExpandidaDesdeValidacion();
 
+      this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;
+
     } else {
       this.listaExpandida[index].id = null;
       this.listaExpandida[index].assignedModel = null;
@@ -606,6 +606,8 @@ export class PeticionesComponent implements OnInit {
     this.listaExpandida[index].id = device._id;
     this.listaExpandida[index].assignedModel = device.model;
     this.listaExpandida[index].identifier = this.getDeviceIdentifier(device);
+
+    this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;
   }
 
   async verificarReapertura(r: PeticionItem): Promise<boolean> {
@@ -689,6 +691,7 @@ export class PeticionesComponent implements OnInit {
 
     setTimeout(() => {
       this.estadoInicialRespuesta = this.getEstadoActual();
+      this.hayCambiosFlag = false;
     });
   }
 
@@ -890,6 +893,7 @@ export class PeticionesComponent implements OnInit {
   }
 
   hayCambios(): boolean {
+    if (!this.estadoInicialRespuesta) return false;
     return this.getEstadoActual() !== this.estadoInicialRespuesta;
   }
 
@@ -943,11 +947,13 @@ export class PeticionesComponent implements OnInit {
     this.nuevoModelo = '';
 
     this.syncListaExpandidaDesdeValidacion();
+    this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;
   }
 
   private eliminarYSync(index: number) {
     this.dispositivosValidacion.splice(index, 1);
     this.syncListaExpandidaDesdeValidacion();
+    this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;
   }
 
   eliminarDispositivoUnitario(index: number) {

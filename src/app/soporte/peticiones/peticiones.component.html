@@ -1,6 +1,11 @@
 <div class="tab-pane" *ngIf="!responding">
-  <div class="header">
-    <h2>Peticiones</h2>
+  <div class="section-header">
+    <div>
+      <h2>Peticiones</h2>
+      <button mat-icon-button class="refresh-btn" (click)="refreshRequests()" matTooltip="Recargar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
     <hr class="divider">
 
     <div class="actions-container">
@@ -331,8 +336,10 @@
 
   </div>
   <!-- ================= MODALES ================= -->
-  <app-new-request-modal (requestCreated)="onRequestCreated($event)"></app-new-request-modal>
-  <app-edit-request-modal (requestUpdated)="onRequestUpdated($event)" (requestDeleted)="onRequestDeleted($event)">
+  <app-new-request-modal (requestCreated)="refreshRequests()">
+  </app-new-request-modal>
+
+  <app-edit-request-modal (requestUpdated)="refreshRequests()" (requestDeleted)="refreshRequests()">
   </app-edit-request-modal>
 </div>
 
@@ -351,7 +358,7 @@
         </h2>
 
         <button class="send-button" (click)="enviarRespuesta()" [disabled]="!modoValidacion && !hayCambios()"
-          [class.disabled]="!modoValidacion && !hayCambios()">
+          [class.disabled]="!modoValidacion && !hayCambios()" [class.return]="hayCambiosFlag && modoValidacion">
 
           <span class="material-icons">
             {{ modoValidacion && !hayCambios() ? 'check_circle' : 'send' }}
@@ -488,6 +495,7 @@
           <div class="panel-body">
 
             <textarea class="comments-input" [(ngModel)]="responseComments"
+              (ngModelChange)="this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;"
               placeholder="Escribe comentarios sobre la respuesta de la petición..." rows="4"></textarea>
 
           </div>

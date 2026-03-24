@@ -44,22 +44,24 @@ export class EventsComponent implements OnInit {
 
 
   /** Llama a la API: GET /events (usa tu ApiService) */
-  fetchEvents(): void {
+  fetchEvents(forceRefresh = false): void {
     this.eventsLoading = true;
     this.errorMsg = '';
 
-    // Puedes pasar filtros/orden si quieres; aquí­ pido los más recientes primero
-    this.api.getEvents({ sort: 'createdAt', order: 'desc', limit: 1000 }) // ajusta limit si hace falta
+    this.api.getEventsCached(
+      { sort: 'createdAt', order: 'desc', limit: 1000 },
+      forceRefresh
+    )
       .subscribe({
         next: (res: EventsListResponse) => {
-          // La respuesta esperada es { data, pagination, ... }
           const items = res?.data ?? [];
-          // ya vienen ordenados por backend; si quieres reasegurar:
+
           this.events = [...items].sort((a, b) => {
             const ams = new Date(a.createdAt as any).getTime() || 0;
             const bms = new Date(b.createdAt as any).getTime() || 0;
             return bms - ams;
           });
+
           this.currentPage = 1;
         },
         error: (err) => {
@@ -70,6 +72,10 @@ export class EventsComponent implements OnInit {
           this.eventsLoading = false;
         }
       });
+  }
+
+  refreshEvents() {
+    this.fetchEvents(true); // 🔥 fuerza nueva petición
   }
 
   /** Helpers de vista */
@@ -234,8 +240,8 @@ export class EventsComponent implements OnInit {
       this.api.deleteEventById(ev._id).subscribe({
         next: (res) => {
           // Quita el evento de la lista en memoria
-          this.events = this.events.filter(e => e._id !== ev._id);
           this.deletingId = null;
+          this.refreshEvents();
 
           Swal.fire({
             title: 'Eliminado',

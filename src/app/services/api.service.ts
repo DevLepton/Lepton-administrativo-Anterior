@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, shareReplay } from 'rxjs';
 
 /* ====================== Tipos comunes ====================== */
 export type EventOperation = 'Creación' | 'Actualización' | 'Eliminación';
@@ -234,6 +234,28 @@ export class ApiService {
     return this.http.get(`${this.baseUrl}/devices`, { params });
   }
 
+  private devicesCache$: Observable<any> | null = null;
+
+  getDevicesCached(
+    query?: {
+      type?: string;
+      status?: string;
+      includeIds?: string[];
+    },
+    forceRefresh = false
+  ): Observable<any> {
+
+    if (!this.devicesCache$ || forceRefresh) {
+      const params = this.buildHttpParams(query);
+
+      this.devicesCache$ = this.http.get(`${this.baseUrl}/devices`, { params }).pipe(
+        shareReplay(1)
+      );
+    }
+
+    return this.devicesCache$;
+  }
+
   /* ====================== SIMs (devices?type=sim) ====================== */
   getSims(): Observable<any> {
     return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'sim' } });
@@ -307,6 +329,27 @@ export class ApiService {
     const params = this.buildHttpParams(query as any);
     return this.http.get<EventsListResponse>(`${this.baseUrl}/events`, { params });
   }
+
+  private eventsCache$: Observable<EventsListResponse> | null = null;
+
+  getEventsCached(
+    query?: any,
+    forceRefresh = false
+  ): Observable<EventsListResponse> {
+
+    if (!this.eventsCache$ || forceRefresh) {
+      const params = this.buildHttpParams(query);
+
+      this.eventsCache$ = this.http
+        .get<EventsListResponse>(`${this.baseUrl}/events`, { params })
+        .pipe(
+          shareReplay(1)
+        );
+    }
+
+    return this.eventsCache$;
+  }
+
   getEventById(id: string): Observable<{ message: string; data: EventItem }> {
     return this.http.get<{ message: string; data: EventItem }>(`${this.baseUrl}/events/${id}`);
   }
@@ -354,6 +397,18 @@ export class ApiService {
   getRequests(query?: RequestsQuery): Observable<any> {
     const params = this.buildHttpParams(query as any);
     return this.http.get(`${this.baseUrl}/requests`, { params });
+  }
+
+  private requestsCache$: Observable<any> | null = null;
+
+  getRequestsCached(forceRefresh = false): Observable<any> {
+    if (!this.requestsCache$ || forceRefresh) {
+      this.requestsCache$ = this.http.get(`${this.baseUrl}/requests`).pipe(
+        shareReplay(1)
+      );
+    }
+
+    return this.requestsCache$;
   }
 
   /** Obtiene una petición por id */

@@ -1,255 +1,265 @@
-<mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
+<div class="tabs-header">
+  <mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
 
-  <!-- ================= RESUMEN ================= -->
-  <mat-tab label="Resumen">
-    <div class="requests-layout">
+    <!-- ================= RESUMEN ================= -->
+    <mat-tab label="Resumen">
+      <div class="requests-layout">
 
-      <!-- ===== CONTENIDO PRINCIPAL (PUSH) ===== -->
-      <div class="requests-main" [class.with-sidebar]="requestSidebarOpen">
+        <!-- ===== CONTENIDO PRINCIPAL (PUSH) ===== -->
+        <div class="requests-main" [class.with-sidebar]="requestSidebarOpen">
 
-        <!-- ===== TU RESUMEN TAL CUAL ===== -->
-        <div class="tab-pane resumen-pane">
+          <!-- ===== TU RESUMEN TAL CUAL ===== -->
+          <div class="tab-pane resumen-pane">
 
-          <!-- KPIs -->
-          <div class="resumen-kpis">
-            <div class="kpi-card kpi-main">
-              <div class="kpi-title">Total en existencia</div>
-              <div class="kpi-value">{{ totalDevicesInStock }}</div>
-              <div class="kpi-sub">GPS + SIM + Accesorios (En inventario / En configuración)</div>
+            <!-- KPIs -->
+            <div class="resumen-kpis">
+              <div class="kpi-card kpi-main">
+                <div class="kpi-title">Total en existencia</div>
+                <div class="kpi-value">{{ totalDevicesInStock }}</div>
+                <div class="kpi-sub">GPS + SIM + Accesorios (En inventario / En configuración)</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-title">GPS en existencia</div>
+                <div class="kpi-value">{{ gpsInStockCount }}</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-title">SIM en existencia</div>
+                <div class="kpi-value">{{ simsInStockCount }}</div>
+              </div>
+
+              <div class="kpi-card">
+                <div class="kpi-title">Accesorios en existencia</div>
+                <div class="kpi-value">{{ accessoriesInStockCount }}</div>
+              </div>
             </div>
 
-            <div class="kpi-card">
-              <div class="kpi-title">GPS en existencia</div>
-              <div class="kpi-value">{{ gpsInStockCount }}</div>
+            <!-- Por modelo -->
+            <div class="resumen-modelos">
+
+              <!-- GPS -->
+              <section class="resumen-block">
+                <header class="resumen-block__header">
+                  <h3>GPS por modelo</h3>
+                  <span class="resumen-total">Total: {{ gpsInStockCount }}</span>
+                </header>
+
+                <div class="resumen-table" *ngIf="gpsByModelInStock.length; else gpsEmpty">
+                  <div class="resumen-row resumen-head">
+                    <div>Modelo</div>
+                    <div>Cantidad</div>
+                    <div>Estatus</div>
+                    <div *ngIf="isSupportUser">Acción</div>
+                  </div>
+
+                  <div class="resumen-row" *ngFor="let it of gpsByModelInStock">
+                    <div class="model">{{ it.modelo }}</div>
+                    <div class="qty">{{ it.cantidad }}</div>
+                    <div class="badge">
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                        {{ stockBadgeText(it.cantidad) }}
+                      </span>
+                    </div>
+
+                    <div *ngIf="isSupportUser">
+
+                      <button type="button" class="req-icon-btn"
+                        (pointerdown)="$event.preventDefault(); $event.stopPropagation(); addRequestedModel(it.modelo); openRequestSidebar()"
+                        title="Solicitar" aria-label="Solicitar">
+                        <span class="material-icons">playlist_add</span>
+                      </button>
+
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- SIM -->
+              <section class="resumen-block">
+                <header class="resumen-block__header">
+                  <h3>SIM por modelo</h3>
+                  <span class="resumen-total">Total: {{ simsInStockCount }}</span>
+                </header>
+
+                <div class="resumen-table" *ngIf="simsByModelInStock.length; else simEmpty">
+                  <div class="resumen-row resumen-head">
+                    <div>Modelo</div>
+                    <div>Cantidad</div>
+                    <div>Estatus</div>
+                    <div *ngIf="isSupportUser">Acción</div>
+                  </div>
+
+                  <div class="resumen-row" *ngFor="let it of simsByModelInStock">
+                    <div class="model">{{ it.modelo }}</div>
+                    <div class="qty">{{ it.cantidad }}</div>
+                    <div class="badge">
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                        {{ stockBadgeText(it.cantidad) }}
+                      </span>
+                    </div>
+
+                    <div *ngIf="isSupportUser">
+                      <button type="button" class="req-icon-btn"
+                        (click)="addRequestedModel(it.modelo); openRequestSidebar()" title="Solicitar"
+                        aria-label="Solicitar">
+                        <span class="material-icons">playlist_add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Accesorios -->
+              <section class="resumen-block">
+                <header class="resumen-block__header">
+                  <h3>Accesorios por modelo</h3>
+                  <span class="resumen-total">Total: {{ accessoriesInStockCount }}</span>
+                </header>
+
+                <div class="resumen-table" *ngIf="accessoriesByModelInStock.length; else accEmpty">
+                  <div class="resumen-row resumen-head">
+                    <div>Modelo</div>
+                    <div>Cantidad</div>
+                    <div>Estatus</div>
+                    <div *ngIf="isSupportUser">Acción</div>
+                  </div>
+
+                  <div class="resumen-row" *ngFor="let it of accessoriesByModelInStock">
+                    <div class="model">{{ it.modelo }}</div>
+                    <div class="qty">{{ it.cantidad }}</div>
+                    <div class="badge">
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
+                        {{ stockBadgeText(it.cantidad) }}
+                      </span>
+                    </div>
+
+                    <div *ngIf="isSupportUser">
+                      <button type="button" class="req-icon-btn"
+                        (click)="addRequestedModel(it.modelo); openRequestSidebar()" title="Solicitar"
+                        aria-label="Solicitar">
+                        <span class="material-icons">playlist_add</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
             </div>
 
-            <div class="kpi-card">
-              <div class="kpi-title">SIM en existencia</div>
-              <div class="kpi-value">{{ simsInStockCount }}</div>
-            </div>
+            <ng-template #gpsEmpty>
+              <div class="resumen-empty">Sin GPS en existencia.</div>
+            </ng-template>
+            <ng-template #simEmpty>
+              <div class="resumen-empty">Sin SIM en existencia.</div>
+            </ng-template>
+            <ng-template #accEmpty>
+              <div class="resumen-empty">Sin Accesorios en existencia.</div>
+            </ng-template>
 
-            <div class="kpi-card">
-              <div class="kpi-title">Accesorios en existencia</div>
-              <div class="kpi-value">{{ accessoriesInStockCount }}</div>
-            </div>
           </div>
-
-          <!-- Por modelo -->
-          <div class="resumen-modelos">
-
-            <!-- GPS -->
-            <section class="resumen-block">
-              <header class="resumen-block__header">
-                <h3>GPS por modelo</h3>
-                <span class="resumen-total">Total: {{ gpsInStockCount }}</span>
-              </header>
-
-              <div class="resumen-table" *ngIf="gpsByModelInStock.length; else gpsEmpty">
-                <div class="resumen-row resumen-head">
-                  <div>Modelo</div>
-                  <div>Cantidad</div>
-                  <div>Estatus</div>
-                  <div *ngIf="isSupportUser">Acción</div>
-                </div>
-
-                <div class="resumen-row" *ngFor="let it of gpsByModelInStock">
-                  <div class="model">{{ it.modelo }}</div>
-                  <div class="qty">{{ it.cantidad }}</div>
-                  <div class="badge">
-                    <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                      {{ stockBadgeText(it.cantidad) }}
-                    </span>
-                  </div>
-
-                  <div *ngIf="isSupportUser">
-
-                    <button type="button" class="req-icon-btn"
-                      (pointerdown)="$event.preventDefault(); $event.stopPropagation(); addRequestedModel(it.modelo); openRequestSidebar()"
-                      title="Solicitar" aria-label="Solicitar">
-                      <span class="material-icons">playlist_add</span>
-                    </button>
-
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <!-- SIM -->
-            <section class="resumen-block">
-              <header class="resumen-block__header">
-                <h3>SIM por modelo</h3>
-                <span class="resumen-total">Total: {{ simsInStockCount }}</span>
-              </header>
-
-              <div class="resumen-table" *ngIf="simsByModelInStock.length; else simEmpty">
-                <div class="resumen-row resumen-head">
-                  <div>Modelo</div>
-                  <div>Cantidad</div>
-                  <div>Estatus</div>
-                  <div *ngIf="isSupportUser">Acción</div>
-                </div>
-
-                <div class="resumen-row" *ngFor="let it of simsByModelInStock">
-                  <div class="model">{{ it.modelo }}</div>
-                  <div class="qty">{{ it.cantidad }}</div>
-                  <div class="badge">
-                    <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                      {{ stockBadgeText(it.cantidad) }}
-                    </span>
-                  </div>
-
-                  <div *ngIf="isSupportUser">
-                    <button type="button" class="req-icon-btn"
-                      (click)="addRequestedModel(it.modelo); openRequestSidebar()" title="Solicitar"
-                      aria-label="Solicitar">
-                      <span class="material-icons">playlist_add</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            <!-- Accesorios -->
-            <section class="resumen-block">
-              <header class="resumen-block__header">
-                <h3>Accesorios por modelo</h3>
-                <span class="resumen-total">Total: {{ accessoriesInStockCount }}</span>
-              </header>
-
-              <div class="resumen-table" *ngIf="accessoriesByModelInStock.length; else accEmpty">
-                <div class="resumen-row resumen-head">
-                  <div>Modelo</div>
-                  <div>Cantidad</div>
-                  <div>Estatus</div>
-                  <div *ngIf="isSupportUser">Acción</div>
-                </div>
-
-                <div class="resumen-row" *ngFor="let it of accessoriesByModelInStock">
-                  <div class="model">{{ it.modelo }}</div>
-                  <div class="qty">{{ it.cantidad }}</div>
-                  <div class="badge">
-                    <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                      {{ stockBadgeText(it.cantidad) }}
-                    </span>
-                  </div>
-
-                  <div *ngIf="isSupportUser">
-                    <button type="button" class="req-icon-btn"
-                      (click)="addRequestedModel(it.modelo); openRequestSidebar()" title="Solicitar"
-                      aria-label="Solicitar">
-                      <span class="material-icons">playlist_add</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-          </div>
-
-          <ng-template #gpsEmpty>
-            <div class="resumen-empty">Sin GPS en existencia.</div>
-          </ng-template>
-          <ng-template #simEmpty>
-            <div class="resumen-empty">Sin SIM en existencia.</div>
-          </ng-template>
-          <ng-template #accEmpty>
-            <div class="resumen-empty">Sin Accesorios en existencia.</div>
-          </ng-template>
-
         </div>
+
+        <!-- ===== SIDEBAR (PUSH, NO OVERLAY) ===== -->
+        <aside class="side-panel" *ngIf="isSupportUser && requestSidebarOpen">
+          <div class="side-panel__head">
+            <div>
+              <div class="side-title">Solicitud de dispositivos</div>
+              <div class="side-sub">Total: <b>{{ requestedTotal }}</b>/50</div>
+            </div>
+
+            <button mat-icon-button (click)="toggleRequestSidebar()" aria-label="Cerrar">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <div class="side-panel__body">
+            <div class="resumen-empty" *ngIf="requestedItems.length === 0">
+              Aún no agregas dispositivos. Presiona <b>“Solicitar”</b> en algún modelo.
+            </div>
+
+            <div class="side-table" *ngIf="requestedItems.length > 0">
+
+              <!-- head (3 cols pero mismo skin) -->
+              <div class="side-table__head side-table__head--req">
+                <div>Modelo</div>
+                <div>Cantidad</div>
+                <div>Acciones</div>
+              </div>
+
+              <div class="side-table__row side-table__row--req" *ngFor="let it of requestedItems; let i = index">
+                <div class="ellipsis" [title]="it.model">{{ it.model }}</div>
+
+                <div>
+                  <div class="qty-control">
+                    <button mat-icon-button type="button" (click)="decRequested(i)" [disabled]="it.quantity <= 1">
+                      <mat-icon>remove</mat-icon>
+                    </button>
+
+                    <span class="qty-num"><b>{{ it.quantity }}</b></span>
+
+                    <button mat-icon-button type="button" (click)="incRequested(i)" [disabled]="requestedTotal >= 50">
+                      <mat-icon>add</mat-icon>
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <button mat-icon-button type="button" class="danger" (click)="removeRequested(i)"
+                    aria-label="Eliminar">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <div class="side-panel__footer">
+            <button mat-stroked-button type="button" (click)="clearRequestedList()"
+              [disabled]="requestedItems.length === 0">
+              Limpiar
+            </button>
+
+            <button mat-flat-button color="primary" type="button" (click)="createRequestFromSidebar()"
+              [disabled]="requestedItems.length === 0 || creatingRequest">
+              {{ creatingRequest ? 'Creando…' : 'Crear petición' }}
+            </button>
+          </div>
+        </aside>
+
+        <!-- ===== BOTÓN FLOTANTE PARA ABRIR/CERRAR ===== -->
+        <button *ngIf="isSupportUser" type="button" class="fab-sidebar" [class.is-open]="requestSidebarOpen"
+          (click)="toggleRequestSidebar()" [attr.aria-label]="requestSidebarOpen ? 'Ocultar panel' : 'Mostrar panel'">
+          <span class="material-icons">
+            {{ requestSidebarOpen ? 'chevron_right' : 'chevron_left' }}
+          </span>
+
+          <span class="fab-badge" *ngIf="requestedItems.length > 0">{{ requestedItems.length }}</span>
+        </button>
+
       </div>
+    </mat-tab>
 
-      <!-- ===== SIDEBAR (PUSH, NO OVERLAY) ===== -->
-      <aside class="side-panel" *ngIf="isSupportUser && requestSidebarOpen">
-        <div class="side-panel__head">
-          <div>
-            <div class="side-title">Solicitud de dispositivos</div>
-            <div class="side-sub">Total: <b>{{ requestedTotal }}</b>/50</div>
-          </div>
+    <!-- ============= TABS COMPONENTIZADOS ============= -->
+    <mat-tab label="GPS's">
+      <app-gps-tab [gpsData]="gpsFull" [isInventoryUser]="isInventoryUser"
+        (refreshRequested)="loadResumen(true)"></app-gps-tab>
+    </mat-tab>
 
-          <button mat-icon-button (click)="toggleRequestSidebar()" aria-label="Cerrar">
-            <mat-icon>close</mat-icon>
-          </button>
-        </div>
+    <mat-tab label="SIM's">
+      <app-sims-tab [simsData]="simsFull" [isInventoryUser]="isInventoryUser"
+        (refreshRequested)="loadResumen(true)"></app-sims-tab>
+    </mat-tab>
 
-        <div class="side-panel__body">
-          <div class="resumen-empty" *ngIf="requestedItems.length === 0">
-            Aún no agregas dispositivos. Presiona <b>“Solicitar”</b> en algún modelo.
-          </div>
+    <mat-tab label="Accesorios">
+      <app-accessories-tab [accessoriesData]="accessoriesFull" [isInventoryUser]="isInventoryUser"
+        (refreshRequested)="loadResumen(true)"></app-accessories-tab>
+    </mat-tab>
 
-          <div class="side-table" *ngIf="requestedItems.length > 0">
+  </mat-tab-group>
 
-            <!-- head (3 cols pero mismo skin) -->
-            <div class="side-table__head side-table__head--req">
-              <div>Modelo</div>
-              <div>Cantidad</div>
-              <div>Acciones</div>
-            </div>
-
-            <div class="side-table__row side-table__row--req" *ngFor="let it of requestedItems; let i = index">
-              <div class="ellipsis" [title]="it.model">{{ it.model }}</div>
-
-              <div>
-                <div class="qty-control">
-                  <button mat-icon-button type="button" (click)="decRequested(i)" [disabled]="it.quantity <= 1">
-                    <mat-icon>remove</mat-icon>
-                  </button>
-
-                  <span class="qty-num"><b>{{ it.quantity }}</b></span>
-
-                  <button mat-icon-button type="button" (click)="incRequested(i)" [disabled]="requestedTotal >= 50">
-                    <mat-icon>add</mat-icon>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <button mat-icon-button type="button" class="danger" (click)="removeRequested(i)" aria-label="Eliminar">
-                  <mat-icon>delete</mat-icon>
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-
-        <div class="side-panel__footer">
-          <button mat-stroked-button type="button" (click)="clearRequestedList()"
-            [disabled]="requestedItems.length === 0">
-            Limpiar
-          </button>
-
-          <button mat-flat-button color="primary" type="button" (click)="createRequestFromSidebar()"
-            [disabled]="requestedItems.length === 0 || creatingRequest">
-            {{ creatingRequest ? 'Creando…' : 'Crear petición' }}
-          </button>
-        </div>
-      </aside>
-
-      <!-- ===== BOTÓN FLOTANTE PARA ABRIR/CERRAR ===== -->
-      <button *ngIf="isSupportUser" type="button" class="fab-sidebar" [class.is-open]="requestSidebarOpen" (click)="toggleRequestSidebar()"
-        [attr.aria-label]="requestSidebarOpen ? 'Ocultar panel' : 'Mostrar panel'">
-        <span class="material-icons">
-          {{ requestSidebarOpen ? 'chevron_right' : 'chevron_left' }}
-        </span>
-
-        <span class="fab-badge" *ngIf="requestedItems.length > 0">{{ requestedItems.length }}</span>
-      </button>
-
-    </div>
-  </mat-tab>
-
-  <!-- ============= TABS COMPONENTIZADOS ============= -->
-  <mat-tab label="GPS's">
-    <app-gps-tab [gpsData]="gpsFull" [isInventoryUser]="isInventoryUser" (refreshRequested)="loadResumen()"></app-gps-tab>
-  </mat-tab>
-
-  <mat-tab label="SIM's">
-    <app-sims-tab [simsData]="simsFull" [isInventoryUser]="isInventoryUser" (refreshRequested)="loadResumen()"></app-sims-tab>
-  </mat-tab>
-
-  <mat-tab label="Accesorios">
-    <app-accessories-tab [accessoriesData]="accessoriesFull" [isInventoryUser]="isInventoryUser" (refreshRequested)="loadResumen()"></app-accessories-tab>
-  </mat-tab>
-
-</mat-tab-group>
+  <button mat-icon-button class="tabs-refresh-btn" (click)="refreshDevices()" matTooltip="Recargar">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
