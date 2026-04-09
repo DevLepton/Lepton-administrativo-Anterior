@@ -62,11 +62,15 @@ export class SidenavComponent implements OnInit {
     if (typeof window !== 'undefined') {
       this.screenWidth = window.innerWidth;
     }
+    
+    this.collapsed = true;
+    this.onToggleSidenav.emit({ collapsed: true, screenWidth: this.screenWidth });
 
     const role = this.authService.getUserRole();
     this.navData = role
       ? navbarData.filter(item => item.roles.includes(role))
       : [];
+
   }
   toggleCollapsed(): void {
     this.collapsed = !this.collapsed;

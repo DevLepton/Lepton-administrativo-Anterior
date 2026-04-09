@@ -211,7 +211,7 @@ export class PeticionesComponent implements OnInit {
 
   get totalFromSidebar(): number {
     const arr = this.selectedRequestForSidebar?.dispositivosSolicitados ?? [];
-    return arr.reduce((s, x) => s + (Number(x.quantity) || 0), 0);
+    return arr.reduce((s, x) => s + (Number(x.quantity) || 0), 0);//
   }
 
   openDevicesSidebar(r: PeticionItem) {
@@ -230,7 +230,6 @@ export class PeticionesComponent implements OnInit {
     this.devicesSidebarOpen = false;
     this.selectedRequestForSidebar = null;
   }
-
 
   // ===== filtros =====
   updateRequestSearch(v: string) {

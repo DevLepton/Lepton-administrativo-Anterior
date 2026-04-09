@@ -9,7 +9,8 @@ export class AuthService {
   private authenticated = new BehaviorSubject<boolean>(this.checkAuthentication()); // Estado inicial
   isAuthenticated$ = this.authenticated.asObservable();
 
-  private apiUrl = 'http://localhost:3003/users'; // URL de la API para autenticación
+  // private apiUrl = 'http://localhost:3003/users'; // URL de la API para autenticación
+  private apiUrl = 'https://leptoncore-api.lepton-seguridad.com/users'; // URL de la API para autenticación
 
   constructor(private http: HttpClient) { }
 

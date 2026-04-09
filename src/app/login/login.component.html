@@ -59,9 +59,33 @@
       </form>
 
       <!-- Enlace para registro -->
-      <p class="register-text">
-        ¿Nuevo usuario? <a href="#" (click)="onRegister()">Regístrate aquí</a>
+      <p class="register-text" (click)="onRegister()">
+        ¿Olvidaste tu contraseña?
       </p>
     </div>
+  </div>
+</div>
+
+<!-- Modal recuperar contraseña -->
+<div class="modal-backdrop" *ngIf="showForgotModal" (click)="showForgotModal = false">
+  <div class="modal-content forgot-modal" (click)="$event.stopPropagation()">
+
+    <!-- <h2 class="login-title">Recuperar contraseña</h2> -->
+
+    <!-- Imagen -->
+    <div class="forgot-image">
+      <img src="../../assets/Gato riendo.jpg" alt="Recuperar contraseña" />
+    </div>
+
+    <!-- <p class="forgot-text">
+      Contacta al administrador para recuperar tu acceso o sigue las instrucciones enviadas a tu correo.
+    </p> -->
+
+    <div class="modal-actions">
+      <button mat-flat-button color="warn" (click)="showForgotModal = false">
+        Cerrar
+      </button>
+    </div>
+
   </div>
 </div>

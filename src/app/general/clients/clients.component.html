@@ -1,0 +1,633 @@
+<div class="tab-pane" *ngIf="activeTab === 'clients'">
+    <div class="section-header">
+        <div>
+            <h2 style="flex: 1;">Detalles de los clientes</h2>
+            <span *ngIf="lastUpdate" class="last-update">
+                Última consulta: {{ lastUpdate | date:'medium' }}
+            </span>
+            <button mat-icon-button class="refresh-btn" (click)="refreshClients()" matTooltip="Recargar"
+                disabled="{{loading}}">
+                <mat-icon>refresh</mat-icon>
+            </button>
+        </div>
+        <hr class="divider">
+        <div class="filter-bar" *ngIf="!loading">
+
+            <!-- 🔍 BUSCADOR -->
+            <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+                <mat-label>Buscar cliente</mat-label>
+                <input matInput [(ngModel)]="search" (ngModelChange)="updateFilteredClients()">
+                <mat-icon matSuffix>search</mat-icon>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="tracker-filter" subscriptSizing="dynamic">
+                <mat-label>Mostrar</mat-label>
+
+                <mat-select [(ngModel)]="trackerFilter" (selectionChange)="onTrackerFilterChange()">
+
+                    <mat-option value="all">
+                        Todos
+                    </mat-option>
+
+                    <mat-option value="with">
+                        Con dispositivos
+                    </mat-option>
+
+                    <mat-option value="without">
+                        Sin dispositivos
+                    </mat-option>
+
+                </mat-select>
+            </mat-form-field>
+
+            <!-- 📊 SELECTOR COLUMNAS -->
+            <mat-form-field appearance="outline" class="columns" subscriptSizing="dynamic">
+                <mat-label>Columnas</mat-label>
+
+                <mat-select multiple [(ngModel)]="selectedColumns" (selectionChange)="updateVisibleColumns()">
+
+                    <mat-option *ngFor="let col of availableColumns" [value]="col">
+                        {{ col | titlecase }}
+                    </mat-option>
+
+                    <mat-option *ngFor="let col of extraColumns" [value]="col">
+                        {{ col | titlecase}}
+                    </mat-option>
+
+                </mat-select>
+            </mat-form-field>
+
+            <div class="toggles">
+
+                <div class="toggle-item" matTooltip="Mostrar solo los clientes de la lista de activos">
+                    <span>Solo activos</span>
+                    <mat-slide-toggle [(ngModel)]="onlyActiveClients"
+                        (change)="onSettingsChange(); updateFilteredClients()">
+                    </mat-slide-toggle>
+                </div>
+
+                <div class="toggle-item" matTooltip="Excluir cuentas de la lista de excluidos">
+                    <span>Excluir bloqueados</span>
+                    <mat-slide-toggle [(ngModel)]="excludeBlockedClients"
+                        (change)="onSettingsChange(); updateFilteredClients()">
+                    </mat-slide-toggle>
+                </div>
+
+                <div class="toggle-item"
+                    matTooltip="Incluir los datos de sensores (SDC y CAN Bus) en la próxima consulta">
+                    <span>Sensores</span>
+                    <mat-slide-toggle [(ngModel)]="includeSensors" (change)="onSettingsChange()"></mat-slide-toggle>
+                </div>
+
+                <div class="toggle-item" matTooltip="Incluir los datos de inicio de sesión en la próxima consulta">
+                    <span>Último login</span>
+                    <mat-slide-toggle [(ngModel)]="includeLogin" (change)="onSettingsChange()"></mat-slide-toggle>
+                </div>
+
+            </div>
+
+            <button class="tab-btn" (click)="setActiveTab('config')" *ngIf="isSupportUser">
+                Listas de clientes
+            </button>
+
+            <button class="toggle-btn" [class.rotate]="sidebarCollapsed" (click)="toggleSidebar()"
+                matTooltip="{{sidebarCollapsed ? 'Mostrar estadísticas' : 'Ocultar estadísticas'}}">
+                <mat-icon>
+                    chevron_right
+                </mat-icon>
+            </button>
+        </div>
+        <div class="bulk-actions" *ngIf="!loading">
+
+            <mat-checkbox [checked]="allSelected" [indeterminate]="selectedClients.size > 0 && !allSelected"
+                (change)="toggleSelectAll()" style="margin-right: auto;">
+
+                Seleccionar todos ({{ selectedClients.size }}/{{ filteredClientsList.length }})
+
+            </mat-checkbox>
+
+            <button mat-raised-button class="custom-button" color="primary" (click)="toggleExpandMode()">
+                <mat-icon>{{ expandAll ? 'unfold_less' : 'unfold_more' }}</mat-icon>
+                {{ expandAll ? 'Ver uno por uno' : 'Expandir todos' }}
+            </button>
+            <button mat-flat-button class="btn-excel" color="primary" (click)="exportToExcel()" [disabled]="selectedClients.size === 0">
+
+                <mat-icon>download</mat-icon>
+                Exportar
+            </button>
+
+        </div>
+    </div>
+
+    <div *ngIf="loading" class="loading-state">
+        <div class="loader"></div>
+        <p>Cargando datos...</p>
+    </div>
+    <div *ngIf="!loading" class="dashboard">
+        <!-- IZQUIERDA -->
+        <div class="left" [class.full]="sidebarCollapsed">
+
+            <!-- CLIENTES -->
+            <div class="clients" #clientsContainer>
+
+                <div class="client" #clientItem *ngFor="let c of filteredClientsList; trackBy: trackByClient">
+
+                    <!-- 🔥 HEADER TIPO HOJA -->
+                    <div class="client-header" (click)="toggleClient(c.id)">
+
+                        <div class="client-left">
+                            <!-- ✅ CHECKBOX -->
+                            <mat-checkbox class="client-checkbox" [checked]="selectedClients.has(c.id)"
+                                (click)="stop($event)" (change)="toggleClientSelection(c.id)">
+                            </mat-checkbox>
+
+                            <span class="client-id">#{{ c.id }}</span>
+
+                            <div class="client-info">
+                                <b class="client-name">{{ c.nombre }}</b>
+                                <small class="client-email">{{ c.login }}</small>
+                            </div>
+                        </div>
+
+                        <div class="client-center">
+                            <mat-icon *ngIf="c.hasHidden" class="warn" matTooltip="Tiene dispositivos hidden">
+                                error_outline
+                            </mat-icon>
+
+                            <span class="client-id" *ngIf="c.ciudad">{{ c.ciudad }}</span>
+
+                            <mat-icon *ngIf="c.ultimoIngreso" matTooltip="{{ c.ultimoIngreso }}">
+                                account_circle
+                            </mat-icon>
+                        </div>
+
+                        <div class="client-stats">
+                            <div class="stat total">{{ c.total }}</div>
+                            <div class="stat ok">{{ c.online }}</div>
+                            <div class="stat bad">{{ c.offline }}</div>
+                        </div>
+
+                    </div>
+
+                    <div class="expand" [@expandCollapse]="(expandAll || expandedClient === c.id) ? 'expanded' : 'collapsed'"
+                        (@expandCollapse.done)="onAnimationDone(c.id)" (click)="stop($event)">
+                        <ng-container *ngIf="renderedClients.has(c.id)">
+                            <div class="table-container">
+                                <table mat-table [dataSource]="c.trackers" class="tracker-table full">
+
+                                    <!-- ID -->
+                                    <ng-container matColumnDef="id">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('id')"> ID
+                                        </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('id')"> {{ t.id }} </td>
+                                    </ng-container>
+
+                                    <!-- Nombre -->
+                                    <ng-container matColumnDef="nombre">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('nombre')"> Nombre en Plataforma
+                                        </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('nombre')"> {{ t.nombre }} </td>
+                                    </ng-container>
+
+                                    <!-- IMEI -->
+                                    <ng-container matColumnDef="imei">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('imei')"> IMEI </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('imei')"> {{ t.imei }} </td>
+                                    </ng-container>
+
+                                    <!-- SIM -->
+                                    <ng-container matColumnDef="sim">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('sim')"> SIM </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('sim')">
+                                            {{ t.sim }} </td>
+                                    </ng-container>
+
+                                    <!-- PLAN -->
+                                    <ng-container matColumnDef="plan">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('plan')"> Plan </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('plan')"> {{ t.plan }} </td>
+                                    </ng-container>
+
+                                    <!-- MODELO -->
+                                    <ng-container matColumnDef="modelo">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('modelo')"> Modelo GPS </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('modelo')"> {{ t.modelo }} </td>
+                                    </ng-container>
+
+                                    <!-- CLON -->
+                                    <ng-container matColumnDef="clon">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('clon')"> Clon </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('clon')">
+                                            <span [class.bad]="t.clon">{{ t.clon ? 'Sí' : 'No' }}</span>
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- SUSPENDIDO -->
+                                    <ng-container matColumnDef="suspendido">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('suspendido')"> Suspendido </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('suspendido')">
+                                            {{ t.suspendido ? 'Sí' : 'No' }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- HIDDEN -->
+                                    <ng-container matColumnDef="hidden">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('hidden')"> Hidden </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('hidden')">
+                                            <span [class.bad]="t.hidden">{{ t.hidden ? 'TRUE' : 'FALSE' }}</span>
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- SDC1 -->
+                                    <ng-container matColumnDef="sdc1">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc1')"> SDC1 </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc1')">
+                                            {{ includeSensors ? (t.sdc1 || '-') : '-' }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- SDC2 -->
+                                    <ng-container matColumnDef="sdc2">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc2')"> SDC2 </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc2')">
+                                            {{ includeSensors ? (t.sdc2 || '-') : '-' }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- SDC ACUMULADO -->
+                                    <ng-container matColumnDef="sdcAcumulado">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdcAcumulado')"> SDC Acumulado
+                                        </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdcAcumulado')">
+                                            {{ includeSensors ? (t.sdcAcumulado || '-') : '-' }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- CANBUS -->
+                                    <ng-container matColumnDef="canbus">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('canbus')"> CAN Bus </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('canbus')">
+                                            {{ includeSensors ? (t.canbus || '-') : '-' }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- UTC -->
+                                    <ng-container matColumnDef="ultimaConexionUTC">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionUTC')"> UTC </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionUTC')">
+                                            {{ t.ultimaConexionUTC }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- ÚLTIMA CONEXIÓN -->
+                                    <ng-container matColumnDef="ultimaConexionLocal">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionLocal')"> Última
+                                            Conexión </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionLocal')">
+                                            {{ t.ultimaConexionLocal }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- TIEMPO OFFLINE -->
+                                    <ng-container matColumnDef="tiempoOffline">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempoOffline')"> Tiempo Offline
+                                        </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempoOffline')">
+                                            {{ t.tiempoOffline }}
+                                        </td>
+                                    </ng-container>
+
+                                    <!-- STATUS -->
+                                    <ng-container matColumnDef="statusSoporte">
+                                        <th mat-header-cell *matHeaderCellDef
+                                            [class.hidden-col]="!visibleColumnsSet.has('statusSoporte')"> Status </th>
+                                        <td mat-cell *matCellDef="let t"
+                                            [class.hidden-col]="!visibleColumnsSet.has('statusSoporte')">
+                                            <span [ngClass]="getStatusClass(t.statusSoporte)">
+                                                {{ t.statusSoporte }}
+                                            </span>
+                                        </td>
+                                    </ng-container>
+
+                                    <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                                    <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                                </table>
+                            </div>
+                        </ng-container>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- DERECHA (SIDEBAR) -->
+        <div class="right" [class.collapsed]="sidebarCollapsed">
+
+            <!-- KPIs -->
+            <div class="kpis">
+                <div class="kpi-card main">
+                    <div>Clientes</div>
+                    <b>{{ totalClientes }}</b>
+                </div>
+
+                <div class="kpi-card">
+                    <div>Dispositivos</div>
+                    <b>{{ totalTrackers }}</b>
+                </div>
+
+                <div class="kpi-card ok">
+                    <div>Online</div>
+                    <b>{{ totalOnline }}</b>
+                </div>
+
+                <div class="kpi-card bad">
+                    <div>Offline</div>
+                    <b>{{ totalOffline }}</b>
+                </div>
+            </div>
+
+            <!-- BUCKETS -->
+            <div class="card">
+                <h4 style="margin-bottom: 10px;">GPS fuera de línea</h4>
+                <div class="offline-card" *ngFor="let b of offlineBuckets"
+                    (click)="filterByBucket(b.label); stop($event)" [class.active]="selectedBucket === b.label">
+
+                    <div>{{ b.label }}</div>
+                    <b>{{ b.value }}</b>
+
+                    <div class="bar">
+                        <div class="bar-fill" [style.width.%]="getPercent(b.value)"
+                            [style.background]="getBucketColor(b.label)">
+                        </div>
+                    </div>
+
+                </div>
+
+            </div>
+
+            <!-- TOP OFFLINE -->
+            <div class="card">
+                <h4 style="margin-bottom: 10px;">Top offline</h4>
+
+                <div class="top-row" *ngFor="let c of topOffline">
+                    <span>{{ c.nombre }}</span>
+                    <b>{{ c.offline }}</b>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<div class="tab-pane" *ngIf="activeTab === 'config' && isSupportUser">
+
+    <div class="section-header">
+        <button class="back-button" (click)="setActiveTab('clients')">
+            <span class="material-icons">arrow_back</span>
+            Regresar
+        </button>
+
+        <div class="header-bar">
+            <h2>Configuración de clientes</h2>
+
+            <button mat-icon-button class="refresh-btn" (click)="loadClientConfig(true)" matTooltip="Recargar">
+                <mat-icon>refresh</mat-icon>
+            </button>
+        </div>
+    </div>
+
+    <div class="config-layout">
+
+        <!-- 🔵 ACTIVOS -->
+        <div class="config-card">
+
+            <div class="card-header">
+                <div>
+                    <h3>Clientes activos</h3>
+                    <p class="subtitle">ID → HASH autorizados</p>
+                </div>
+
+                <button mat-flat-button color="primary" class="custom-button" (click)="saveActiveClients()"
+                    [disabled]="!hasActiveChanges()">
+                    <mat-icon>save</mat-icon>
+                    Guardar
+                </button>
+            </div>
+
+            <!-- FORM -->
+            <div class="form-inline">
+
+                <mat-form-field appearance="outline" class="field" subscriptSizing="dynamic">
+                    <mat-label>ID cliente</mat-label>
+
+                    <input matInput [(ngModel)]="newActiveId" (ngModelChange)="onActiveIdInput($event)"
+                        [matAutocomplete]="autoActive">
+
+                    <mat-autocomplete #autoActive="matAutocomplete"
+                        (optionSelected)="newActiveId = $event.option.value">
+
+                        <mat-option *ngFor="let c of filteredActiveOptions" [value]="c.id">
+                            <div class="option">
+                                <span class="id">#{{ c.id }}</span>
+                                <span class="name">{{ c.nombre }}</span>
+                            </div>
+                        </mat-option>
+
+                    </mat-autocomplete>
+
+                </mat-form-field>
+
+                <mat-form-field appearance="outline" class="field" subscriptSizing="dynamic">
+                    <mat-label>Hash</mat-label>
+                    <input matInput [(ngModel)]="newActiveHash">
+                </mat-form-field>
+
+                <button mat-mini-fab color="primary" class="add-btn" (click)="addActiveClient()" matTooltip="Agregar"
+                    [disabled]="!newActiveId || !newActiveHash">
+                    <mat-icon>add</mat-icon>
+                </button>
+
+            </div>
+
+            <!-- LIST -->
+            <div class="list">
+
+                <div class="list-item" *ngFor="let item of activeClients | keyvalue">
+
+                    <!-- MODO NORMAL -->
+                    <ng-container *ngIf="editingActiveId !== item.key; else editActiveTpl">
+
+                        <div class="item-info">
+                            <span class="id">#{{ item.key }}</span>
+                            <span class="hash">{{ item.value }}</span>
+                        </div>
+
+                        <div class="actions">
+                            <button mat-icon-button color="primary" (click)="startEditActive(item.key, item.value)">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+
+                            <button mat-icon-button color="warn" (click)="removeActiveClient(item.key)">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </div>
+
+                    </ng-container>
+
+                    <!-- MODO EDICIÓN -->
+                    <ng-template #editActiveTpl>
+
+                        <div class="edit-row">
+
+                            <span class="id">#{{ item.key }}</span>
+
+                            <mat-form-field appearance="outline" class="edit-field" subscriptSizing="dynamic">
+                                <input matInput [(ngModel)]="editingActiveHash">
+                            </mat-form-field>
+
+                            <button mat-icon-button color="primary" (click)="saveEditActive()">
+                                <mat-icon>check</mat-icon>
+                            </button>
+
+                            <button mat-icon-button (click)="cancelEditActive()">
+                                <mat-icon>close</mat-icon>
+                            </button>
+
+                        </div>
+
+                    </ng-template>
+
+                </div>
+
+            </div>
+
+        </div>
+
+        <!-- 🔴 EXCLUIDOS -->
+        <div class="config-card">
+
+            <div class="card-header">
+                <div>
+                    <h3>Cuentas excluidas</h3>
+                    <p class="subtitle">IDs bloqueados del sistema</p>
+                </div>
+
+                <button mat-flat-button color="primary" class="custom-button" (click)="saveExcludedAccounts()"
+                    [disabled]="!hasExcludedChanges()">
+                    <mat-icon>save</mat-icon>
+                    Guardar
+                </button>
+            </div>
+
+            <!-- FORM -->
+            <div class="form-inline">
+
+                <mat-form-field appearance="outline" class="field" subscriptSizing="dynamic">
+                    <mat-label>ID cliente</mat-label>
+
+                    <input matInput [(ngModel)]="newExcludedId" (ngModelChange)="onExcludedIdInput($event)"
+                        [matAutocomplete]="autoExcluded">
+
+                    <mat-autocomplete #autoExcluded="matAutocomplete"
+                        (optionSelected)="newExcludedId = $event.option.value">
+
+                        <mat-option *ngFor="let c of filteredExcludedOptions" [value]="c.id">
+                            <div class="option">
+                                <span class="id">#{{ c.id }}</span>
+                                <span class="name">{{ c.nombre }}</span>
+                            </div>
+                        </mat-option>
+
+                    </mat-autocomplete>
+
+                </mat-form-field>
+
+                <button mat-mini-fab color="warn" class="add-btn" (click)="addExcludedAccount()" matTooltip="Agregar"
+                    [disabled]="!newExcludedId">
+                    <mat-icon>add</mat-icon>
+                </button>
+
+            </div>
+
+            <!-- LIST -->
+            <div class="list">
+
+                <div class="list-item" *ngFor="let id of excludedAccounts">
+
+                    <ng-container *ngIf="editingExcludedId !== id; else editExcludedTpl">
+
+                        <div class="item-info">
+                            <span class="id">#{{ id }}</span>
+                        </div>
+
+                        <div class="actions">
+                            <button mat-icon-button color="primary" (click)="startEditExcluded(id)">
+                                <mat-icon>edit</mat-icon>
+                            </button>
+
+                            <button mat-icon-button color="warn" (click)="removeExcludedAccount(id)">
+                                <mat-icon>delete</mat-icon>
+                            </button>
+                        </div>
+
+                    </ng-container>
+
+                    <ng-template #editExcludedTpl>
+
+                        <div class="edit-row">
+
+                            <mat-form-field appearance="outline" class="edit-field" subscriptSizing="dynamic">
+                                <input matInput [(ngModel)]="editingExcludedTemp">
+                            </mat-form-field>
+
+                            <button mat-icon-button color="primary" (click)="saveEditExcluded()">
+                                <mat-icon>check</mat-icon>
+                            </button>
+
+                            <button mat-icon-button (click)="cancelEditExcluded()">
+                                <mat-icon>close</mat-icon>
+                            </button>
+
+                        </div>
+                    </ng-template>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<app-confirm-modal></app-confirm-modal>

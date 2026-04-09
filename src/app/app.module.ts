@@ -80,6 +80,11 @@ import { getSpanishPaginatorIntl } from './utils/mat-paginator-es';
 import { PeticionesComponent } from './soporte/peticiones/peticiones.component';
 import { NewRequestModalComponent } from './modals/new-request-modal/new-request-modal.component';
 import { EditRequestModalComponent } from './modals/edit-request-modal/edit-request-modal.component';
+import { ClientsComponent } from './general/clients/clients.component';
+import { MatTableModule } from '@angular/material/table';
+import { MatButtonToggleModule } from '@angular/material/button-toggle';
+import { ConfirmModalComponent } from './services/confirm-modal/confirm-modal.component';
+import { MatCheckboxModule } from '@angular/material/checkbox';
 
 registerLocaleData(es);
 
@@ -133,6 +138,8 @@ registerLocaleData(es);
     PeticionesComponent,
     NewRequestModalComponent,
     EditRequestModalComponent,
+    ClientsComponent,
+    ConfirmModalComponent,
   ],
   imports: [
     BrowserModule,
@@ -159,7 +166,10 @@ registerLocaleData(es);
     MatProgressBar,
     MatTooltipModule,
     MatSlideToggleModule,
-    MatPaginatorModule
+    MatPaginatorModule,
+    MatTableModule,
+    MatButtonToggleModule,
+    MatCheckboxModule
 ],
   providers: [
     provideClientHydration(),

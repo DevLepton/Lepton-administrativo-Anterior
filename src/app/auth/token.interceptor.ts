@@ -12,7 +12,8 @@ export class TokenInterceptor implements HttpInterceptor {
   private router = inject(Router);
   private http = inject(HttpClient);
 
-  private apiBase = 'http://localhost:3003';
+  // private apiBase = 'http://localhost:3003';
+  private apiBase = 'https://leptoncore-api.lepton-seguridad.com';
 
   // control de refresh
   private refreshing = false;

@@ -357,7 +357,7 @@
           {{ modoValidacion ? 'Validar petición' : 'Responder petición' }}
         </h2>
 
-        <button class="send-button" (click)="enviarRespuesta()" [disabled]="!modoValidacion && !hayCambios()"
+        <button class="send-button custom-button" (click)="enviarRespuesta()" [disabled]="!modoValidacion && !hayCambios()"
           [class.disabled]="!modoValidacion && !hayCambios()" [class.return]="hayCambiosFlag && modoValidacion">
 
           <span class="material-icons">
@@ -477,7 +477,7 @@
                 </mat-autocomplete>
               </mat-form-field>
 
-              <button mat-flat-button color="primary" (click)="agregarDispositivoUnitario()" [disabled]="!nuevoModelo">
+              <button mat-flat-button class="custom-button" color="primary" (click)="agregarDispositivoUnitario()" [disabled]="!nuevoModelo">
                 Agregar
               </button>
 

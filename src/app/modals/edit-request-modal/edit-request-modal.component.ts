@@ -43,6 +43,7 @@ export class EditRequestModalComponent {
     this.form = this.fb.group({
       deviceRequested: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(50)]],
+      comments: ['']
     });
 
     this.filteredDeviceModels$ = this.form.get('deviceRequested')!.valueChanges.pipe(
@@ -64,6 +65,7 @@ export class EditRequestModalComponent {
     id: string;
     dispositivosSolicitados?: { model: string; quantity: number }[];
     devicesRequested?: { model: string; quantity: number }[];
+    comments?: string;
     status?: string;
     estatus?: string;
     requestDate?: any;
@@ -96,7 +98,7 @@ export class EditRequestModalComponent {
       }))
       .filter(x => x.model && Number.isFinite(x.quantity) && x.quantity > 0);
 
-    this.form.reset({ deviceRequested: '', quantity: 1 });
+    this.form.reset({ deviceRequested: '', quantity: 1, comments: request.comments || '' });
 
     this.loadDeviceModels();
   }
@@ -290,7 +292,8 @@ export class EditRequestModalComponent {
 
     const payload = {
       devicesRequested: this.buildDevicesRequested(),
-      quantity: total, // opcional (si tu backend lo recalcula, igual no estorba)
+      quantity: total, 
+      comments: this.form.get('comments')?.value || ''
     };
 
     this.apiService.updateRequest(this.requestId, payload).subscribe({

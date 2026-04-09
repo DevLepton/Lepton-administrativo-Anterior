@@ -21,6 +21,9 @@ interface GpsItem {
   cliente?: string | null;
   comments?: string | null;
   installationDate?: string | Date | null;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }
 
 @Component({
@@ -111,11 +114,17 @@ export class GpsTabComponent implements OnChanges {
       marca: d.brand ?? '',
       modelo: d.model ?? '',
       estatus: d.status ?? 'En inventario',
+
       fechaCompra: d.purchaseDate ?? null,
       fechaIngresoLepton: d.entryDate ?? null,
+
       cliente: d.client ?? null,
       comments: d.comments ?? null,
       installationDate: d.installationDate ?? null,
+
+      netPrice: d.netPrice ?? null,
+      grossPrice: d.grossPrice ?? null,
+      satCode: d.satCode ?? null,
     };
   }
 
@@ -402,7 +411,10 @@ export class GpsTabComponent implements OnChanges {
       fechaCompra: found.fechaCompra ?? null,
       fechaIngresoLepton: found.fechaIngresoLepton ?? null,
       cliente: found.cliente ?? '',
-      comentarios: found.comments ?? ''
+      comentarios: found.comments ?? '',
+      netPrice: found.netPrice ?? null,
+      grossPrice: found.grossPrice ?? null,
+      satCode: found.satCode ?? null,
     });
   }
 

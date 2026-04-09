@@ -17,6 +17,10 @@
       <div class="row"><span>Modelo</span><b>{{ data?.modelo || '—' }}</b></div>
       <div class="row"><span>Estatus</span><b>{{ data?.estatus || '—' }}</b></div>
 
+      <div class="row"><span>Precio neto</span><b>{{ data?.netPrice ? ('$ ' + data?.netPrice) : '—' }}</b></div>
+      <div class="row"><span>Precio bruto</span><b>{{ data?.grossPrice ? ('$ ' + data?.grossPrice) : '—' }}</b></div>
+      <div class="row"><span>Código SAT</span><b>{{ data?.satCode || '—' }}</b></div>
+
       <div class="row"><span>Fecha de compra</span><b>{{ fmtDate(data?.fechaCompra) }}</b></div>
       <div class="row"><span>Fecha de ingreso</span><b>{{ fmtDate(data?.fechaIngresoLepton) }}</b></div>
 

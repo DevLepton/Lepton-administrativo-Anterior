@@ -5,6 +5,7 @@ import { ApiService, EventItem, EventsListResponse } from '../../services/api.se
 import { EventHistoryModalComponent } from '../../modals/event-history-modal/event-history-modal.component';
 import Swal from 'sweetalert2';
 import { PageEvent } from '@angular/material/paginator';
+import { NgToastService } from 'ng-angular-popup';
 
 @Component({
   selector: 'app-events',
@@ -31,6 +32,7 @@ export class EventsComponent implements OnInit {
   constructor(
     private dialog: MatDialog,
     private api: ApiService,              // inyecta el ApiService
+    private toast: NgToastService
   ) { }
 
   ngOnInit(): void {
@@ -65,7 +67,12 @@ export class EventsComponent implements OnInit {
           this.currentPage = 1;
         },
         error: (err) => {
-          console.error(err);
+          // console.error(err);
+          this.toast.error({
+              detail: 'Error',
+              summary: 'No se pudieron cargar los eventos. Intente más tarde.',
+              duration: 5000,
+            });
           this.errorMsg = 'No se pudieron cargar los eventos.';
         },
         complete: () => {
@@ -181,6 +188,11 @@ export class EventsComponent implements OnInit {
     const docId = (ev as any)?.finalValues?._id || (ev as any)?.documentId;
     if (!docId) {
       this.errorMsg = 'No se encontró el _id del documento en este evento.';
+      this.toast.error({
+              detail: 'Error',
+              summary: 'No se encontró el _id del documento en este evento.',
+              duration: 5000,
+            });
       return;
     }
 
@@ -214,7 +226,12 @@ export class EventsComponent implements OnInit {
         this.eventHistoryModal.open({ data, events: related });
       },
       error: (err) => {
-        console.error(err);
+        // console.error(err);
+        this.toast.error({
+              detail: 'Error',
+              summary: 'No se pudo cargar el historial.',
+              duration: 5000,
+            });
         this.errorMsg = 'No se pudo cargar el historial.';
       }
     });

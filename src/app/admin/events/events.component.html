@@ -118,7 +118,7 @@
                 <ng-template #loadingTpl>
                     <tbody>
                         <tr>
-                            <td colspan="7" style="text-align:center; padding:1rem;">Cargando eventos…</td>
+                            <td colspan="7" style="text-align:center; padding:1rem;">{{errorMsg || 'Cargando eventos…'}}</td>
                         </tr>
                     </tbody>
                 </ng-template>
@@ -128,8 +128,6 @@
             [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
             (page)="onPageChange($event)">
         </mat-paginator>
-
-        <div *ngIf="errorMsg" class="error">{{ errorMsg }}</div>
     </div>
     <app-event-details-modal></app-event-details-modal>
     <app-event-history-modal></app-event-history-modal>

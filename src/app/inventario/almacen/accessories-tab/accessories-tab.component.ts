@@ -21,6 +21,9 @@ interface AccessoryItem {
   cliente?: string | null;
   comments?: string | null;
   installationDate?: string | Date | null;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }
 
 @Component({
@@ -114,6 +117,9 @@ export class AccessoriesTabComponent implements OnChanges {
       cliente: d.client ?? null,
       comments: d.comments ?? null,
       installationDate: d.installationDate ?? null,
+      netPrice: d.netPrice ?? null,
+      grossPrice: d.grossPrice ?? null,
+      satCode: d.satCode ?? null,
     };
   }
 
@@ -269,7 +275,10 @@ export class AccessoriesTabComponent implements OnChanges {
       fechaCompra: found.fechaCompra,
       fechaIngresoLepton: found.fechaIngresoLepton,
       cliente: found.cliente ?? '',
-      comentarios: found.comments ?? ''
+      comentarios: found.comments ?? '',
+      netPrice: found.netPrice ?? null,
+      grossPrice: found.grossPrice ?? null,
+      satCode: found.satCode ?? null,
     });
   }
 

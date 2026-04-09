@@ -12,7 +12,7 @@
   z-index: 901;
   width: 640px;
   max-width: calc(100% - 2rem);
-  height: 60vh;
+  height: 80vh;
   background: #fff;
   border-radius: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, .2);
@@ -43,6 +43,8 @@
 
 .modal__scroll {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
   min-height: 0;
   /* clave */
   overflow-y: auto;
@@ -294,4 +296,23 @@
 .total {
   font-size: .85rem;
   opacity: .9;
+}
+
+.comments-input {
+  width: 100%;
+  resize: vertical;
+  margin-top: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 10px;
+  font-family: inherit;
+  font-size: .9rem;
+  background: #fafafa;
+  transition: border-color .2s ease;
+}
+
+.comments-input:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  background: #fff;
 }

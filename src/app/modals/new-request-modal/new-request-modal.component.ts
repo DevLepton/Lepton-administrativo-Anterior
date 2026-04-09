@@ -37,6 +37,7 @@ export class NewRequestModalComponent {
     this.form = this.fb.group({
       deviceRequested: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(80)]],
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(50)]],
+      comments: ['']
     });
 
     this.filteredDeviceModels$ = this.form.get('deviceRequested')!.valueChanges.pipe(
@@ -57,7 +58,7 @@ export class NewRequestModalComponent {
     this.loading = false;
 
     this.items = [];
-    this.form.reset({ deviceRequested: '', quantity: 1 });
+    this.form.reset({ deviceRequested: '', quantity: 1, comments: '' });
 
     this.loadDeviceModels();
   }
@@ -203,8 +204,8 @@ export class NewRequestModalComponent {
       requestDate: new Date(),
       responseDate: null,
       devicesRequested,
-      quantity: total, // opcional (backend lo recalcula)
-      comments: null,
+      quantity: total,
+      comments: this.form.get('comments')?.value || '',
     };
 
     this.apiService.createRequest(payload).subscribe({

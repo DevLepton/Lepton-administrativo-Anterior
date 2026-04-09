@@ -81,6 +81,26 @@ body {
     padding-bottom: 1rem;
 }
 
+.tab-btn, .back-button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  background: #f1f3f7;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+
+  &:hover {
+    background: #e3e7ee;
+  }
+}
+
+.custom-button {
+    border-radius: 12px !important;
+}
+
 /* ====== TABLA + SCROLL ====== */
 .table-container {
     width: 100%;
@@ -91,7 +111,7 @@ body {
     background-color: #f8f9fc;
     border-radius: 10px;
     position: relative;
-
+    min-height: auto;
 
     /* Scroll vertical + horizontal para TODA la tabla */
     .table-scroll {
@@ -205,7 +225,7 @@ tr.row-selected td {
 
 /* ====== HEADER ====== */
 .section-header {
-    margin-bottom: 2rem;
+    margin-bottom: 1rem;
 
     >div {
         display: flex;

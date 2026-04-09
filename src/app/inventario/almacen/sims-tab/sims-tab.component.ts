@@ -18,6 +18,9 @@ interface SimItem {
   fechaIngresoLepton: string | Date | null;
   cliente?: string;
   comments?: string;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }
 
 @Component({
@@ -109,7 +112,10 @@ export class SimsTabComponent implements OnChanges {
       fechaCompra: d.purchaseDate ?? null,
       fechaIngresoLepton: d.entryDate ?? null,
       cliente: d.client ?? '',
-      comments: d.comments ?? ''
+      comments: d.comments ?? '',
+      netPrice: d.netPrice ?? null,
+      grossPrice: d.grossPrice ?? null,
+      satCode: d.satCode ?? null,
     };
   }
 
@@ -382,7 +388,10 @@ export class SimsTabComponent implements OnChanges {
       fechaCompra: found.fechaCompra ?? null,
       fechaIngresoLepton: found.fechaIngresoLepton ?? null,
       cliente: found.cliente ?? '',
-      comentarios: found.comments ?? ''
+      comentarios: found.comments ?? '',
+      netPrice: found.netPrice ?? null,
+      grossPrice: found.grossPrice ?? null,
+      satCode: found.satCode ?? null,
     });
   }
 

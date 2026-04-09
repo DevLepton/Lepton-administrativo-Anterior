@@ -13,6 +13,7 @@ export class LoginComponent implements OnInit {
   isVisible = true; // Controla la visibilidad del modal
   loginForm!: FormGroup; // Formulario reactivo
   hidePassword: boolean = true; // Control de visibilidad de la contraseña
+  showForgotModal: boolean = false;
 
   @Output() loginSuccess = new EventEmitter<void>(); // Evento para emitir al realizar login con éxito
 
@@ -92,7 +93,7 @@ export class LoginComponent implements OnInit {
           } else if (userRole === 'inventario') {
             this.router.navigate(['/peticiones']);
           } else if (userRole === 'finanzas') {
-            this.router.navigate(['/dashboard']);
+            this.router.navigate(['/clientes']);
           } else {
             // Rol desconocido, cerrar sesión o redirigir a login
             this.toast.error({
@@ -125,7 +126,6 @@ export class LoginComponent implements OnInit {
    * Función para redirigir al registro.
    */
   onRegister(): void {
-    console.log('Redirigiendo al registro...');
-    // Lógica de navegación o visualización de modal de registro
-  }
+  this.showForgotModal = true;
+}
 }

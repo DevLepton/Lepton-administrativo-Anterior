@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, shareReplay } from 'rxjs';
+import { Observable, shareReplay, map, switchMap, timeout, retry, forkJoin } from 'rxjs';
 
 /* ====================== Tipos comunes ====================== */
 export type EventOperation = 'Creación' | 'Actualización' | 'Eliminación';
@@ -51,6 +51,70 @@ export interface EventsListResponse {
     limit: number;
     total: number;
     totalPages: number;
+  };
+}
+
+export interface TrackerUI {
+  id: number;
+
+  nombre: string;
+  imei: string;
+  sim: string;
+  plan: string;
+  modelo: string;
+
+  clon: boolean;
+  suspendido: boolean;
+  hidden: boolean;
+
+  sdc1?: string;
+  sdc2?: string;
+  sdcAcumulado?: string;
+  canbus?: string;
+
+  ultimaConexionUTC: string;
+  ultimaConexionLocal: string;
+
+  tiempoOffline: string;
+  statusSoporte: string;
+
+  // 🔥 AGREGA ESTO
+  minutosOffline: number;
+  online: boolean;
+}
+
+export interface ClienteUI {
+  id: number;
+  nombre: string;
+  login: string;
+  ciudad: string;
+
+  total: number;
+  online: number;
+  offline: number;
+
+  ultimoIngreso: string;
+  hasHidden: boolean;
+
+  trackers: TrackerUI[];
+}
+
+export interface FullClientsResponse {
+  clientes: ClienteUI[];
+
+  kpis: {
+    totalClientes: number;
+    totalTrackers: number;
+    online: number;
+    offline: number;
+    porcentajeOnline: number;
+
+    offline12h: number;
+    offline1d: number;
+    offline15d: number;
+    offline1m: number;
+    offline6m: number;
+    offline1a: number;
   };
 }
 
@@ -161,7 +225,8 @@ export interface RequestsQuery {
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  private baseUrl = 'http://localhost:3003';
+  // private baseUrl = 'http://localhost:3003';
+  private baseUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
   constructor(private http: HttpClient) { }
 
@@ -440,4 +505,63 @@ export class ApiService {
   deleteRequest(id: string): Observable<any> {
     return this.http.delete(`${this.baseUrl}/requests/${id}`);
   }
+
+  // ====================== CLIENT CONFIG ======================
+
+  private clientConfigCache$: Observable<any> | null = null;
+
+  getClientConfigCached(forceRefresh = false): Observable<any> {
+
+    if (!this.clientConfigCache$ || forceRefresh) {
+
+      this.clientConfigCache$ = this.http
+        .get(`${this.baseUrl}/clients/config`)
+        .pipe(
+          shareReplay(1)
+        );
+    }
+
+    return this.clientConfigCache$;
+  }
+
+  updateActiveClients(activeClients: any): Observable<any> {
+    return this.http.put(`${this.baseUrl}/clients/config/active`, { activeClients });
+  }
+
+  updateExcludedAccounts(excludedAccounts: number[]): Observable<any> {
+    return this.http.put(`${this.baseUrl}/clients/config/excluded`, { excludedAccounts });
+  }
+
+  private clientsCache = new Map<string, Observable<FullClientsResponse>>();
+
+  getFullClientsData(
+    includeSensors: boolean,
+    includeLogin: boolean,
+    forceRefresh = false
+  ): Observable<FullClientsResponse> {
+
+    const key = `full-data-${includeSensors}-${includeLogin}`;
+
+    if (!this.clientsCache.has(key) || forceRefresh) {
+
+      const params = this.buildHttpParams({
+        includeSensors,
+        includeLogin
+      });
+
+      const request$ = this.http
+        .get<FullClientsResponse>(`${this.baseUrl}/clients/full-data`, { params })
+        .pipe(
+          retry(2),
+          shareReplay(1)
+        );
+
+      this.clientsCache.set(key, request$);
+    }
+
+    return this.clientsCache.get(key)!;
+  }
+
+
 }
+

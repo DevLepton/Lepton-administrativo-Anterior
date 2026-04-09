@@ -9,7 +9,10 @@ export interface ViewSimData {
   fechaCompra: string | Date | null;
   fechaIngresoLepton: string | Date | null;
   cliente?: string | null;
-  comentarios?: string | null; // si lo manejas en UI
+  comentarios?: string | null;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }
 
 @Component({

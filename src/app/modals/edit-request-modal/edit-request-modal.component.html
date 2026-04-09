@@ -16,13 +16,8 @@
         <!-- Modelo -->
         <mat-form-field appearance="outline" class="col-span-2">
           <mat-label>Dispositivo solicitado (Modelo)</mat-label>
-          <input
-            matInput
-            formControlName="deviceRequested"
-            [matAutocomplete]="modelAuto"
-            placeholder="Ej: Teltonika FMB920 / Queclink GV300..."
-            autocomplete="off"
-          />
+          <input matInput formControlName="deviceRequested" [matAutocomplete]="modelAuto"
+            placeholder="Ej: Teltonika FMB920 / Queclink GV300..." autocomplete="off" />
           <mat-autocomplete #modelAuto="matAutocomplete" autoActiveFirstOption>
             <mat-option *ngFor="let opt of filteredDeviceModels$ | async" [value]="opt">
               {{ opt }}
@@ -40,30 +35,15 @@
           <mat-form-field appearance="outline" class="qty-field">
             <mat-label>Cantidad</mat-label>
 
-            <button
-              mat-icon-button
-              matPrefix
-              type="button"
-              (click)="decQty()"
+            <button mat-icon-button matPrefix type="button" (click)="decQty()"
               [disabled]="(form.get('quantity')?.value || 1) <= 1">
               <mat-icon>remove</mat-icon>
             </button>
 
-            <input
-              matInput
-              type="number"
-              formControlName="quantity"
-              min="1"
-              max="50"
-              (input)="clampQty()"
-              (change)="clampQty()"
-            />
+            <input matInput type="number" formControlName="quantity" min="1" max="50" (input)="clampQty()"
+              (change)="clampQty()" />
 
-            <button
-              mat-icon-button
-              matSuffix
-              type="button"
-              (click)="incQty()"
+            <button mat-icon-button matSuffix type="button" (click)="incQty()"
               [disabled]="(form.get('quantity')?.value || 1) >= 50 || totalRequested >= 50">
               <mat-icon>add</mat-icon>
             </button>
@@ -72,12 +52,7 @@
           </mat-form-field>
 
           <div class="add-wrap">
-            <button
-              mat-stroked-button
-              type="button"
-              class="add-btn"
-              (click)="addToList()"
-              [disabled]="!canAdd">
+            <button mat-stroked-button type="button" class="add-btn" (click)="addToList()" [disabled]="!canAdd">
               Agregar
             </button>
 
@@ -105,22 +80,14 @@
 
             <div class="col-qty">
               <div class="qty-control">
-                <button
-                  mat-icon-button
-                  type="button"
-                  (click)="decItem(i)"
-                  [disabled]="it.quantity <= 1"
+                <button mat-icon-button type="button" (click)="decItem(i)" [disabled]="it.quantity <= 1"
                   aria-label="Disminuir">
                   <mat-icon>remove</mat-icon>
                 </button>
 
                 <span class="qty-num">{{ it.quantity }}</span>
 
-                <button
-                  mat-icon-button
-                  type="button"
-                  (click)="incItem(i)"
-                  [disabled]="totalRequested >= 50"
+                <button mat-icon-button type="button" (click)="incItem(i)" [disabled]="totalRequested >= 50"
                   aria-label="Aumentar">
                   <mat-icon>add</mat-icon>
                 </button>
@@ -128,12 +95,7 @@
             </div>
 
             <div class="col-actions">
-              <button
-                mat-icon-button
-                type="button"
-                class="danger"
-                (click)="removeItem(i)"
-                aria-label="Eliminar">
+              <button mat-icon-button type="button" class="danger" (click)="removeItem(i)" aria-label="Eliminar">
                 <mat-icon>delete</mat-icon>
               </button>
             </div>
@@ -151,6 +113,10 @@
       <div *ngIf="items.length === 0" style="opacity:.8; margin-top:.75rem;">
         No hay dispositivos en la lista. Si guardas así, se eliminará la petición.
       </div>
+
+      <textarea id="comments-textarea" class="comments-input" formControlName="comments" placeholder="Escribe comentarios sobre la petición..."
+        rows="4">
+</textarea>
 
     </div>
 

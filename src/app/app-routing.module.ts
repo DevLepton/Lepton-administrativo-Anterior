@@ -17,6 +17,7 @@ import { UsersComponent } from './admin/users/users.component';
 import { AlmacenComponent } from './inventario/almacen/almacen.component';
 import { EventsComponent } from './admin/events/events.component';
 import { PeticionesComponent } from './soporte/peticiones/peticiones.component';
+import { ClientsComponent } from './general/clients/clients.component';
 
 const routes: Routes = [
   {
@@ -38,56 +39,62 @@ const routes: Routes = [
         path: 'peticiones',
         component: PeticionesComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['inventario', 'soporte'] }
+        data: { roles: ['admin', 'inventario', 'soporte'] }
+      },
+      {
+        path: 'clientes',
+        component: ClientsComponent,
+        canActivate: [RoleGuard],
+        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas'] }
       },
       {
         path: 'eventos',
         component: EventsComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte'] }
+        data: { roles: ['admin', 'soporte'] }
       },
       {
         path: 'almacen',
         component: AlmacenComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['inventario', 'soporte'] }
+        data: { roles: ['admin', 'inventario', 'soporte'] }
       },
-      {
-        path: 'dashboard',
-        component: DashboardComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
-      {
-        path: 'clientes',
-        component: ClientesComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
-      {
-        path: 'servicios',
-        component: ServiciosComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
-      {
-        path: 'planes',
-        component: PlanesComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
-      {
-        path: 'dispositivos',
-        component: DispositivosComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
-      {
-        path: 'pedidos',
-        component: PedidosComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['finanzas'] }
-      },
+      // {
+      //   path: 'dashboard',
+      //   component: DashboardComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
+      // {
+      //   path: 'clientes-finanzas',
+      //   component: ClientesComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
+      // {
+      //   path: 'servicios',
+      //   component: ServiciosComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
+      // {
+      //   path: 'planes',
+      //   component: PlanesComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
+      // {
+      //   path: 'dispositivos',
+      //   component: DispositivosComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
+      // {
+      //   path: 'pedidos',
+      //   component: PedidosComponent,
+      //   canActivate: [RoleGuard],
+      //   data: { roles: ['finanzas'] }
+      // },
       { path: '', component: InicioRedireccionComponent }
     ]
   },

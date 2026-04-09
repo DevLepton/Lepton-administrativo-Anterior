@@ -441,23 +441,6 @@ mat-paginator {
   gap: 1rem;
 }
 
-.back-button {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  border: none;
-  background: #f1f3f7;
-  padding: 6px 12px;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 600;
-  align-self: flex-start;
-
-  &:hover {
-    background: #e3e7ee;
-  }
-}
-
 /* GRID */
 
 .respuesta-grid {

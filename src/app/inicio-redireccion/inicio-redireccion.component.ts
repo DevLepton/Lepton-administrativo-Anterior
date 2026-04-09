@@ -20,7 +20,7 @@ export class InicioRedireccionComponent implements OnInit {
     } else if (role === 'inventario') {
       this.router.navigate(['/peticiones']);
     } else if (role === 'finanzas') {
-      this.router.navigate(['/dashboard']);
+      this.router.navigate(['/clientes']);
     } else {
       this.router.navigate(['/login']);
     }

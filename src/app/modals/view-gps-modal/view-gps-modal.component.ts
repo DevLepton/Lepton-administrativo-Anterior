@@ -12,6 +12,9 @@ export interface ViewGpsData {
   fechaIngresoLepton: string | Date | null; // entryDate
   cliente?: string | null;
   comentarios?: string | null;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }
 
 @Component({

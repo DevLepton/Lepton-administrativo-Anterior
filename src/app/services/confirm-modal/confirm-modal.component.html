@@ -1,0 +1,24 @@
+<div *ngIf="confirm.show"
+     class="modal-backdrop"
+     (click)="onBackdropClick($event)">
+
+  <div class="panel" (click)="$event.stopPropagation()">
+
+    <h2 class="title">
+      {{ confirm.options?.title || 'Confirmación' }}
+    </h2>
+
+    <p [innerHTML]="confirm.options?.message"></p>
+
+    <div class="actions">
+      <button mat-flat-button class="custom-button" color="warn" (click)="confirm.cancel()">
+        {{ confirm.options?.cancelText || 'Cancelar' }}
+      </button>
+
+      <button mat-flat-button class="custom-button" color="primary" (click)="confirm.confirm()">
+        {{ confirm.options?.confirmText || 'Aceptar' }}
+      </button>
+    </div>
+
+  </div>
+</div>
