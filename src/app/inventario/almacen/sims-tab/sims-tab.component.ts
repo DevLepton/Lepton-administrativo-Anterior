@@ -5,7 +5,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { NewSimModalComponent } from '../../../modals/new-sim-modal/new-sim-modal.component';
 import { ViewSimModalComponent } from '../../../modals/view-sim-modal/view-sim-modal.component';
 import { EditSimModalComponent } from '../../../modals/edit-sim-modal/edit-sim-modal.component';
-import { ApiService } from '../../../services/api.service';
+import { ApiService, DeviceStatus } from '../../../services/api.service';
 import { PageEvent } from '@angular/material/paginator';
 
 interface SimItem {
@@ -13,7 +13,7 @@ interface SimItem {
   iccid: string;
   modelo: string;        // model
   compania: string;      // company
-  estatus: 'En inventario' | 'En configuración' | 'Instalado' | string;
+  estatus: DeviceStatus;
   fechaCompra: string | Date | null;
   fechaIngresoLepton: string | Date | null;
   cliente?: string;

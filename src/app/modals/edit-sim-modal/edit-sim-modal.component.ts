@@ -2,8 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
-
-type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+import { DeviceStatus } from '../../services/api.service';
 
 export interface EditSimOpenData {
   id: string;
@@ -65,6 +64,8 @@ export class EditSimModalComponent {
   hasChanges = false;
   private initialSnapshot: any = null;
   private changesSub?: Subscription;
+
+  isSupportUser = false;
 
   private snapshotForm() {
     const v = this.form.getRawValue();
@@ -128,6 +129,10 @@ export class EditSimModalComponent {
       startWith(''),
       map(v => this.filterList((v ?? '').toString(), this.companyOptions))
     );
+
+    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+
+    this.isSupportUser = role === 'soporte';
   }
 
   private filterList(value: string, source: string[] = []): string[] {

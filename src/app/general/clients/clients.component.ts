@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ApiService, ClienteUI, TrackerUI } from '../../services/api.service';
 import { Subscription } from 'rxjs';
-import datos from './datos.json';
+// import datos from './datos.json';
 
 import {
   trigger,
@@ -165,6 +165,9 @@ export class ClientsComponent implements OnInit {
   lastUpdate: Date | null = null;
 
   expandAll = false;
+
+  progress = 0;
+  progressMessage = '';
 
   isColumnVisible(col: string): boolean {
     return this.selectedColumns.includes(col);
@@ -542,36 +545,89 @@ export class ClientsComponent implements OnInit {
   loadData(forceRefresh = false) {
     this.loading = true;
 
+    this.progress = 0;
+    this.progressMessage = 'Iniciando...';
+
     this.sub?.unsubscribe();
 
-    this.sub = this.api.getFullClientsData(
+    this.sub = this.api.getFullClientsDataStream(
       this.includeSensors,
       this.includeLogin,
       forceRefresh
     ).subscribe({
-      next: (res) => {
 
-  this.lastUpdate = new Date();
+      next: (event) => {
 
-        // 🔥 SIEMPRE nuevas referencias (clave en OnPush)
-        this.clientesFiltrados = [...res.clientes];
+        // 🔄 PROGRESO
+        if (event.type === 'progress') {
+          this.progress = event.progress;
+          this.progressMessage = event.message;
 
-        this.updateFilteredClients();
+          this.cdr.markForCheck();
+          return;
+        }
 
-  this.loading = false;
+        // ✅ FINAL
+        if (event.type === 'done') {
 
-        // 🔥 AVISAR a Angular
-        this.cdr.markForCheck();
+          this.lastUpdate = new Date();
+
+          this.clientesFiltrados = [...event.data.clientes];
+
+          this.updateFilteredClients();
+
+          this.loading = false;
+          this.progress = 100;
+          this.progressMessage = 'Completado';
+
+          this.cdr.markForCheck();
+        }
       },
 
-      error: () => {
+      error: (err) => {
+        console.error(err);
+
         this.loading = false;
+        this.progressMessage = 'Error al cargar datos';
 
-        // 🔥 también aquí
         this.cdr.markForCheck();
-      },
+      }
     });
   }
+
+  // loadData(forceRefresh = false) {
+  //   this.loading = true;
+
+  //   this.sub?.unsubscribe();
+
+  //   this.sub = this.api.getFullClientsData(
+  //     this.includeSensors,
+  //     this.includeLogin,
+  //     forceRefresh
+  //   ).subscribe({
+  //     next: (res) => {
+
+  //       this.lastUpdate = new Date();
+
+  //       // SIEMPRE nuevas referencias (clave en OnPush)
+  //       this.clientesFiltrados = [...res.clientes];
+
+  //       this.updateFilteredClients();
+
+  //       this.loading = false;
+
+  //       // AVISAR a Angular
+  //       this.cdr.markForCheck();
+  //     },
+
+  //     error: () => {
+  //       this.loading = false;
+
+  //       // 🔥 también aquí
+  //       this.cdr.markForCheck();
+  //     },
+  //   });
+  // }
 
   // loadData(forceRefresh = false) {
   //   this.loading = true;
@@ -652,7 +708,7 @@ export class ClientsComponent implements OnInit {
 
     this.cdr.markForCheck();
   }
-  
+
   toggleExpandMode() {
     this.expandAll = !this.expandAll;
 
@@ -996,15 +1052,15 @@ export class ClientsComponent implements OnInit {
       ['GPS Offline + 1A:', this.offlineBuckets.find(b => b.label === '+1A')?.value || 0]
     ];
 
+
     XLSX.utils.sheet_add_aoa(ws, kpis, { origin: { r: 2, c: 0 } });
 
     let currentRow = 0;
-    const startCol = 3; // 🔥 desplazamiento a la derecha
+    const startCol = 3; // desplazamiento a la derecha
 
     selected.forEach(cliente => {
 
-      // 🔷 HEADER CLIENTE + HEADERS
-      XLSX.utils.sheet_add_aoa(ws, [[
+      const headers = [
         `${cliente.id}`,
         `${cliente.nombre}`,
         `${cliente.login}`,
@@ -1026,7 +1082,23 @@ export class ClientsComponent implements OnInit {
         'Tiempo Offline',
         'Status Soporte',
         'Último ingreso'
-      ]], { origin: { r: currentRow, c: startCol } });
+      ];
+
+      const headerRow = currentRow; // guarda la fila
+
+      XLSX.utils.sheet_add_aoa(ws, [headers], { origin: { r: headerRow, c: startCol } });
+
+      headers.forEach((_, i) => {
+        const ref = XLSX.utils.encode_cell({ r: headerRow, c: startCol + i });
+
+        if (ws[ref]) {
+          ws[ref].s = {
+            font: { bold: true },
+            fill: { fgColor: { rgb: "EAEAEA" } },
+            alignment: { horizontal: "center" }
+          };
+        }
+      });
 
       currentRow++;
 
@@ -1079,21 +1151,6 @@ export class ClientsComponent implements OnInit {
           ws[ref].s = { font: { bold: true } };
         }
 
-        // KPI values
-        if (C === 1 && R >= 2 && R < 2 + kpis.length) {
-          ws[ref].s = { font: { bold: true } };
-        }
-
-        // Headers cliente
-        if (value.includes('ID:')) {
-          for (let i = startCol; i <= range.e.c; i++) {
-            const headerRef = XLSX.utils.encode_cell({ r: R, c: i });
-            if (ws[headerRef]) {
-              ws[headerRef].s = { font: { bold: true } };
-            }
-          }
-        }
-
         // Fecha
         if (value.includes('Fecha:')) {
           ws[ref].s = { font: { bold: true } };
@@ -1104,9 +1161,9 @@ export class ClientsComponent implements OnInit {
     const pxToWch = (px: number) => Math.round(px / 12);
 
     ws['!cols'] = [
-      { wch: 45 }, // KPI label
-      { wch: 20 }, // KPI value
-      { wch: 5 },  // espacio
+      { wch: 30 }, // KPI label
+      { wch: 10 }, // KPI value
+      { wch: 10 },  // espacio
       { wch: pxToWch(135) },
       { wch: pxToWch(510) },
       { wch: pxToWch(270) },

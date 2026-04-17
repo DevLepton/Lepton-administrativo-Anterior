@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
+import { apiUrl } from './api.service';
 
 @Injectable({
   providedIn: 'root',
@@ -8,9 +9,6 @@ import { HttpClient } from '@angular/common/http';
 export class AuthService {
   private authenticated = new BehaviorSubject<boolean>(this.checkAuthentication()); // Estado inicial
   isAuthenticated$ = this.authenticated.asObservable();
-
-  // private apiUrl = 'http://localhost:3003/users'; // URL de la API para autenticación
-  private apiUrl = 'https://leptoncore-api.lepton-seguridad.com/users'; // URL de la API para autenticación
 
   constructor(private http: HttpClient) { }
 
@@ -21,9 +19,9 @@ export class AuthService {
     return false;
   }
 
-  login(credentials: { userName: string; password: string }): Observable<any> {
+  login(credentials: { userName: string; password: string } | { email: string; password: string }): Observable<any> {
     // Envía una solicitud POST al backend con las credenciales
-    return this.http.post(`${this.apiUrl}/login`, credentials);
+    return this.http.post(`${apiUrl}/users/login`, credentials);
   }
 
   setAuthenticationState(isAuthenticated: boolean): void {
@@ -37,6 +35,7 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       localStorage.setItem('isAuthenticated', 'false');
       localStorage.removeItem('token');
+      localStorage.removeItem('user'); 
     }
     this.authenticated.next(false);
   }
@@ -49,5 +48,17 @@ export class AuthService {
     return localStorage.getItem('user_role');
   }
 
+  getUser() {
+    const user = localStorage.getItem('user');
+    return user ? JSON.parse(user) : null;
+  }
+
+  setUser(user: any) {
+    localStorage.setItem('user', JSON.stringify(user));
+  }
+
+  clearUser() {
+    localStorage.removeItem('user');
+  }
 
 }

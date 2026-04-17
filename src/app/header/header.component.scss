@@ -277,11 +277,14 @@
         width: 10rem;
 
         li {
-            padding: 0.35rem 1.5rem;
             font-size: 14px;
             font-weight: 400;
             color: #495057;
-            cursor: pointer;
+            
+            div {
+                cursor: pointer;
+                padding: 0.35rem 1.5rem;
+            }
 
             .icon{
                 margin-right: 0.6rem;

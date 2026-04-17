@@ -806,7 +806,7 @@ export class PeticionesComponent implements OnInit {
             this.modoValidacion = false;
             this.peticionAValidar = null;
 
-            this.loadRequests();
+            this.refreshRequests();
           },
 
           error: (err) => {

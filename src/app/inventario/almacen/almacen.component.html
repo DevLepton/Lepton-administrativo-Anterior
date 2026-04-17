@@ -216,12 +216,12 @@
           </div>
 
           <div class="side-panel__footer">
-            <button mat-stroked-button type="button" (click)="clearRequestedList()"
+            <button mat-button type="button" class="custom-button" color="warn" (click)="clearRequestedList()"
               [disabled]="requestedItems.length === 0">
               Limpiar
             </button>
 
-            <button mat-flat-button color="primary" type="button" (click)="createRequestFromSidebar()"
+            <button mat-flat-button color="primary" type="button" class="custom-button" (click)="createRequestFromSidebar()"
               [disabled]="requestedItems.length === 0 || creatingRequest">
               {{ creatingRequest ? 'Creando…' : 'Crear petición' }}
             </button>

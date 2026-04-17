@@ -91,6 +91,7 @@ body {
   border-radius: 6px;
   cursor: pointer;
   font-weight: 600;
+  max-width: fit-content;
 
   &:hover {
     background: #e3e7ee;
@@ -192,6 +193,10 @@ body {
                 &.inst,
                 &.upd {
                     background-color: var(--color-primary);
+                }
+
+                &.ready {
+                    background-color: var(--color-success-hover);
                 }
             }
         }

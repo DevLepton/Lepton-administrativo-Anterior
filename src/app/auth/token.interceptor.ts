@@ -6,14 +6,13 @@ import {
 import { Observable, BehaviorSubject, throwError } from 'rxjs';
 import { catchError, filter, switchMap, take } from 'rxjs/operators';
 import { Router } from '@angular/router';
+import { apiUrl } from '../services/api.service';
 
 @Injectable()
 export class TokenInterceptor implements HttpInterceptor {
   private router = inject(Router);
   private http = inject(HttpClient);
 
-  // private apiBase = 'http://localhost:3003';
-  private apiBase = 'https://leptoncore-api.lepton-seguridad.com';
 
   // control de refresh
   private refreshing = false;
@@ -25,7 +24,7 @@ export class TokenInterceptor implements HttpInterceptor {
   private clearToken() { localStorage.removeItem(this.tokenKey); }
 
   intercept(req: HttpRequest<any>, next: HttpHandler): Observable<HttpEvent<any>> {
-    const isApiCall = req.url.startsWith(this.apiBase);
+    const isApiCall = req.url.startsWith(apiUrl);
 
     // No adjuntes Authorization a servicios externos (Maps, etc.)
     let authReq = req;
@@ -69,7 +68,7 @@ export class TokenInterceptor implements HttpInterceptor {
       this.refreshing = true;
       this.refreshSubject.next(null);
 
-      return this.http.post<{ token: string }>(`${this.apiBase}/auth/refresh`, {}, { withCredentials: true })
+      return this.http.post<{ token: string }>(`${apiUrl}/auth/refresh`, {}, { withCredentials: true })
         .pipe(
           switchMap(res => {
             const newAccess = res?.token;

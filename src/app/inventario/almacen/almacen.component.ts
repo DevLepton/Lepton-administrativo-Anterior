@@ -1,10 +1,8 @@
 import { Component, OnInit } from '@angular/core';
-import { ApiService, CreateRequestPayload, RequestedDeviceItem } from '../../services/api.service';
+import { ApiService, CreateRequestPayload, DeviceStatus, RequestedDeviceItem } from '../../services/api.service';
 import { catchError, forkJoin, of } from 'rxjs';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-
-type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | string;
 
 interface MiniItem {
   modelo: string;

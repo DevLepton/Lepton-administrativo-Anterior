@@ -15,32 +15,26 @@
       <form [formGroup]="loginForm" (ngSubmit)="onSubmit()">
         <!-- Campo de Usuario -->
         <mat-form-field appearance="outline">
-          <mat-label>Usuario</mat-label>
-          <span matPrefix class="input-icon material-icons">person</span>
-          <input matInput type="text" formControlName="username" required />
+          <mat-label>Usuario o correo</mat-label>
+          <!-- <span matPrefix class="input-icon material-icons">person</span> -->
+          <mat-icon matPrefix>person</mat-icon>
+          <input matInput type="text" formControlName="username" [errorStateMatcher]="matcher" required />
           <mat-error *ngIf="loginForm.get('username')?.hasError('required')">
             El usuario es obligatorio
+          </mat-error>
+          <mat-error *ngIf="loginForm.hasError('invalidLogin') && loginForm.get('username')?.touched">
+            Usuario o correo incorrecto
           </mat-error>
         </mat-form-field>
 
         <!-- Campo de Contraseña -->
         <mat-form-field appearance="outline">
           <mat-label>Contraseña</mat-label>
-          <span matPrefix class="input-icon material-icons">lock</span>
-          <input
-            matInput
-            [type]="hidePassword ? 'password' : 'text'"
-            formControlName="password"
-            required
-          />
-          <button
-            mat-icon-button
-            matSuffix
-            type="button"
-            (click)="togglePassword()"
-            class="password-toggle"
-          >
-            <mat-icon>{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
+          <mat-icon matPrefix>lock</mat-icon>
+          <!-- <span matPrefix class="input-icon material-icons">lock</span> -->
+          <input matInput [type]="hidePassword ? 'password' : 'text'" formControlName="password" [errorStateMatcher]="matcher" required />
+          <button mat-icon-button matSuffix type="button" (click)="togglePassword()" class="password-toggle">
+            <mat-icon color="{{!hidePassword ? 'primary' : ''}}">{{ hidePassword ? 'visibility' : 'visibility_off' }}</mat-icon>
           </button>
           <mat-error *ngIf="loginForm.get('password')?.hasError('required')">
             La contraseña es obligatoria
@@ -48,14 +42,23 @@
           <mat-error *ngIf="loginForm.get('password')?.hasError('minlength')">
             La contraseña debe tener al menos 6 caracteres
           </mat-error>
+          <mat-error *ngIf="loginForm.hasError('invalidLogin') && loginForm.get('password')?.touched">
+            Contraseña incorrecta
+          </mat-error>
         </mat-form-field>
 
         <!-- Botones -->
-      <div class="modal-actions">
-        <button mat-raised-button type="submit" class="save-button" [disabled]="!loginForm.valid">
-          Iniciar sesión
-        </button>
-      </div>
+        <div class="modal-actions">
+          <button mat-raised-button type="submit" class="save-button" [disabled]="loginForm.invalid || isLoading">
+            <ng-container *ngIf="!isLoading; else loadingTpl">
+              Iniciar sesión
+            </ng-container>
+
+            <ng-template #loadingTpl>
+              <mat-progress-spinner diameter="20" mode="indeterminate" strokeWidth="3"></mat-progress-spinner>
+            </ng-template>
+          </button>
+        </div>
       </form>
 
       <!-- Enlace para registro -->

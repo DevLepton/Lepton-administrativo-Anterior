@@ -1,8 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, startWith, Subscription } from 'rxjs';
-
-type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+import { DeviceStatus } from '../../services/api.service';
 
 export interface EditGpsOpenData {
   id: string;
@@ -75,6 +74,8 @@ export class EditGpsModalComponent {
   private initialSnapshot: any = null;
   private changesSub?: Subscription;
 
+  isSupportUser = false;
+
   constructor(private fb: FormBuilder) {
     this.form = this.fb.group({
       imei: ['', [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]],
@@ -98,6 +99,10 @@ export class EditGpsModalComponent {
       startWith(''),
       map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
+
+    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+
+    this.isSupportUser = role === 'soporte';
   }
 
   // ===== Helpers =====

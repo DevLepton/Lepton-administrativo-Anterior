@@ -5,7 +5,7 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { NewGpsModalComponent } from '../../../modals/new-gps-modal/new-gps-modal.component';
 import { ViewGpsModalComponent } from '../../../modals/view-gps-modal/view-gps-modal.component';
 import { EditGpsModalComponent } from '../../../modals/edit-gps-modal/edit-gps-modal.component';
-import { ApiService, CreateGpsPayload } from '../../../services/api.service';
+import { ApiService, CreateGpsPayload, DeviceStatus } from '../../../services/api.service';
 import { PageEvent } from '@angular/material/paginator';
 
 interface GpsItem {
@@ -15,7 +15,7 @@ interface GpsItem {
   nombre: string;                     // name
   marca: string;                      // brand
   modelo: string;                     // model
-  estatus: 'En inventario' | 'En configuración' | 'Instalado' | string;
+  estatus: DeviceStatus;
   fechaCompra: string | Date | null;
   fechaIngresoLepton: string | Date | null;
   cliente?: string | null;
@@ -273,7 +273,7 @@ export class GpsTabComponent implements OnChanges {
     name: string;
     brand: string;
     model: string;
-    status: 'En inventario' | 'En configuración' | 'Instalado';
+    status: DeviceStatus;
     purchaseDate: string | null;
     entryDate: string;
     installationDate?: string | null;

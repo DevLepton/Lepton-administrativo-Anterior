@@ -10,21 +10,11 @@
     opacity: .7;
 }
 
-.loader {
-    width: 30px;
-    height: 30px;
-    border: 3px solid #eee;
-    border-top: 3px solid var(--color-primary);
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-}
 
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+.loader-gif {
+    width: 150px;
+    height: auto;
 }
-
 
 /* ================= LAYOUT ================= */
 .dashboard {
@@ -323,7 +313,6 @@
     gap: 10px;
     margin-bottom: 10px;
     position: relative;
-    padding-right: 60px;
 
     mat-form-field {
         flex: 1 1 200px;
@@ -605,11 +594,13 @@
 }
 
 .bulk-actions {
-  display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 16px;
-  margin-left: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 16px;
+    margin-left: 10px;
+    padding-right: 65px;
 }
 
 .btn-excel {

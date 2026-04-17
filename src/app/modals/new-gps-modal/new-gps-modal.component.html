@@ -67,7 +67,6 @@
               <mat-label>Estatus</mat-label>
               <mat-select formControlName="status">
                 <mat-option value="En inventario">En inventario</mat-option>
-                <mat-option value="En configuración">En configuración</mat-option>
                 <mat-option value="Instalado">Instalado</mat-option>
               </mat-select>
               <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
@@ -172,7 +171,6 @@
                 <mat-label>Estatus</mat-label>
                 <mat-select formControlName="status">
                   <mat-option value="En inventario">En inventario</mat-option>
-                  <mat-option value="En configuración">En configuración</mat-option>
                   <mat-option value="Instalado">Instalado</mat-option>
                 </mat-select>
                 <mat-error *ngIf="bulkForm.get('status')?.hasError('required')">Requerido</mat-error>

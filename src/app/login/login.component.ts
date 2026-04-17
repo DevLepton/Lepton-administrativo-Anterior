@@ -1,8 +1,20 @@
 import { Component, EventEmitter, OnInit, Output } from '@angular/core';
-import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { FormBuilder, FormControl, FormGroup, FormGroupDirective, NgForm, Validators } from '@angular/forms';
 import { AuthService } from '../services/auth.service'; // Importa tu servicio de autenticación
 import { Router } from '@angular/router';
 import { NgToastService } from 'ng-angular-popup';
+import { ErrorStateMatcher } from '@angular/material/core';
+
+
+export class LoginErrorStateMatcher implements ErrorStateMatcher {
+  isErrorState(control: FormControl | null, form: FormGroupDirective | NgForm | null): boolean {
+    return !!(
+      control &&
+      (control.invalid || form?.hasError('invalidLogin')) &&
+      (control.touched || form?.touched)
+    );
+  }
+}
 
 @Component({
   selector: 'app-login',
@@ -14,6 +26,10 @@ export class LoginComponent implements OnInit {
   loginForm!: FormGroup; // Formulario reactivo
   hidePassword: boolean = true; // Control de visibilidad de la contraseña
   showForgotModal: boolean = false;
+
+  isLoading = false;
+
+  matcher = new LoginErrorStateMatcher();
 
   @Output() loginSuccess = new EventEmitter<void>(); // Evento para emitir al realizar login con éxito
 
@@ -30,6 +46,16 @@ export class LoginComponent implements OnInit {
       username: ['', [Validators.required]], // Campo de usuario obligatorio
       password: ['', [Validators.required, Validators.minLength(6)]], // Contraseña obligatoria con mínimo 6 caracteres
     });
+
+    this.loginForm.valueChanges.subscribe(() => {
+      if (this.loginForm.hasError('invalidLogin')) {
+        this.loginForm.setErrors(null);
+
+        this.loginForm.markAsPristine();
+        this.loginForm.markAsUntouched();
+      }
+    });
+
   }
 
   /**
@@ -57,13 +83,23 @@ export class LoginComponent implements OnInit {
     });
   }
 
+  isEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  }
+
   /**
    * Enviar los datos del formulario al servicio de autenticación.
    */
   onSubmit(): void {
     if (this.loginForm.valid) {
+      this.isLoading = true;
+
+      const input = this.loginForm.value.username;
+
       const credentials = {
-        userName: this.loginForm.value.username,
+        ...(this.isEmail(input)
+          ? { email: input }
+          : { userName: input }),
         password: this.loginForm.value.password,
       };
 
@@ -76,6 +112,7 @@ export class LoginComponent implements OnInit {
 
           localStorage.setItem('token', response.token);
           localStorage.setItem('user_role', userRole);
+          localStorage.setItem('user', JSON.stringify(response.user));
 
           this.authService.setAuthenticationState(true);
 
@@ -86,6 +123,7 @@ export class LoginComponent implements OnInit {
           });
 
           this.loginSuccess.emit();
+
           if (userRole === 'admin') {
             this.router.navigate(['/usuarios']);
           } else if (userRole === 'soporte') {
@@ -106,15 +144,20 @@ export class LoginComponent implements OnInit {
           }
         },
         error: (error) => {
-          console.error('Error al iniciar sesión:', error);
+          this.isLoading = false;
+
+          // Marcar los campos como erróneos
+          this.loginForm.setErrors({ invalidLogin: true });
+
+          this.loginForm.markAllAsTouched();
+
+          // console.error('Error al iniciar sesión:', error);
           this.toast.error({
             detail: 'Error',
             summary: 'Usuario o contraseña incorrectos',
             duration: 5000,
           });
-          // Marcar los campos como erróneos
-          this.loginForm.controls['username'].setErrors({ invalid: true });
-          this.loginForm.controls['password'].setErrors({ invalid: true });
+
         }
       });
     } else {
@@ -126,6 +169,6 @@ export class LoginComponent implements OnInit {
    * Función para redirigir al registro.
    */
   onRegister(): void {
-  this.showForgotModal = true;
-}
+    this.showForgotModal = true;
+  }
 }

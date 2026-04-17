@@ -119,7 +119,7 @@ export interface FullClientsResponse {
 }
 
 /* ====================== Tipos Devices ====================== */
-export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | 'Listo para usar';
 
 export type UpdateSimPayload = Partial<{
   iccid: string;
@@ -223,10 +223,12 @@ export interface RequestsQuery {
   order?: 'asc' | 'desc';
 }
 
+export const apiUrl = 'http://localhost:3103';
+// export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
+
+
 @Injectable({ providedIn: 'root' })
 export class ApiService {
-  // private baseUrl = 'http://localhost:3003';
-  private baseUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
   constructor(private http: HttpClient) { }
 
@@ -257,37 +259,40 @@ export class ApiService {
   }
 
   /* ====================== Planes / Clientes / Servicios / Users (sin cambios) ====================== */
-  getPlanes(): Observable<any> { return this.http.get(`${this.baseUrl}/planes`); }
-  getPlanById(id: number): Observable<any> { return this.http.get(`${this.baseUrl}/planes/${id}`); }
-  createPlan(plan: any): Observable<any> { return this.http.post(`${this.baseUrl}/planes`, plan); }
-  updatePlan(id: number, plan: any): Observable<any> { return this.http.put(`${this.baseUrl}/planes/${id}`, plan); }
-  deletePlan(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/planes/${id}`); }
+  getPlanes(): Observable<any> { return this.http.get(`${apiUrl}/planes`); }
+  getPlanById(id: number): Observable<any> { return this.http.get(`${apiUrl}/planes/${id}`); }
+  createPlan(plan: any): Observable<any> { return this.http.post(`${apiUrl}/planes`, plan); }
+  updatePlan(id: number, plan: any): Observable<any> { return this.http.put(`${apiUrl}/planes/${id}`, plan); }
+  deletePlan(id: number): Observable<any> { return this.http.delete(`${apiUrl}/planes/${id}`); }
 
-  getClientes(): Observable<any> { return this.http.get(`${this.baseUrl}/clientes`); }
-  getClienteById(id: string): Observable<any> { return this.http.get(`${this.baseUrl}/clientes/${id}`); }
+  getClientes(): Observable<any> { return this.http.get(`${apiUrl}/clientes`); }
+  getClienteById(id: string): Observable<any> { return this.http.get(`${apiUrl}/clientes/${id}`); }
   checkEmailExists(email: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/clientes/check-email`, { params: { email } });
+    return this.http.get(`${apiUrl}/clientes/check-email`, { params: { email } });
   }
-  createCliente(cliente: any): Observable<any> { return this.http.post(`${this.baseUrl}/clientes`, cliente); }
-  updateCliente(id: number, cliente: any): Observable<any> { return this.http.put(`${this.baseUrl}/clientes/${id}`, cliente); }
-  deleteCliente(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/clientes/${id}`); }
+  createCliente(cliente: any): Observable<any> { return this.http.post(`${apiUrl}/clientes`, cliente); }
+  updateCliente(id: number, cliente: any): Observable<any> { return this.http.put(`${apiUrl}/clientes/${id}`, cliente); }
+  deleteCliente(id: number): Observable<any> { return this.http.delete(`${apiUrl}/clientes/${id}`); }
 
   // (Legacy) Dispositivos - si aún los usas en otra vista
-  getDispositivos(): Observable<any> { return this.http.get(`${this.baseUrl}/dispositivos`); }
-  createDispositivo(dispositivo: any): Observable<any> { return this.http.post(`${this.baseUrl}/dispositivos`, dispositivo); }
-  updateDispositivo(id: number, dispositivo: any): Observable<any> { return this.http.put(`${this.baseUrl}/dispositivos/${id}`, dispositivo); }
-  deleteDispositivo(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/dispositivos/${id}`); }
+  getDispositivos(): Observable<any> { return this.http.get(`${apiUrl}/dispositivos`); }
+  createDispositivo(dispositivo: any): Observable<any> { return this.http.post(`${apiUrl}/dispositivos`, dispositivo); }
+  updateDispositivo(id: number, dispositivo: any): Observable<any> { return this.http.put(`${apiUrl}/dispositivos/${id}`, dispositivo); }
+  deleteDispositivo(id: number): Observable<any> { return this.http.delete(`${apiUrl}/dispositivos/${id}`); }
 
-  getServicios(): Observable<any> { return this.http.get(`${this.baseUrl}/servicios`); }
-  getServicioById(id: number): Observable<any> { return this.http.get(`${this.baseUrl}/servicios/${id}`); }
-  createServicio(servicio: any): Observable<any> { return this.http.post(`${this.baseUrl}/servicios`, servicio); }
-  updateServicio(id: number, servicio: any): Observable<any> { return this.http.put(`${this.baseUrl}/servicios/${id}`, servicio); }
-  deleteServicio(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/servicios/${id}`); }
+  getServicios(): Observable<any> { return this.http.get(`${apiUrl}/servicios`); }
+  getServicioById(id: number): Observable<any> { return this.http.get(`${apiUrl}/servicios/${id}`); }
+  createServicio(servicio: any): Observable<any> { return this.http.post(`${apiUrl}/servicios`, servicio); }
+  updateServicio(id: number, servicio: any): Observable<any> { return this.http.put(`${apiUrl}/servicios/${id}`, servicio); }
+  deleteServicio(id: number): Observable<any> { return this.http.delete(`${apiUrl}/servicios/${id}`); }
 
-  registerUser(user: any): Observable<any> { return this.http.post(`${this.baseUrl}/users`, user); }
-  getUsers(): Observable<any> { return this.http.get(`${this.baseUrl}/users`); }
-  updateUser(id: number, user: any): Observable<any> { return this.http.put(`${this.baseUrl}/users/${id}`, user); }
-  deleteUser(id: number): Observable<any> { return this.http.delete(`${this.baseUrl}/users/${id}`); }
+  registerUser(user: any): Observable<any> { return this.http.post(`${apiUrl}/users`, user); }
+  getUsers(): Observable<any> { return this.http.get(`${apiUrl}/users`); }
+  updateUser(id: number, user: any): Observable<any> { return this.http.put(`${apiUrl}/users/${id}`, user); }
+  //   updateUser(id: string, data: any) {
+  //   return this.http.put(`${apiUrl}/users/${id}`, data);
+  // }
+  deleteUser(id: number): Observable<any> { return this.http.delete(`${apiUrl}/users/${id}`); }
 
   /* ====================== DEVICES (todos) ====================== */
   getDevices(query?: {
@@ -296,7 +301,7 @@ export class ApiService {
     includeIds?: string[];
   }): Observable<any> {
     const params = this.buildHttpParams(query);
-    return this.http.get(`${this.baseUrl}/devices`, { params });
+    return this.http.get(`${apiUrl}/devices`, { params });
   }
 
   private devicesCache$: Observable<any> | null = null;
@@ -313,7 +318,7 @@ export class ApiService {
     if (!this.devicesCache$ || forceRefresh) {
       const params = this.buildHttpParams(query);
 
-      this.devicesCache$ = this.http.get(`${this.baseUrl}/devices`, { params }).pipe(
+      this.devicesCache$ = this.http.get(`${apiUrl}/devices`, { params }).pipe(
         shareReplay(1)
       );
     }
@@ -323,7 +328,7 @@ export class ApiService {
 
   /* ====================== SIMs (devices?type=sim) ====================== */
   getSims(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'sim' } });
+    return this.http.get(`${apiUrl}/devices`, { params: { type: 'sim' } });
   }
 
   createSim(payload: {
@@ -344,7 +349,7 @@ export class ApiService {
       entryDate: this.toIsoDate(payload.entryDate),
       installationDate: this.toIsoDate(payload.installationDate ?? null),
     };
-    return this.http.post(`${this.baseUrl}/devices`, body);
+    return this.http.post(`${apiUrl}/devices`, body);
   }
   updateSim(id: string, payload: UpdateSimPayload): Observable<any> {
     const body: any = { ...payload };
@@ -353,19 +358,19 @@ export class ApiService {
     if (body.entryDate !== undefined) body.entryDate = this.toIsoDate(body.entryDate);
     if (body.installationDate !== undefined) body.installationDate = this.toIsoDate(body.installationDate);
 
-    return this.http.put(`${this.baseUrl}/devices/${id}`, body);
+    return this.http.put(`${apiUrl}/devices/${id}`, body);
   }
   deleteSim(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/devices/${id}`);
+    return this.http.delete(`${apiUrl}/devices/${id}`);
   }
 
   /* ====================== GPS (devices?type=gps) ====================== */
   getGps(query?: GpsQuery): Observable<any> {
     const params = this.buildHttpParams({ type: 'gps', ...query });
-    return this.http.get(`${this.baseUrl}/devices`, { params });
+    return this.http.get(`${apiUrl}/devices`, { params });
   }
   getGpsById(id: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/devices/${id}`);
+    return this.http.get(`${apiUrl}/devices/${id}`);
   }
   createGps(payload: Omit<CreateGpsPayload, 'type'>): Observable<any> {
     const body: CreateGpsPayload = {
@@ -375,7 +380,7 @@ export class ApiService {
       entryDate: this.toIsoDate(payload.entryDate)!,
       installationDate: this.toIsoDate(payload.installationDate ?? null),
     };
-    return this.http.post(`${this.baseUrl}/devices`, body);
+    return this.http.post(`${apiUrl}/devices`, body);
   }
   updateGps(id: string, payload: Partial<Omit<CreateGpsPayload, 'type'>>): Observable<any> {
     const body: any = { ...payload };
@@ -383,16 +388,16 @@ export class ApiService {
     if ('purchaseDate' in body) body.purchaseDate = toIso(body.purchaseDate);
     if ('entryDate' in body) body.entryDate = toIso(body.entryDate);
     if ('installationDate' in body) body.installationDate = toIso(body.installationDate);
-    return this.http.put(`${this.baseUrl}/devices/${id}`, body);
+    return this.http.put(`${apiUrl}/devices/${id}`, body);
   }
   deleteGps(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/devices/${id}`);
+    return this.http.delete(`${apiUrl}/devices/${id}`);
   }
 
   /* ====================== Events ====================== */
   getEvents(query?: EventsQuery): Observable<EventsListResponse> {
     const params = this.buildHttpParams(query as any);
-    return this.http.get<EventsListResponse>(`${this.baseUrl}/events`, { params });
+    return this.http.get<EventsListResponse>(`${apiUrl}/events`, { params });
   }
 
   private eventsCache$: Observable<EventsListResponse> | null = null;
@@ -406,7 +411,7 @@ export class ApiService {
       const params = this.buildHttpParams(query);
 
       this.eventsCache$ = this.http
-        .get<EventsListResponse>(`${this.baseUrl}/events`, { params })
+        .get<EventsListResponse>(`${apiUrl}/events`, { params })
         .pipe(
           shareReplay(1)
         );
@@ -416,24 +421,24 @@ export class ApiService {
   }
 
   getEventById(id: string): Observable<{ message: string; data: EventItem }> {
-    return this.http.get<{ message: string; data: EventItem }>(`${this.baseUrl}/events/${id}`);
+    return this.http.get<{ message: string; data: EventItem }>(`${apiUrl}/events/${id}`);
   }
   deleteEventById(id: string): Observable<{ message: string; data: EventItem }> {
-    return this.http.delete<{ message: string; data: EventItem }>(`${this.baseUrl}/events/${id}`);
+    return this.http.delete<{ message: string; data: EventItem }>(`${apiUrl}/events/${id}`);
   }
   bulkDeleteEvents(
     filters?: Pick<EventsQuery, 'identifier' | 'collectionName' | 'operation' | 'userId' | 'q' | 'from' | 'to'>
   ): Observable<{ message: string; deletedCount: number }> {
     const params = this.buildHttpParams(filters as any);
-    return this.http.delete<{ message: string; deletedCount: number }>(`${this.baseUrl}/events`, { params });
+    return this.http.delete<{ message: string; deletedCount: number }>(`${apiUrl}/events`, { params });
   }
 
   /* ====================== ACCESORIOS (devices?type=accessory) ====================== */
   getAccessories(): Observable<any> {
-    return this.http.get(`${this.baseUrl}/devices`, { params: { type: 'accessory' } });
+    return this.http.get(`${apiUrl}/devices`, { params: { type: 'accessory' } });
   }
   getAccessoryById(id: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/devices/${id}`);
+    return this.http.get(`${apiUrl}/devices/${id}`);
   }
   createAccessory(payload: Omit<CreateAccessoryPayload, 'type'>): Observable<any> {
     const body: CreateAccessoryPayload = {
@@ -443,17 +448,17 @@ export class ApiService {
       entryDate: this.toIsoDate(payload.entryDate)!,
       installationDate: this.toIsoDate(payload.installationDate ?? null),
     };
-    return this.http.post(`${this.baseUrl}/devices`, body);
+    return this.http.post(`${apiUrl}/devices`, body);
   }
   updateAccessory(id: string, payload: UpdateAccessoryPayload): Observable<any> {
     const body: any = { ...payload };
     if ('purchaseDate' in body) body.purchaseDate = this.toIsoDate(body.purchaseDate);
     if ('entryDate' in body) body.entryDate = this.toIsoDate(body.entryDate);
     if ('installationDate' in body) body.installationDate = this.toIsoDate(body.installationDate);
-    return this.http.put(`${this.baseUrl}/devices/${id}`, body);
+    return this.http.put(`${apiUrl}/devices/${id}`, body);
   }
   deleteAccessory(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/devices/${id}`);
+    return this.http.delete(`${apiUrl}/devices/${id}`);
   }
 
   /* ====================== PETICIONES (requests) ====================== */
@@ -461,14 +466,14 @@ export class ApiService {
   /** Lista peticiones (si tu backend solo filtra por status, manda { status } ) */
   getRequests(query?: RequestsQuery): Observable<any> {
     const params = this.buildHttpParams(query as any);
-    return this.http.get(`${this.baseUrl}/requests`, { params });
+    return this.http.get(`${apiUrl}/requests`, { params });
   }
 
   private requestsCache$: Observable<any> | null = null;
 
   getRequestsCached(forceRefresh = false): Observable<any> {
     if (!this.requestsCache$ || forceRefresh) {
-      this.requestsCache$ = this.http.get(`${this.baseUrl}/requests`).pipe(
+      this.requestsCache$ = this.http.get(`${apiUrl}/requests`).pipe(
         shareReplay(1)
       );
     }
@@ -478,7 +483,7 @@ export class ApiService {
 
   /** Obtiene una petición por id */
   getRequestById(id: string): Observable<any> {
-    return this.http.get(`${this.baseUrl}/requests/${id}`);
+    return this.http.get(`${apiUrl}/requests/${id}`);
   }
 
   /** Crea una petición */
@@ -488,7 +493,7 @@ export class ApiService {
       requestDate: this.toIsoDate(payload.requestDate),
       responseDate: this.toIsoDate(payload.responseDate ?? null),
     };
-    return this.http.post(`${this.baseUrl}/requests`, body);
+    return this.http.post(`${apiUrl}/requests`, body);
   }
 
   /** Actualiza una petición */
@@ -498,12 +503,12 @@ export class ApiService {
     if (body.requestDate !== undefined) body.requestDate = this.toIsoDate(body.requestDate);
     if (body.responseDate !== undefined) body.responseDate = this.toIsoDate(body.responseDate);
 
-    return this.http.put(`${this.baseUrl}/requests/${id}`, body);
+    return this.http.put(`${apiUrl}/requests/${id}`, body);
   }
 
   /** Elimina una petición */
   deleteRequest(id: string): Observable<any> {
-    return this.http.delete(`${this.baseUrl}/requests/${id}`);
+    return this.http.delete(`${apiUrl}/requests/${id}`);
   }
 
   // ====================== CLIENT CONFIG ======================
@@ -515,7 +520,7 @@ export class ApiService {
     if (!this.clientConfigCache$ || forceRefresh) {
 
       this.clientConfigCache$ = this.http
-        .get(`${this.baseUrl}/clients/config`)
+        .get(`${apiUrl}/clients/config`)
         .pipe(
           shareReplay(1)
         );
@@ -525,43 +530,127 @@ export class ApiService {
   }
 
   updateActiveClients(activeClients: any): Observable<any> {
-    return this.http.put(`${this.baseUrl}/clients/config/active`, { activeClients });
+    return this.http.put(`${apiUrl}/clients/config/active`, { activeClients });
   }
 
   updateExcludedAccounts(excludedAccounts: number[]): Observable<any> {
-    return this.http.put(`${this.baseUrl}/clients/config/excluded`, { excludedAccounts });
+    return this.http.put(`${apiUrl}/clients/config/excluded`, { excludedAccounts });
   }
 
   private clientsCache = new Map<string, Observable<FullClientsResponse>>();
 
-  getFullClientsData(
+  // getFullClientsData(
+  //   includeSensors: boolean,
+  //   includeLogin: boolean,
+  //   forceRefresh = false
+  // ): Observable<FullClientsResponse> {
+
+  //   const key = `full-data-${includeSensors}-${includeLogin}`;
+
+  //   if (!this.clientsCache.has(key) || forceRefresh) {
+
+  //     const params = this.buildHttpParams({
+  //       includeSensors,
+  //       includeLogin
+  //     });
+
+  //     const request$ = this.http
+  //       .get<FullClientsResponse>(`${apiUrl}/clients/full-data`, { params })
+  //       .pipe(
+  //         retry(2),
+  //         shareReplay(1)
+  //       );
+
+  //     this.clientsCache.set(key, request$);
+  //   }
+
+  //   return this.clientsCache.get(key)!;
+  // }
+
+  getFullClientsDataStream(
     includeSensors: boolean,
     includeLogin: boolean,
     forceRefresh = false
-  ): Observable<FullClientsResponse> {
+  ): Observable<
+    | { type: 'progress'; progress: number; message: string }
+    | { type: 'done'; data: FullClientsResponse }
+  > {
 
     const key = `full-data-${includeSensors}-${includeLogin}`;
 
-    if (!this.clientsCache.has(key) || forceRefresh) {
-
-      const params = this.buildHttpParams({
-        includeSensors,
-        includeLogin
-      });
-
-      const request$ = this.http
-        .get<FullClientsResponse>(`${this.baseUrl}/clients/full-data`, { params })
-        .pipe(
-          retry(2),
-          shareReplay(1)
-        );
-
-      this.clientsCache.set(key, request$);
+    // 🔥 SI YA HAY CACHE Y NO FORZAMOS → devolver directo
+    if (this.clientsCache.has(key) && !forceRefresh) {
+      return this.clientsCache.get(key)!.pipe(
+        map(data => ({
+          type: 'done' as const,
+          data
+        }))
+      );
     }
 
-    return this.clientsCache.get(key)!;
-  }
+    const token = localStorage.getItem('token');
 
+    const params = new URLSearchParams({
+      includeSensors: String(includeSensors),
+      includeLogin: String(includeLogin),
+      token: token || ''
+    });
+
+    const url = `${apiUrl}/clients/full-data?${params.toString()}`;
+
+    return new Observable(observer => {
+
+      const eventSource = new EventSource(url);
+
+      eventSource.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+
+        // 🔄 PROGRESO
+        if (!data.done && !data.error) {
+          observer.next({
+            type: 'progress',
+            progress: data.progress,
+            message: data.message
+          });
+        }
+
+        // ✅ TERMINADO
+        if (data.done) {
+
+          // 🔥 GUARDAR EN CACHE
+          const finalData$ = new Observable<FullClientsResponse>(obs => {
+            obs.next(data.data);
+            obs.complete();
+          }).pipe(shareReplay(1));
+
+          this.clientsCache.set(key, finalData$);
+
+          observer.next({
+            type: 'done',
+            data: data.data
+          });
+
+          observer.complete();
+          eventSource.close();
+        }
+
+        // ❌ ERROR BACKEND
+        if (data.error) {
+          observer.error(data.message || 'Error en stream');
+          eventSource.close();
+        }
+      };
+
+      eventSource.onerror = () => {
+        observer.error('Error de conexión SSE');
+        eventSource.close();
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    });
+  }
 
 }
 

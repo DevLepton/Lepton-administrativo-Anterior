@@ -2,7 +2,7 @@ import { Component, EventEmitter, Input, OnChanges, OnInit, Output, ViewChild } 
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, of } from 'rxjs';
-import { ApiService } from '../../../services/api.service';
+import { ApiService, DeviceStatus } from '../../../services/api.service';
 import { NewAccessoryModalComponent } from '../../../modals/new-accessory-modal/new-accessory-modal.component';
 import { ViewAccessoryModalComponent } from '../../../modals/view-accessory-modal/view-accessory-modal.component';
 import { EditAccessoryModalComponent } from '../../../modals/edit-accessory-modal/edit-accessory-modal.component';
@@ -15,7 +15,7 @@ interface AccessoryItem {
   nombre: string;
   marca: string;
   modelo: string;
-  estatus: 'En inventario' | 'En configuración' | 'Instalado' | string;
+  estatus: DeviceStatus;
   fechaCompra: string | Date | null;
   fechaIngresoLepton: string | Date | null;
   cliente?: string | null;

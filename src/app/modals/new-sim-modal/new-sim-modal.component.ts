@@ -2,8 +2,7 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
-
-type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+import { DeviceStatus } from '../../services/api.service';
 
 @Component({
   selector: 'app-new-sim-modal',

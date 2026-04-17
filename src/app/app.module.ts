@@ -85,6 +85,8 @@ import { MatTableModule } from '@angular/material/table';
 import { MatButtonToggleModule } from '@angular/material/button-toggle';
 import { ConfirmModalComponent } from './services/confirm-modal/confirm-modal.component';
 import { MatCheckboxModule } from '@angular/material/checkbox';
+import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { UserProfileComponent } from './general/user-profile/user-profile.component';
 
 registerLocaleData(es);
 
@@ -140,6 +142,7 @@ registerLocaleData(es);
     EditRequestModalComponent,
     ClientsComponent,
     ConfirmModalComponent,
+    UserProfileComponent,
   ],
   imports: [
     BrowserModule,
@@ -169,7 +172,8 @@ registerLocaleData(es);
     MatPaginatorModule,
     MatTableModule,
     MatButtonToggleModule,
-    MatCheckboxModule
+    MatCheckboxModule,
+    MatProgressSpinnerModule,
 ],
   providers: [
     provideClientHydration(),

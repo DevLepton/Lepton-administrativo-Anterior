@@ -1,0 +1,182 @@
+<div class="tab-pane">
+
+    <!-- HEADER -->
+    <div class="profile-header">
+        <div class="title">
+            <span class="material-icons">account_circle</span>
+            <h2>Mi perfil</h2>
+        </div>
+
+        <button class="icon-button close-btn" matTooltip="Cerrar" (click)="closeProfile()">
+            <span class="material-icons">close</span>
+        </button>
+    </div>
+
+    <div class="profile-layout">
+
+        <!-- PERFIL -->
+        <div class="card profile-card">
+
+            <div class="profile-top">
+
+                <div class="avatar">
+                    {{ user?.userName?.charAt(0) }}
+                </div>
+
+                <div class="user-info">
+                    <h3>{{ user?.userName }}</h3>
+                    <span>{{ user?.email }}</span>
+
+                    <span class="role-badge">
+                        {{ user?.role | titlecase }}
+                    </span>
+                </div>
+
+                <button class="edit-btn" (click)="toggleEdit()">
+                    <span class="material-icons">
+                        {{ editMode ? 'close' : 'edit' }}
+                    </span>
+                </button>
+
+            </div>
+
+            <!-- FORM -->
+            <div class="form-wrapper" [class.active]="editMode">
+                <form *ngIf="editMode" class="form" [formGroup]="profileForm">
+
+                    <div class="form-field-container">
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Nombre de usuario</mat-label>
+                            <input matInput formControlName="userName" />
+                            <mat-error
+                                *ngIf=" profileForm.get('userName')?.hasError('required') && profileForm.get('userName')?.touched">
+                                Campo obligatorio
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Correo electrónico</mat-label>
+                            <input matInput type="email" formControlName="email" />
+                            <mat-error
+                                *ngIf=" profileForm.get('email')?.hasError('required') && profileForm.get('email')?.touched">
+                                Campo obligatorio
+                            </mat-error>
+                            <mat-error
+                                *ngIf=" profileForm.get('email')?.hasError('email') && profileForm.get('email')?.touched">
+                                Correo inválido
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <div class="actions">
+                        <button class="primary-btn" (click)="saveProfile()"
+                            [disabled]="profileForm.invalid || !profileForm.dirty || !hasProfileChanges()">
+                            Guardar cambios
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+        <!-- SEGURIDAD -->
+        <div class="card security-card">
+
+            <div class="card-header">
+                <span class="material-icons">security</span>
+                <h3>Seguridad</h3>
+            </div>
+
+            <p class="security-text">
+                Cambia tu contraseña regularmente para proteger tu cuenta.
+            </p>
+
+            <button class="primary-btn" (click)="togglePasswordForm()">
+                Cambiar contraseña
+            </button>
+            <div class="form-wrapper" [class.active]="showPasswordForm">
+                <form *ngIf="showPasswordForm" class="form" [formGroup]="passwordForm">
+                    <div class="form-field-container">
+
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Contraseña actual</mat-label>
+                            <input matInput [type]="hideCurrentPassword ? 'password' : 'text'"
+                                formControlName="currentPassword" />
+
+                            <button mat-icon-button matSuffix (click)="hideCurrentPassword = !hideCurrentPassword"
+                                type="button">
+
+                                <mat-icon>
+                                    {{ hideCurrentPassword ? 'visibility_off' : 'visibility' }}
+                                </mat-icon>
+                            </button>
+                            <mat-error
+                                *ngIf=" passwordForm.get('currentPassword')?.hasError('required') && passwordForm.get('currentPassword')?.touched">
+                                Campo obligatorio
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Nueva contraseña</mat-label>
+                            <input matInput [type]="hideNewPassword ? 'password' : 'text'"
+                                formControlName="newPassword" />
+
+                            <button mat-icon-button matSuffix (click)="hideNewPassword = !hideNewPassword"
+                                type="button">
+
+                                <mat-icon>
+                                    {{ hideNewPassword ? 'visibility_off' : 'visibility' }}
+                                </mat-icon>
+                            </button>
+                            <mat-error
+                                *ngIf="passwordForm.get('newPassword')?.hasError('required') && passwordForm.get('newPassword')?.touched">
+                                Campo obligatorio
+                            </mat-error>
+                            <mat-error
+                                *ngIf="passwordForm.get('newPassword')?.hasError('minlength') && passwordForm.get('newPassword')?.touched">
+                                Mínimo 6 caracteres
+                            </mat-error>
+                        </mat-form-field>
+
+                        <mat-form-field appearance="outline" class="full-width" subscriptSizing="dynamic">
+                            <mat-label>Confirmar contraseña</mat-label>
+                            <input matInput [type]="hideConfirmPassword ? 'password' : 'text'"
+                                formControlName="confirmPassword" [errorStateMatcher]="matcher" />
+
+                            <button mat-icon-button matSuffix (click)="hideConfirmPassword = !hideConfirmPassword"
+                                type="button">
+
+                                <mat-icon>
+                                    {{ hideConfirmPassword ? 'visibility_off' : 'visibility' }}
+                                </mat-icon>
+                            </button>
+                            <mat-error
+                                *ngIf="passwordForm.get('confirmPassword')?.hasError('required') && passwordForm.get('confirmPassword')?.touched">
+                                Campo obligatorio
+                            </mat-error>
+                            <mat-error
+                                *ngIf="passwordForm.get('confirmPassword')?.touched && passwordForm.hasError('passwordMismatch')">
+                                Las contraseñas no coinciden
+                            </mat-error>
+                        </mat-form-field>
+                    </div>
+
+                    <div class="actions">
+                        <button class="primary-btn" (click)="changePassword()"
+                            [disabled]="passwordForm.invalid || !passwordForm.dirty">
+                            Actualizar
+                        </button>
+
+                        <button class="secondary-btn" (click)="togglePasswordForm()">
+                            Cancelar
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+<app-confirm-modal></app-confirm-modal>

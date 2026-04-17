@@ -13,11 +13,15 @@ import { NoAuthGuard } from './auth/no-auth.guard';
 import { RoleGuard } from './auth/role.guard';
 import { AccesoDenegadoComponent } from './acceso-denegado/acceso-denegado.component';
 import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redireccion.component';
-import { UsersComponent } from './admin/users/users.component';
-import { AlmacenComponent } from './inventario/almacen/almacen.component';
-import { EventsComponent } from './admin/events/events.component';
-import { PeticionesComponent } from './soporte/peticiones/peticiones.component';
-import { ClientsComponent } from './general/clients/clients.component';
+import { navbarData } from './sidenav/nav-data';
+import { UserProfileComponent } from './general/user-profile/user-profile.component';
+
+const dynamicRoutes = navbarData.map(item => ({
+  path: item.RouteLink,
+  component: item.component,
+  canActivate: [RoleGuard],
+  data: { roles: item.roles }
+}));
 
 const routes: Routes = [
   {
@@ -30,71 +34,13 @@ const routes: Routes = [
     canActivate: [AuthGuard],
     children: [
       {
-        path: 'usuarios',
-        component: UsersComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['admin'] }
-      },
-      {
-        path: 'peticiones',
-        component: PeticionesComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte'] }
-      },
-      {
-        path: 'clientes',
-        component: ClientsComponent,
+        path: 'perfil',
+        component: UserProfileComponent,
         canActivate: [RoleGuard],
         data: { roles: ['admin', 'inventario', 'soporte', 'finanzas'] }
       },
-      {
-        path: 'eventos',
-        component: EventsComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['admin', 'soporte'] }
-      },
-      {
-        path: 'almacen',
-        component: AlmacenComponent,
-        canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte'] }
-      },
-      // {
-      //   path: 'dashboard',
-      //   component: DashboardComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
-      // {
-      //   path: 'clientes-finanzas',
-      //   component: ClientesComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
-      // {
-      //   path: 'servicios',
-      //   component: ServiciosComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
-      // {
-      //   path: 'planes',
-      //   component: PlanesComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
-      // {
-      //   path: 'dispositivos',
-      //   component: DispositivosComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
-      // {
-      //   path: 'pedidos',
-      //   component: PedidosComponent,
-      //   canActivate: [RoleGuard],
-      //   data: { roles: ['finanzas'] }
-      // },
+
+      ...dynamicRoutes,
       { path: '', component: InicioRedireccionComponent }
     ]
   },

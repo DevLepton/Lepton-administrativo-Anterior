@@ -4,7 +4,7 @@
       <div class="filter-container">
 
         <!-- Buscador por ID o S/N -->
-        <mat-form-field appearance="outline" class="sim-search">
+        <mat-form-field appearance="outline" class="sim-search" subscriptSizing="dynamic">
           <mat-label>Buscar por ID / S/N</mat-label>
           <input matInput [(ngModel)]="accessorySearch" (ngModelChange)="updateAccessorySearch($event)"
             placeholder="Ingrese ID de accesorio o número de serie..." autocomplete="off" />
@@ -18,7 +18,7 @@
         </mat-form-field>
 
         <!-- Marca -->
-        <mat-form-field appearance="outline" class="sim-filter">
+        <mat-form-field appearance="outline" class="sim-filter" subscriptSizing="dynamic">
           <mat-label>Marca</mat-label>
           <mat-select [(value)]="accessoryFilterBrand" (selectionChange)="onAccessoryFilterChange()">
             <mat-option [value]="''">Todas</mat-option>
@@ -27,7 +27,7 @@
         </mat-form-field>
 
         <!-- Modelo -->
-        <mat-form-field appearance="outline" class="sim-filter">
+        <mat-form-field appearance="outline" class="sim-filter" subscriptSizing="dynamic">
           <mat-label>Modelo</mat-label>
           <mat-select [(value)]="accessoryFilterModel" (selectionChange)="onAccessoryFilterChange()">
             <mat-option [value]="''">Todos</mat-option>
@@ -36,7 +36,7 @@
         </mat-form-field>
 
         <!-- Estatus -->
-        <mat-form-field appearance="outline" class="sim-filter">
+        <mat-form-field appearance="outline" class="sim-filter" subscriptSizing="dynamic">
           <mat-label>Estatus</mat-label>
           <mat-select [(value)]="accessoryFilterStatus" (selectionChange)="onAccessoryFilterChange()">
             <mat-option [value]="''">Todos</mat-option>
@@ -45,7 +45,7 @@
         </mat-form-field>
 
         <!-- Fecha compra -->
-        <mat-form-field appearance="outline" class="sim-filter">
+        <mat-form-field appearance="outline" class="sim-filter" subscriptSizing="dynamic">
           <mat-label>Fecha de compra</mat-label>
           <input matInput [matDatepicker]="accPickerCompra" placeholder="Selecciona fecha"
             [(ngModel)]="accessoryPurchaseDateFilter" (dateChange)="onAccessoryPurchaseDateChange($event.value)" />
@@ -63,7 +63,7 @@
         </mat-form-field>
 
         <!-- Fecha ingreso -->
-        <mat-form-field appearance="outline" class="sim-filter">
+        <mat-form-field appearance="outline" class="sim-filter" subscriptSizing="dynamic">
           <mat-label>Fecha de ingreso</mat-label>
           <input matInput [matDatepicker]="accPickerIngreso" placeholder="Selecciona fecha"
             [(ngModel)]="accessoryEntryDateFilter" (dateChange)="onAccessoryEntryDateChange($event.value)" />
@@ -189,7 +189,8 @@
               <span class="status-badge" [ngClass]="{
               inv:  a.estatus === 'En inventario',
               cfg:  a.estatus === 'En configuración',
-              inst: a.estatus === 'Instalado'
+              inst: a.estatus === 'Instalado',
+              ready: a.estatus === 'Listo para usar'
             }">
                 {{ a.estatus }}
               </span>

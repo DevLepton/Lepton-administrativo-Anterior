@@ -1,8 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, startWith } from 'rxjs';
-
-export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado';
+import { DeviceStatus } from '../../services/api.service';
 
 @Component({
   selector: 'app-new-gps-modal',

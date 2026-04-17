@@ -59,6 +59,7 @@ export class EditRequestModalComponent {
   }
 
   private originalDevices: RequestedDeviceItem[] = [];
+  private originalComments: string = '';
 
   /** ✅ Abre el modal y carga la petición seleccionada */
   open(request: {
@@ -86,6 +87,8 @@ export class EditRequestModalComponent {
       quantity: d.quantity,
       response: d.response || []
     }));
+
+    this.originalComments = request.comments || '';
 
     const src = Array.isArray(request.dispositivosSolicitados)
       ? request.dispositivosSolicitados
@@ -292,7 +295,7 @@ export class EditRequestModalComponent {
 
     const payload = {
       devicesRequested: this.buildDevicesRequested(),
-      quantity: total, 
+      quantity: total,
       comments: this.form.get('comments')?.value || ''
     };
 
@@ -310,5 +313,32 @@ export class EditRequestModalComponent {
         this.loading = false;
       }
     });
+  }
+
+  get hasChanges(): boolean {
+    const normalize = (arr: { model: string; quantity: number }[]) =>
+      arr
+        .map(i => ({
+          model: i.model.trim().toLowerCase(),
+          quantity: i.quantity
+        }))
+        .sort((a, b) => a.model.localeCompare(b.model));
+
+    const current = normalize(this.items);
+    const original = normalize(
+      this.originalDevices.map(d => ({
+        model: d.model,
+        quantity: d.quantity
+      }))
+    );
+
+    const itemsChanged = JSON.stringify(current) !== JSON.stringify(original);
+
+    const currentComments = (this.form.get('comments')?.value || '').trim();
+    const originalComments = (this.originalComments || '').trim();
+
+    const commentsChanged = currentComments !== originalComments;
+
+    return itemsChanged || commentsChanged;
   }
 }
