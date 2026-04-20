@@ -78,7 +78,6 @@ export interface TrackerUI {
   tiempoOffline: string;
   statusSoporte: string;
 
-  // 🔥 AGREGA ESTO
   minutosOffline: number;
   online: boolean;
 }

@@ -86,7 +86,7 @@
 
             </div>
 
-            <button class="tab-btn" (click)="setActiveTab('config')" *ngIf="isSupportUser">
+            <button class="tab-btn" (click)="setActiveTab('config')" *ngIf="isAdminUser || isSupportUser">
                 Listas de clientes
             </button>
 
@@ -130,7 +130,7 @@
 
         <small>{{ progress }}%</small>
     </div>
-    
+
     <div *ngIf="!loading" class="dashboard">
         <!-- IZQUIERDA -->
         <div class="left" [class.full]="sidebarCollapsed">
@@ -241,7 +241,7 @@
                                             [class.hidden-col]="!visibleColumnsSet.has('clon')"> Clon </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('clon')">
-                                            <span [class.bad]="t.clon">{{ t.clon ? 'Sí' : 'No' }}</span>
+                                            <span [class.bad]="t.clon">{{ t.clon ? 'TRUE' : 'FALSE' }}</span>
                                         </td>
                                     </ng-container>
 
@@ -251,7 +251,7 @@
                                             [class.hidden-col]="!visibleColumnsSet.has('suspendido')"> Suspendido </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('suspendido')">
-                                            {{ t.suspendido ? 'Sí' : 'No' }}
+                                            {{ t.suspendido ? 'TRUE' : 'FALSE' }}
                                         </td>
                                     </ng-container>
 
@@ -286,12 +286,12 @@
                                     </ng-container>
 
                                     <!-- SDC ACUMULADO -->
-                                    <ng-container matColumnDef="sdcAcumulado">
+                                    <ng-container matColumnDef="sdc Acumulado">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('sdcAcumulado')"> SDC Acumulado
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc Acumulado')"> SDC Acumulado
                                         </th>
                                         <td mat-cell *matCellDef="let t"
-                                            [class.hidden-col]="!visibleColumnsSet.has('sdcAcumulado')">
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc Acumulado')">
                                             {{ t.sdcAcumulado || '-' }}
                                         </td>
                                     </ng-container>
@@ -307,43 +307,43 @@
                                     </ng-container>
 
                                     <!-- UTC -->
-                                    <ng-container matColumnDef="ultimaConexionUTC">
+                                    <ng-container matColumnDef="ultima Conexion UTC">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionUTC')"> UTC </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')"> UTC </th>
                                         <td mat-cell *matCellDef="let t"
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionUTC')">
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')">
                                             {{ t.ultimaConexionUTC }}
                                         </td>
                                     </ng-container>
 
                                     <!-- ÚLTIMA CONEXIÓN -->
-                                    <ng-container matColumnDef="ultimaConexionLocal">
+                                    <ng-container matColumnDef="ultima Conexion Local">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionLocal')"> Última
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion Local')"> Última
                                             Conexión </th>
                                         <td mat-cell *matCellDef="let t"
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultimaConexionLocal')">
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion Local')">
                                             {{ t.ultimaConexionLocal }}
                                         </td>
                                     </ng-container>
 
                                     <!-- TIEMPO OFFLINE -->
-                                    <ng-container matColumnDef="tiempoOffline">
+                                    <ng-container matColumnDef="tiempo Offline">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('tiempoOffline')"> Tiempo Offline
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')"> Tiempo Offline
                                         </th>
                                         <td mat-cell *matCellDef="let t"
-                                            [class.hidden-col]="!visibleColumnsSet.has('tiempoOffline')">
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')">
                                             {{ t.tiempoOffline }}
                                         </td>
                                     </ng-container>
 
                                     <!-- STATUS -->
-                                    <ng-container matColumnDef="statusSoporte">
+                                    <ng-container matColumnDef="status Soporte">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('statusSoporte')"> Status </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('status Soporte')"> Status </th>
                                         <td mat-cell *matCellDef="let t"
-                                            [class.hidden-col]="!visibleColumnsSet.has('statusSoporte')">
+                                            [class.hidden-col]="!visibleColumnsSet.has('status Soporte')">
                                             <span [ngClass]="getStatusClass(t.statusSoporte)">
                                                 {{ t.statusSoporte }}
                                             </span>
@@ -423,7 +423,7 @@
     </div>
 </div>
 
-<div class="tab-pane" *ngIf="activeTab === 'config' && isSupportUser">
+<div class="tab-pane" *ngIf="activeTab === 'config' && (isAdminUser || isSupportUser )">
 
     <div class="section-header">
         <button class="back-button" (click)="setActiveTab('clients')">
@@ -496,7 +496,7 @@
             <!-- LIST -->
             <div class="list">
 
-                <div class="list-item" *ngFor="let item of activeClients | keyvalue">
+                <div class="list-item" *ngFor="let item of activeClients | keyvalue: sortKeysDesc">
 
                     <!-- MODO NORMAL -->
                     <ng-container *ngIf="editingActiveId !== item.key; else editActiveTpl">

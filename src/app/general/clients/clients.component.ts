@@ -1,7 +1,7 @@
 import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ApiService, ClienteUI, TrackerUI } from '../../services/api.service';
 import { Subscription } from 'rxjs';
-// import datos from './datos.json';
+import datos from './datos.json';
 
 import {
   trigger,
@@ -19,6 +19,13 @@ import { ConfirmModalService } from '../../services/confirm-modal/confirm-modal-
 // import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx-js-style';
+
+type BucketKey = '+12H' | '+1D' | '+15D' | '+1M' | '+6M' | '+1A';
+
+type BucketItem = {
+  label: BucketKey;
+  value: number;
+};
 
 @Component({
   selector: 'app-clients',
@@ -68,11 +75,11 @@ export class ClientsComponent implements OnInit {
 
   search = '';
   expandedClient: number | null = null;
-  selectedBucket: string | null = null;
+  selectedBucket: BucketKey | null = null;
 
   topOffline: ClienteUI[] = [];
 
-  offlineBuckets = [
+  offlineBuckets: BucketItem[] = [
     { label: '+12H', value: 0 },
     { label: '+1D', value: 0 },
     { label: '+15D', value: 0 },
@@ -96,12 +103,12 @@ export class ClientsComponent implements OnInit {
     'hidden',
     'sdc1',
     'sdc2',
-    'sdcAcumulado',
+    'sdc Acumulado',
     'canbus',
-    'ultimaConexionUTC',
-    'ultimaConexionLocal',
-    'tiempoOffline',
-    'statusSoporte'
+    'ultima Conexion UTC',
+    'ultima Conexion Local',
+    'tiempo Offline',
+    'status Soporte'
   ];
 
   displayedColumns: string[] = [
@@ -116,12 +123,12 @@ export class ClientsComponent implements OnInit {
     'hidden',
     'sdc1',
     'sdc2',
-    'sdcAcumulado',
+    'sdc Acumulado',
     'canbus',
-    'ultimaConexionUTC',
-    'ultimaConexionLocal',
-    'tiempoOffline',
-    'statusSoporte'
+    'ultima Conexion UTC',
+    'ultima Conexion Local',
+    'tiempo Offline',
+    'status Soporte'
   ];
 
   filteredClientsList: ClienteUI[] = [];
@@ -157,6 +164,7 @@ export class ClientsComponent implements OnInit {
   editingExcludedId: number | null = null;
   editingExcludedTemp = '';
 
+  isAdminUser = false;
   isSupportUser = false;
 
   onlyActiveClients = false;
@@ -189,6 +197,7 @@ export class ClientsComponent implements OnInit {
     const role = (localStorage.getItem('user_role') || '').toLowerCase();
 
     this.isSupportUser = role === 'soporte';
+    this.isAdminUser = role === 'admin';
 
     this.loadPreferences();
     this.loadClientConfig();
@@ -323,7 +332,7 @@ export class ClientsComponent implements OnInit {
     this.api.getClientConfigCached(forceRefresh).subscribe({
       next: (res: any) => {
         this.activeClients = res.activeClients || {};
-        this.excludedAccounts = res.excludedAccounts || [];
+        this.excludedAccounts = (res.excludedAccounts || []).sort((a: number, b: number) => a - b);
 
         this.originalActiveClients = { ...this.activeClients };
         this.originalExcludedAccounts = [...this.excludedAccounts];
@@ -341,6 +350,10 @@ export class ClientsComponent implements OnInit {
       }
     });
   }
+
+  sortKeysDesc = (a: any, b: any): number => {
+    return Number(a.key) - Number(b.key);
+  };
 
   // ===== ACTIVE =====
   addActiveClient() {
@@ -451,12 +464,14 @@ export class ClientsComponent implements OnInit {
     }
 
     this.excludedAccounts.push(id);
+    this.excludedAccounts.sort((a, b) => a - b);
     this.newExcludedId = '';
     this.filteredExcludedOptions = [];
   }
 
   removeExcludedAccount(id: number) {
     this.excludedAccounts = this.excludedAccounts.filter(x => x !== id);
+    this.excludedAccounts.sort((a, b) => a - b);
   }
 
   saveExcludedAccounts() {
@@ -496,9 +511,9 @@ export class ClientsComponent implements OnInit {
 
     if (isNaN(newId)) return;
 
-    this.excludedAccounts = this.excludedAccounts.map(id =>
-      id === this.editingExcludedId ? newId : id
-    );
+    this.excludedAccounts = this.excludedAccounts
+      .map(id => id === this.editingExcludedId ? newId : id)
+      .sort((a, b) => a - b);
 
     this.editingExcludedId = null;
   }
@@ -542,109 +557,77 @@ export class ClientsComponent implements OnInit {
     this.newExcludedId = String(option.id);
   }
 
-  loadData(forceRefresh = false) {
-    this.loading = true;
-
-    this.progress = 0;
-    this.progressMessage = 'Iniciando...';
-
-    this.sub?.unsubscribe();
-
-    this.sub = this.api.getFullClientsDataStream(
-      this.includeSensors,
-      this.includeLogin,
-      forceRefresh
-    ).subscribe({
-
-      next: (event) => {
-
-        // 🔄 PROGRESO
-        if (event.type === 'progress') {
-          this.progress = event.progress;
-          this.progressMessage = event.message;
-
-          this.cdr.markForCheck();
-          return;
-        }
-
-        // ✅ FINAL
-        if (event.type === 'done') {
-
-          this.lastUpdate = new Date();
-
-          this.clientesFiltrados = [...event.data.clientes];
-
-          this.updateFilteredClients();
-
-          this.loading = false;
-          this.progress = 100;
-          this.progressMessage = 'Completado';
-
-          this.cdr.markForCheck();
-        }
-      },
-
-      error: (err) => {
-        console.error(err);
-
-        this.loading = false;
-        this.progressMessage = 'Error al cargar datos';
-
-        this.cdr.markForCheck();
-      }
-    });
-  }
-
   // loadData(forceRefresh = false) {
   //   this.loading = true;
 
+  //   this.progress = 0;
+  //   this.progressMessage = 'Iniciando...';
+
   //   this.sub?.unsubscribe();
 
-  //   this.sub = this.api.getFullClientsData(
+  //   this.sub = this.api.getFullClientsDataStream(
   //     this.includeSensors,
   //     this.includeLogin,
   //     forceRefresh
   //   ).subscribe({
-  //     next: (res) => {
 
-  //       this.lastUpdate = new Date();
+  //     next: (event) => {
 
-  //       // SIEMPRE nuevas referencias (clave en OnPush)
-  //       this.clientesFiltrados = [...res.clientes];
+  //       // PROGRESO
+  //       if (event.type === 'progress') {
+  //         this.progress = event.progress;
+  //         this.progressMessage = event.message;
 
-  //       this.updateFilteredClients();
+  //         this.cdr.markForCheck();
+  //         return;
+  //       }
 
-  //       this.loading = false;
+  //       // FINAL
+  //       if (event.type === 'done') {
 
-  //       // AVISAR a Angular
-  //       this.cdr.markForCheck();
+  //         this.lastUpdate = new Date();
+
+  //         this.clientesFiltrados = [...event.data.clientes];
+
+  //         this.updateFilteredClients();
+
+  //         this.loading = false;
+  //         this.progress = 100;
+  //         this.progressMessage = 'Completado';
+
+  //         this.cdr.markForCheck();
+  //       }
   //     },
 
-  //     error: () => {
-  //       this.loading = false;
+  //     error: (err) => {
+  //       console.error(err);
 
-  //       // 🔥 también aquí
+  //       this.loading = false;
+  //       this.progressMessage = 'Error al cargar datos';
+
   //       this.cdr.markForCheck();
-  //     },
+  //     }
   //   });
   // }
 
-  // loadData(forceRefresh = false) {
-  //   this.loading = true;
+  
 
-  //   const res: any = datos;
+  loadData(forceRefresh = false) {
+    this.loading = true;
 
-  //   this.lastUpdate = new Date();
+    const res: any = datos;
 
-  //   this.clientesFiltrados = [...res.clientes];
+    this.lastUpdate = new Date();
 
-  //   this.updateFilteredClients();
+    this.clientesFiltrados = [...res.clientes];
 
-  //   this.loading = false;
+    this.updateFilteredClients();
 
-  //   // 🔥 CLAVE
-  //   this.cdr.markForCheck();
-  // }
+    this.loading = false;
+
+    // 🔥 CLAVE
+    this.cdr.markForCheck();
+  }
 
   refreshClients() {
     this.loadData(true);
@@ -746,10 +729,16 @@ export class ClientsComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
-  filterByBucket(label: string) {
+  filterByBucket(label: BucketKey) {
     this.selectedBucket = this.selectedBucket === label ? null : label;
     this.updateFilteredClients();
     this.cdr.markForCheck();
+  }
+
+  isValidTracker(t: TrackerUI): boolean {
+    return (
+      !t.clon
+    );
   }
 
   updateFilteredClients() {
@@ -758,7 +747,7 @@ export class ClientsComponent implements OnInit {
     let totalTrackers = 0;
     let totalOnline = 0;
 
-    const buckets = {
+    const buckets: Record<BucketKey, number> = {
       '+12H': 0,
       '+1D': 0,
       '+15D': 0,
@@ -815,6 +804,7 @@ export class ClientsComponent implements OnInit {
       let bucketMatch = !this.selectedBucket;
 
       for (const t of trackers) {
+
         const min = t.minutosOffline;
         const isOnline = min < 720;
 
@@ -823,12 +813,18 @@ export class ClientsComponent implements OnInit {
         } else {
           offline++;
 
-          if (min > 720) buckets['+12H']++;
-          if (min > 1440) buckets['+1D']++;
-          if (min > 21600) buckets['+15D']++;
-          if (min > 43200) buckets['+1M']++;
-          if (min > 259200) buckets['+6M']++;
-          if (min > 525600) buckets['+1A']++;
+          let bucket: BucketKey | null = null;
+
+          if (min > 525600) bucket = '+1A';
+          else if (min > 259200) bucket = '+6M';
+          else if (min > 43200) bucket = '+1M';
+          else if (min > 21600) bucket = '+15D';
+          else if (min > 1440) bucket = '+1D';
+          else if (min > 720) bucket = '+12H';
+
+          if (bucket) {
+            buckets[bucket]++;
+          }
 
           if (this.selectedBucket) {
             if (this.matchBucket(t, this.selectedBucket)) {
@@ -840,7 +836,9 @@ export class ClientsComponent implements OnInit {
 
       if (!bucketMatch) continue;
 
-      totalTrackers += trackers.length;
+      const trackersValidos = trackers.filter(t => this.isValidTracker(t));
+
+      totalTrackers += trackersValidos.length;
 
       result.push({
         ...c,
@@ -854,7 +852,6 @@ export class ClientsComponent implements OnInit {
 
     // 🔥 asignar resultados
     this.filteredClientsList = result;
-
     this.totalClientes = result.length;
     this.totalTrackers = totalTrackers;
     this.totalOnline = totalOnline;
@@ -870,6 +867,18 @@ export class ClientsComponent implements OnInit {
     ];
 
     this.topOffline = [...result]
+      .map(c => {
+        const trackers = c.trackers || [];
+
+        const offlineCount = trackers.filter(t =>
+          this.isValidTracker(t) && t.minutosOffline >= 720
+        ).length;
+
+        return {
+          ...c,
+          offline: offlineCount
+        };
+      })
       .sort((a, b) => b.offline - a.offline)
       .slice(0, 10);
   }
@@ -878,18 +887,17 @@ export class ClientsComponent implements OnInit {
     return item.id;
   }
 
-  matchBucket(t: TrackerUI, bucket: string): boolean {
+  matchBucket(t: TrackerUI, bucket: BucketKey): boolean {
     const min = t.minutosOffline;
 
-    switch (bucket) {
-      case '+12H': return min > 720;
-      case '+1D': return min > 1440;
-      case '+15D': return min > 21600;
-      case '+1M': return min > 43200;
-      case '+6M': return min > 259200;
-      case '+1A': return min > 525600;
-      default: return false;
-    }
+    if (min > 525600) return bucket === '+1A';
+    if (min > 259200) return bucket === '+6M';
+    if (min > 43200) return bucket === '+1M';
+    if (min > 21600) return bucket === '+15D';
+    if (min > 1440) return bucket === '+1D';
+    if (min > 720) return bucket === '+12H';
+
+    return false;
   }
 
   getPercent(value: number): number {
@@ -911,73 +919,6 @@ export class ClientsComponent implements OnInit {
 
   stop(e: Event) {
     e.stopPropagation();
-  }
-
-  recalculateStats() {
-    const list = this.filteredClientsList;
-
-    let totalTrackers = 0;
-    let totalOnline = 0;
-
-    const buckets = {
-      '+12H': 0,
-      '+1D': 0,
-      '+15D': 0,
-      '+1M': 0,
-      '+6M': 0,
-      '+1A': 0
-    };
-
-    list.forEach(c => {
-      const trackers = c.trackers || [];
-
-      totalTrackers += trackers.length;
-
-      trackers.forEach(t => {
-        const isOnline = t.minutosOffline < 720;
-
-        if (isOnline) {
-          totalOnline++;
-        } else {
-          const min = t.minutosOffline;
-
-          if (min > 720) buckets['+12H']++;
-          if (min > 1440) buckets['+1D']++;
-          if (min > 21600) buckets['+15D']++;
-          if (min > 43200) buckets['+1M']++;
-          if (min > 259200) buckets['+6M']++;
-          if (min > 525600) buckets['+1A']++;
-        }
-      });
-    });
-
-    this.totalClientes = list.length;
-    this.totalTrackers = totalTrackers;
-    this.totalOnline = totalOnline;
-    this.totalOffline = totalTrackers - totalOnline;
-
-    this.offlineBuckets = [
-      { label: '+12H', value: buckets['+12H'] },
-      { label: '+1D', value: buckets['+1D'] },
-      { label: '+15D', value: buckets['+15D'] },
-      { label: '+1M', value: buckets['+1M'] },
-      { label: '+6M', value: buckets['+6M'] },
-      { label: '+1A', value: buckets['+1A'] }
-    ];
-
-    this.topOffline = [...list]
-      .map(c => {
-        const trackers = c.trackers || [];
-
-        const offlineCount = trackers.filter(t => t.minutosOffline >= 720).length;
-
-        return {
-          ...c,
-          offline: offlineCount
-        };
-      })
-      .sort((a, b) => b.offline - a.offline)
-      .slice(0, 10);
   }
 
   selectedClients = new Set<number>();
@@ -1066,6 +1007,7 @@ export class ClientsComponent implements OnInit {
         `${cliente.login}`,
         `${cliente.ciudad || '-'}`,
         `${cliente.trackers?.length || 0}`,
+        'Nombre en plataforma',
         'IMEI',
         'SIM',
         'Plan',
@@ -1110,13 +1052,14 @@ export class ClientsComponent implements OnInit {
           '',
           '',
           '',
+          t.nombre,
           t.imei,
           t.sim,
           t.plan,
           t.modelo,
-          t.clon ? 'Sí' : 'No',
-          t.suspendido ? 'Sí' : 'No',
-          t.hidden ? 'Sí' : 'No',
+          t.clon ? 'TRUE' : 'FALSE',
+          t.suspendido ? 'TRUE' : 'FALSE',
+          t.hidden ? 'TRUE' : 'FALSE',
           t.sdc1 || '',
           t.sdc2 || '',
           t.sdcAcumulado || '',
@@ -1166,9 +1109,10 @@ export class ClientsComponent implements OnInit {
       { wch: 10 },  // espacio
       { wch: pxToWch(135) },
       { wch: pxToWch(510) },
-      { wch: pxToWch(270) },
+      { wch: pxToWch(320) },
       { wch: pxToWch(200) },
       { wch: pxToWch(150) },
+      { wch: pxToWch(600) },
       { wch: pxToWch(210) },
       { wch: pxToWch(180) },
       { wch: pxToWch(200) },
