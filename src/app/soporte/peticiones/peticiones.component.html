@@ -207,14 +207,14 @@
 
                 <td>
                   <button *ngIf="isSupportUser && r.estatus === 'Atendida'" class="icon-button validate-button"
-                    (click)="validarPeticion(r); $event.stopPropagation()" title="Validar petición">
+                    (click)="validarPeticion(r); $event.stopPropagation()" matTooltip="Validar petición">
                     <span class="material-icons">fact_check</span>
                   </button>
 
                   <!-- RESPONDER -->
                   <button *ngIf="isInventoryUser && r.estatus === 'Pendiente' && !r.fechaRespuesta"
                     class="icon-button response-button" (click)="responderPeticion(r); $event.stopPropagation()"
-                    title="Responder petición">
+                    matTooltip="Responder petición">
                     <span class="material-icons">reply</span>
                   </button>
 
@@ -222,7 +222,7 @@
                   <button
                     *ngIf="isInventoryUser && ((r.estatus === 'Pendiente' && r.fechaRespuesta) || r.estatus === 'Atendida')"
                     class="icon-button edit-button" (click)="editarRespuesta(r); $event.stopPropagation()"
-                    title="Editar respuesta">
+                    matTooltip="Editar respuesta">
                     <span class="material-icons">edit</span>
                   </button>
                 </td>

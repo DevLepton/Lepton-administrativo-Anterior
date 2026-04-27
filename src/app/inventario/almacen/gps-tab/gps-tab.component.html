@@ -89,7 +89,7 @@
 
                     <span class="tooltip-wrap" [matTooltip]="canViewOrEditGps ? '' : 'Selecciona 1 GPS para ver'"
                         [matTooltipDisabled]="canViewOrEditGps" matTooltipPosition="above">
-                        <button class="icon-button view-button" title="Ver" (click)="viewSelectedGps()"
+                        <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelectedGps()"
                             [disabled]="!canViewOrEditGps">
                             <span class="material-icons">visibility</span>
                         </button>
@@ -97,7 +97,7 @@
 
                     <span class="tooltip-wrap" [matTooltip]="canViewOrEditGps ? '' : 'Selecciona 1 GPS para editar'"
                         [matTooltipDisabled]="canViewOrEditGps" matTooltipPosition="above">
-                        <button class="icon-button edit-button" title="Editar" (click)="editSelectedGps()"
+                        <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelectedGps()"
                             [disabled]="!canViewOrEditGps">
                             <span class="material-icons">edit</span>
                         </button>
@@ -106,7 +106,7 @@
                     <span *ngIf="isInventoryUser" class="tooltip-wrap"
                         [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para eliminar'"
                         [matTooltipDisabled]="gpsSelectedCount > 0" matTooltipPosition="above">
-                        <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedGps()"
+                        <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedGps()"
                             [disabled]="gpsSelectedCount === 0 || gpsDeletingId === '__bulk__'">
                             <span class="material-icons">
                                 {{ gpsDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
@@ -141,24 +141,23 @@
                                 arrowForGps('sn')
                                 }}</span>
                         </th>
-                        <th (click)="sortGpsBy('nombre')" class="th-sort">Nombre <span class="arrow material-icons">{{
-                                arrowForGps('nombre') }}</span></th>
-                        <th (click)="sortGpsBy('marca')" class="th-sort">Marca <span class="arrow material-icons">{{
-                                arrowForGps('marca')
-                                }}</span></th>
-                        <th (click)="sortGpsBy('modelo')" class="th-sort">Modelo <span class="arrow material-icons">{{
-                                arrowForGps('modelo') }}</span></th>
-                        <th (click)="sortGpsBy('estatus')" class="th-sort">Estatus <span class="arrow material-icons">{{
-                                arrowForGps('estatus') }}</span></th>
-                        <th (click)="sortGpsBy('fechaCompra')" class="th-sort">Fecha de compra <span
+                        <th (click)="sortGpsBy('brand')" class="th-sort">Marca <span class="arrow material-icons">{{
+                            arrowForGps('brand')
+                        }}</span></th>
+                        <th (click)="sortGpsBy('model')" class="th-sort">Modelo <span class="arrow material-icons">{{
+                            arrowForGps('model') }}</span></th>
+                            <th (click)="sortGpsBy('supplier')" class="th-sort">Proveedor <span class="arrow material-icons">{{
+                                    arrowForGps('supplier') }}</span></th>
+                        <th (click)="sortGpsBy('status')" class="th-sort">Estatus <span class="arrow material-icons">{{
+                                arrowForGps('status') }}</span></th>
+                        <th (click)="sortGpsBy('purchaseDate')" class="th-sort">Fecha de compra <span
                                 class="arrow material-icons">{{
-                                arrowForGps('fechaCompra') }}</span></th>
-                        <th (click)="sortGpsBy('fechaIngresoLepton')" class="th-sort">Fecha ingreso Leptón <span
-                                class="arrow material-icons">{{ arrowForGps('fechaIngresoLepton') }}</span></th>
-                        <th (click)="sortGpsBy('cliente')" class="th-sort">Cliente <span class="arrow material-icons">{{
-                                arrowForGps('cliente') }}</span></th>
+                                arrowForGps('purchaseDate') }}</span></th>
+                        <th (click)="sortGpsBy('entryDate')" class="th-sort">Fecha ingreso Leptón <span
+                                class="arrow material-icons">{{ arrowForGps('entryDate') }}</span></th>
+                        <th (click)="sortGpsBy('client')" class="th-sort">Cliente <span class="arrow material-icons">{{
+                                arrowForGps('client') }}</span></th>
 
-                        <!-- ❌ ya no hay acciones por fila -->
                     </tr>
                 </thead>
 
@@ -176,22 +175,22 @@
                         <td>{{ ((gpsCurrentPage - 1) * gpsPerPage + idx + 1) }}</td>
                         <td>{{ g.imei }}</td>
                         <td>{{ g.sn }}</td>
-                        <td>{{ g.nombre }}</td>
-                        <td>{{ g.marca }}</td>
-                        <td>{{ g.modelo }}</td>
+                        <td>{{ g.brand }}</td>
+                        <td>{{ g.model }}</td>
+                        <td>{{ g.supplier }}</td>
                         <td>
                             <span class="status-badge" [ngClass]="{
-              inv:  g.estatus === 'En inventario',
-              cfg:  g.estatus === 'En configuración',
-              inst: g.estatus === 'Instalado',
-              ready: g.estatus === 'Listo para usar',
-            }">
-                                {{ g.estatus }}
+                                inv:  g.status === 'En inventario',
+                                cfg:  g.status === 'En configuración',
+                                inst: g.status === 'Instalado',
+                                ready: g.status === 'Listo para usar',
+                                }">
+                                {{ g.status }}
                             </span>
                         </td>
                         <td>
-                            <ng-container *ngIf="g.fechaCompra; else externoTpl">
-                                {{ g.fechaCompra | date:'dd MMM yyyy':'UTC' }}
+                            <ng-container *ngIf="g.purchaseDate; else externoTpl">
+                                {{ g.purchaseDate | date:'dd MMM yyyy':'UTC' }}
                             </ng-container>
 
                             <ng-template #externoTpl>
@@ -199,8 +198,8 @@
                             </ng-template>
                         </td>
 
-                        <td>{{ g.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-                        <td>{{ g.cliente || 'Sin asignar' }}</td>
+                        <td>{{ g.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ g.client || 'Sin asignar' }}</td>
                     </tr>
 
                     <tr *ngIf="displayedGps.length === 0">
@@ -224,7 +223,7 @@
     </div>
     <!-- Modales GPS -->
     <app-new-gps-modal *ngIf="isInventoryUser" (gpsCreated)="onGpsCreated($event)"
-        (gpsBulkCreated)="onGpsBulkCreated($event)" [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions">
+        (gpsBulkCreated)="onGpsBulkCreated($event)" [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions" [existingDevices]="gps">
     </app-new-gps-modal>
 
     <app-view-gps-modal></app-view-gps-modal>

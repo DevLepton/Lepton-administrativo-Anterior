@@ -121,50 +121,76 @@ export interface FullClientsResponse {
 export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | 'Listo para usar';
 
 export type UpdateSimPayload = Partial<{
+  id: string;            // _id
   iccid: string;
-  model: string;
-  company: string;
+  model: string;        // model
+  company: string;      // company
   status: DeviceStatus;
-  purchaseDate: string | Date;
-  entryDate: string | Date;
-  installationDate: string | Date | null;
-  client: string | null;
-  comments: string | null;
+  usage: string;
+  purchaseDate: string | Date | null;
+  entryDate: string | Date | null;
+  installationDate?: string | Date | null;
+  client: string;
+  comments: string;
+  netPrice: string | null;
+  grossPrice: string | null;
+  satCode: string | null;
 }>;
 
 /** Payload para crear/actualizar GPS */
-export interface CreateGpsPayload {
-  type: 'gps';
+export interface GpsPayload {
+  type?: 'gps';
   imei: string;
   sn: string;
-  name: string;
+  supplier: string;
+  name?: string | null;
   brand: string;
   model: string;
   status: DeviceStatus;
   purchaseDate: string | Date | null;
-  entryDate: string | Date;
+  entryDate: string | Date | null;
+  phoneNumber: string | null;
   installationDate?: string | Date | null;
   client?: string | null;
   comments?: string | null;
 }
-export type UpdateGpsPayload = Partial<Omit<CreateGpsPayload, 'type'>>;
+
+export interface SimPayload {
+  type?: 'sim';
+  iccid: string;
+  model: string;
+  company: string;
+  supplier: string;
+  status: DeviceStatus;
+  purchaseDate: string;
+  entryDate: string;
+  usage: string;
+  installationDate?: string | null;
+  client?: string | null;
+  comments?: string | null;
+}
+
+export type UpdateGpsPayload = Partial<Omit<GpsPayload, 'type'>>;
 
 /** Payload para crear Accesorio */
-export interface CreateAccessoryPayload {
-  type: 'accessory';
-  id: string;              // 👈 campo "id" del accesorio (schema)
+export interface AccessoryPayload {
+  type?: 'accessory';
+  id?: string | null; // _id (solo para update)
+  idAccesorio?: string | null;                 // 👈 campo "id" del accesorio
   sn: string;
-  name: string;
+  supplier: string;
+  name?: string;
   brand: string;
   model: string;
   status: DeviceStatus;
-  purchaseDate: string | Date;
-  entryDate: string | Date;
-  installationDate?: string | Date | null;
-  client?: string | null;
+  purchaseDate: string | Date | null;       // 'YYYY-MM-DD'
+  entryDate: string | Date | null;          // 'YYYY-MM-DD'
+  installationDate?: string | Date | null; // (en masivo lo dejamos null)
+  client?: string | null;           // (en masivo lo dejamos null)
   comments?: string | null;
 }
-export type UpdateAccessoryPayload = Partial<Omit<CreateAccessoryPayload, 'type'>>;
+
+export type UpdateAccessoryPayload = Partial<Omit<AccessoryPayload, 'type'>>;
 
 /** Query de listado GPS (coincide con filtros del UI) */
 export interface GpsQuery {
@@ -225,6 +251,15 @@ export interface RequestsQuery {
 export const apiUrl = 'http://localhost:3103';
 // export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
+// Mostrar sin uso y ordenar for fecha ultima conexion, Sincronizar con listo para usar, Qrs
+// Que Admin también pueda hacer peticiones
+// Crear otro campo para accesorios para identificar cuáles ya están configurados
+// Contadores en las pestañas de los dispositivos
+// En el excel incluír el contador de los suspendidos y hidden
+// Nombre del excel "Detalles Clientes 2026 04 25"
+// Dejar un último login por usuario en el excel
+// Agregar una alerta a la sección de clientes para mostrar si hay clientes que no estén registrados en la lista de clientes activos (de clientes con dispositivos, comparalos con la lista de clientes activos, si hay alguno que no esté registrado, mostrar una alerta indicando cuáles son esos clientes para que se agreguen a la lista)
+// Si no hay datos de sensores, que se muestre ese mensaje en laas celdas de la tabla
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -287,6 +322,11 @@ export class ApiService {
 
   registerUser(user: any): Observable<any> { return this.http.post(`${apiUrl}/users`, user); }
   getUsers(): Observable<any> { return this.http.get(`${apiUrl}/users`); }
+
+  getProfile(): Observable<any> {
+    return this.http.get(`${apiUrl}/users/profile`);
+  }
+  
   updateUser(id: number, user: any): Observable<any> { return this.http.put(`${apiUrl}/users/${id}`, user); }
   //   updateUser(id: string, data: any) {
   //   return this.http.put(`${apiUrl}/users/${id}`, data);
@@ -330,10 +370,12 @@ export class ApiService {
     return this.http.get(`${apiUrl}/devices`, { params: { type: 'sim' } });
   }
 
+
   createSim(payload: {
     iccid: string;
     model: string;
     company: string;
+    supplier: string;
     status?: DeviceStatus;
     purchaseDate?: string | Date;
     entryDate?: string | Date;
@@ -371,8 +413,8 @@ export class ApiService {
   getGpsById(id: string): Observable<any> {
     return this.http.get(`${apiUrl}/devices/${id}`);
   }
-  createGps(payload: Omit<CreateGpsPayload, 'type'>): Observable<any> {
-    const body: CreateGpsPayload = {
+  createGps(payload: Omit<GpsPayload, 'type'>): Observable<any> {
+    const body: GpsPayload = {
       type: 'gps',
       ...payload,
       purchaseDate: this.toIsoDate(payload.purchaseDate),
@@ -381,7 +423,7 @@ export class ApiService {
     };
     return this.http.post(`${apiUrl}/devices`, body);
   }
-  updateGps(id: string, payload: Partial<Omit<CreateGpsPayload, 'type'>>): Observable<any> {
+  updateGps(id: string, payload: Partial<Omit<GpsPayload, 'type'>>): Observable<any> {
     const body: any = { ...payload };
     const toIso = (v: any) => (v == null ? null : new Date(v).toISOString());
     if ('purchaseDate' in body) body.purchaseDate = toIso(body.purchaseDate);
@@ -439,8 +481,8 @@ export class ApiService {
   getAccessoryById(id: string): Observable<any> {
     return this.http.get(`${apiUrl}/devices/${id}`);
   }
-  createAccessory(payload: Omit<CreateAccessoryPayload, 'type'>): Observable<any> {
-    const body: CreateAccessoryPayload = {
+  createAccessory(payload: Omit<AccessoryPayload, 'type'>): Observable<any> {
+    const body: AccessoryPayload = {
       type: 'accessory',
       ...payload,
       purchaseDate: this.toIsoDate(payload.purchaseDate)!,

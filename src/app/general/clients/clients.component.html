@@ -16,8 +16,17 @@
             <!-- 🔍 BUSCADOR -->
             <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
                 <mat-label>Buscar cliente</mat-label>
+
                 <input matInput [(ngModel)]="search" (ngModelChange)="updateFilteredClients()">
-                <mat-icon matSuffix>search</mat-icon>
+
+                <!-- 🔍 icono normal -->
+                <mat-icon matSuffix *ngIf="!search">search</mat-icon>
+
+                <!-- ❌ icono limpiar -->
+                <mat-icon matSuffix *ngIf="search" class="clear-icon" (click)="clearSearch()">
+                    close
+                </mat-icon>
+
             </mat-form-field>
 
             <mat-form-field appearance="outline" class="tracker-filter" subscriptSizing="dynamic">
@@ -31,6 +40,18 @@
 
                     <mat-option value="with">
                         Con dispositivos
+                    </mat-option>
+
+                    <mat-option value="suspended">
+                        Solo suspendidos
+                    </mat-option>
+
+                    <mat-option value="hidden">
+                        Solo hidden
+                    </mat-option>
+
+                    <mat-option value="offline">
+                        Solo offline
                     </mat-option>
 
                     <mat-option value="without">
@@ -47,11 +68,11 @@
                 <mat-select multiple [(ngModel)]="selectedColumns" (selectionChange)="updateVisibleColumns()">
 
                     <mat-option *ngFor="let col of availableColumns" [value]="col">
-                        {{ col | titlecase }}
+                        {{ col === 'imei' ? 'IMEI' : col === 'sim' ? 'SIM' : col | titlecase }}
                     </mat-option>
 
                     <mat-option *ngFor="let col of extraColumns" [value]="col">
-                        {{ col | titlecase}}
+                        {{ col === 'canbus' ? 'CAN Bus' : col | titlecase}}
                     </mat-option>
 
                 </mat-select>
@@ -101,7 +122,48 @@
 
             </mat-checkbox>
 
-            <button mat-raised-button class="custom-button" color="primary" (click)="toggleExpandMode()">
+            <div class="sort-wrapper" #sortWrapper>
+
+                <button mat-button class="custom-button" (click)="toggleSortControls(); stop($event);">
+                    <mat-icon>sort</mat-icon>
+                    Ordenar
+                </button>
+
+                <div class="sort-controls" [class.open]="showSortControls" (click)="stop($event)">
+
+                    <button mat-button (click)="sortClients('id', true)">
+                        ID {{ sortField === 'id' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('nombre', true)">
+                        Nombre {{ sortField === 'nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('login', true)">
+                        Correo {{ sortField === 'login' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('ciudad', true)">
+                        Ciudad {{ sortField === 'ciudad' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('total', true)">
+                        Dispositivos {{ sortField === 'total' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('online', true)">
+                        Online {{ sortField === 'online' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('offline', true)">
+                        Offline {{ sortField === 'offline' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                </div>
+
+            </div>
+
+            <button mat-button class="custom-button" color="primary" (click)="toggleExpandMode()">
                 <mat-icon>{{ expandAll ? 'unfold_less' : 'unfold_more' }}</mat-icon>
                 {{ expandAll ? 'Ver uno por uno' : 'Expandir todos' }}
             </button>
@@ -149,7 +211,7 @@
                                 (click)="stop($event)" (change)="toggleClientSelection(c.id)">
                             </mat-checkbox>
 
-                            <span class="client-id">#{{ c.id }}</span>
+                            <span class="client-id" style="flex-basis: 10ch; text-align: center;">#{{ c.id }}</span>
 
                             <div class="client-info">
                                 <b class="client-name">{{ c.nombre }}</b>
@@ -158,13 +220,16 @@
                         </div>
 
                         <div class="client-center">
-                            <mat-icon *ngIf="c.hasHidden" class="warn" matTooltip="Tiene dispositivos hidden">
-                                error_outline
-                            </mat-icon>
+                            <span class="last-login" *ngIf="c.ultimoIngreso">{{ c.ultimoIngreso }}</span>
+
+                            <span class="hidden-icon" *ngIf="c.hasHidden"
+                                matTooltip="Tiene dispositivos hidden">H</span>
 
                             <span class="client-id" *ngIf="c.ciudad">{{ c.ciudad }}</span>
 
-                            <mat-icon *ngIf="c.ultimoIngreso" matTooltip="{{ c.ultimoIngreso }}">
+                            <mat-icon class="login-button"
+                                *ngIf="(isAdminUser || isSupportUser || isCXUser) && activeClients[(c.id)]"
+                                matTooltip="Iniciar sesión" (click)="stop($event); openLogin(c);">
                                 account_circle
                             </mat-icon>
                         </div>
@@ -309,7 +374,8 @@
                                     <!-- UTC -->
                                     <ng-container matColumnDef="ultima Conexion UTC">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')"> UTC </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')"> UTC
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')">
                                             {{ t.ultimaConexionUTC }}
@@ -330,7 +396,8 @@
                                     <!-- TIEMPO OFFLINE -->
                                     <ng-container matColumnDef="tiempo Offline">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')"> Tiempo Offline
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')"> Tiempo
+                                            Offline
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')">
@@ -375,38 +442,57 @@
                 </div>
 
                 <div class="kpi-card">
+                    <mat-icon matTooltip="Dispositivos NO clones totales" class="info-icon">info</mat-icon>
                     <div>Dispositivos</div>
                     <b>{{ totalTrackers }}</b>
                 </div>
 
                 <div class="kpi-card ok">
+                    <mat-icon matTooltip="Dispositivos con estatus online NO clones totales"
+                        class="info-icon">info</mat-icon>
                     <div>Online</div>
                     <b>{{ totalOnline }}</b>
                 </div>
 
                 <div class="kpi-card bad">
+                    <mat-icon matTooltip="Dispositivos con estatus offline NO clones totales"
+                        class="info-icon">info</mat-icon>
                     <div>Offline</div>
                     <b>{{ totalOffline }}</b>
+                </div>
+
+                <div class="kpi-card suspended">
+                    <mat-icon matTooltip="Dispositivos suspendidos NO clones totales" class="info-icon">info</mat-icon>
+                    <div>Suspendidos</div>
+                    <b>{{ totalSuspended }}</b>
+                </div>
+
+                <div class="kpi-card hidden">
+                    <mat-icon matTooltip="Dispositivos hidden NO clones totales" class="info-icon">info</mat-icon>
+                    <div>Hidden</div>
+                    <b>{{ totalHidden }}</b>
                 </div>
             </div>
 
             <!-- BUCKETS -->
             <div class="card">
                 <h4 style="margin-bottom: 10px;">GPS fuera de línea</h4>
-                <div class="offline-card" *ngFor="let b of offlineBuckets"
-                    (click)="filterByBucket(b.label); stop($event)" [class.active]="selectedBucket === b.label">
 
-                    <div>{{ b.label }}</div>
-                    <b>{{ b.value }}</b>
+                <div class="offline-grid">
+                    <div class="offline-card" *ngFor="let b of offlineBuckets"
+                        (click)="filterByBucket(b.label); stop($event)" [class.active]="selectedBucket === b.label">
 
-                    <div class="bar">
-                        <div class="bar-fill" [style.width.%]="getPercent(b.value)"
-                            [style.background]="getBucketColor(b.label)">
+                        <div>{{ b.label }}</div>
+                        <b>{{ b.value }}</b>
+
+                        <div class="bar">
+                            <div class="bar-fill" [style.width.%]="getPercent(b.value)"
+                                [style.background]="getBucketColor(b.label)">
+                            </div>
                         </div>
+
                     </div>
-
                 </div>
-
             </div>
 
             <!-- TOP OFFLINE -->

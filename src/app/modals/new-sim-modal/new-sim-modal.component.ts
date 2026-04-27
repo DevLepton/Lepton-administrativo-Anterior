@@ -1,8 +1,8 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { Observable } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
-import { DeviceStatus } from '../../services/api.service';
+import { DeviceStatus, SimPayload } from '../../services/api.service';
 
 @Component({
   selector: 'app-new-sim-modal',
@@ -22,36 +22,15 @@ export class NewSimModalComponent {
     this.unlockBodyScroll();
   }
 
+  @Input() existingSims: { iccid: string }[] = [];
   @Input() modelOptions: string[] = [];
   @Input() companyOptions: string[] = [];
 
   /** Emite un solo SIM (pestaña Individual) */
-  @Output() simCreated = new EventEmitter<{
-    type: 'sim';
-    iccid: string;
-    model: string;
-    company: string;
-    status: DeviceStatus;
-    purchaseDate: string;
-    entryDate: string;
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }>();
+  @Output() simCreated = new EventEmitter<SimPayload>();
 
   /** Emite muchos SIM (pestaña Masivo) */
-  @Output() simsBulkCreated = new EventEmitter<Array<{
-    type: 'sim';
-    iccid: string;
-    model: string;
-    company: string;
-    status: DeviceStatus;
-    purchaseDate: string;
-    entryDate: string;
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }>>();
+  @Output() simsBulkCreated = new EventEmitter<Array<SimPayload>>();
 
   show = false;
   loading = false;
@@ -72,10 +51,12 @@ export class NewSimModalComponent {
 
     // Individual
     this.form = this.fb.group({
-      iccid: ['', [Validators.required, Validators.minLength(20), Validators.maxLength(20), Validators.pattern(/^\d+$/)]],
+      iccid: ['', [Validators.required, Validators.minLength(19), Validators.maxLength(20), Validators.pattern(/^\d+$/)]],
       model: ['', Validators.required],
       company: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      supplier: ['', Validators.required],
+      usage: ['GPS', Validators.required],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
       installationDate: [null],
@@ -89,11 +70,19 @@ export class NewSimModalComponent {
       model: ['', Validators.required],
       company: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      supplier: ['', Validators.required],
+      usage: ['GPS', Validators.required],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
       comments: [''],
       iccids: this.fb.array([this.buildIccidCtrl()]),
     });
+
+    this.form.get('iccid')?.addValidators(
+      this.duplicateFromExisting(() =>
+        this.existingSims.map(s => s.iccid)
+      )
+    );
 
     // Autocomplete streams
     this.filteredModels$ = this.form.get('model')!.valueChanges.pipe(
@@ -113,6 +102,17 @@ export class NewSimModalComponent {
       startWith(''),
       map(v => this.filterList((v ?? '').toString(), this.companyOptions))
     );
+
+    this.iccids.valueChanges.subscribe(() => {
+      this.iccids.controls.forEach(c =>
+        c.updateValueAndValidity({ emitEvent: false })
+      );
+    });
+  }
+
+  ngOnChanges() {
+    this.form.get('iccid')?.updateValueAndValidity();
+    this.iccids.controls.forEach(c => c.updateValueAndValidity());
   }
 
   // ===== Helpers de lista/autocomplete =====
@@ -120,6 +120,27 @@ export class NewSimModalComponent {
     const v = value.toLowerCase().trim();
     if (!v) return source ?? [];
     return (source ?? []).filter(opt => opt.toLowerCase().includes(v));
+  }
+
+  private duplicateFromExisting(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      return getList().includes(value) ? { duplicate: true } : null;
+    };
+  }
+
+  private duplicateInArray(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      const list = getList();
+      const count = list.filter(v => v === value).length;
+
+      return count > 1 ? { duplicate: true } : null;
+    };
   }
 
   // ===== Apertura / reset =====
@@ -135,6 +156,8 @@ export class NewSimModalComponent {
       model: '',
       company: '',
       status: 'En inventario',
+      supplier: '',
+      usage: 'GPS',
       purchaseDate: today,
       entryDate: today,
       installationDate: null,
@@ -148,6 +171,8 @@ export class NewSimModalComponent {
       model: '',
       company: '',
       status: 'En inventario',
+      supplier: '',
+      usage: 'GPS',
       purchaseDate: today,
       entryDate: today,
       comments: '',
@@ -169,7 +194,9 @@ export class NewSimModalComponent {
       iccid: String(v.iccid).trim(),
       model: String(v.model).trim(),
       company: String(v.company).trim(),
+      supplier: String(v.supplier).trim(),
       status: v.status as DeviceStatus,
+      usage: v.usage,
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       installationDate: v.installationDate ? this.toYMD(v.installationDate) : null,
@@ -188,7 +215,16 @@ export class NewSimModalComponent {
   private buildIccidCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(20), Validators.maxLength(20), Validators.pattern(/^\d+$/)]
+      validators: [
+        Validators.required,
+        Validators.minLength(19),
+        Validators.maxLength(20),
+        Validators.pattern(/^\d+$/),
+
+        // 🔥 NUEVO
+        this.duplicateInArray(() => this.iccids.controls.map(c => c.value)),
+        this.duplicateFromExisting(() => this.existingSims.map(s => s.iccid))
+      ]
     });
   }
 
@@ -225,6 +261,8 @@ export class NewSimModalComponent {
       model: String(v.model).trim(),
       company: String(v.company).trim(),
       status: v.status as DeviceStatus,
+      supplier: String(v.supplier).trim(),
+      usage: v.usage,
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       comments: this.emptyToNull(v.comments),

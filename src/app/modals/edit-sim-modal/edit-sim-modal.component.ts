@@ -3,19 +3,8 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Observable, Subscription } from 'rxjs';
 import { map, startWith } from 'rxjs/operators';
 import { DeviceStatus } from '../../services/api.service';
-
-export interface EditSimOpenData {
-  id: string;
-  iccid: string;
-  model: string;
-  company: string;
-  status: DeviceStatus;
-  purchaseDate: string | Date | null;
-  entryDate: string | Date | null;
-  installationDate?: string | Date | null;
-  client?: string | null;
-  comments?: string | null;
-}
+import { SimItem } from '../../inventario/almacen/sims-tab/sims-tab.component';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-edit-sim-modal',
@@ -39,18 +28,7 @@ export class EditSimModalComponent {
   @Input() companyOptions: string[] = [];
 
   @Output() simUpdated = new EventEmitter<{
-    id: string; payload: {
-      type: 'sim';
-      iccid: string;
-      model: string;
-      company: string;
-      status: DeviceStatus;
-      purchaseDate: string;
-      entryDate: string;
-      installationDate?: string | null;
-      client?: string | null;
-      comments?: string | null;
-    }
+    id: string; payload: Omit<SimItem, 'id'>;
   }>();
 
   show = false;
@@ -85,6 +63,8 @@ export class EditSimModalComponent {
       model: t(v.model),
       company: t(v.company),
       status: t(v.status),
+      supplier: t(v.supplier),
+      usage: t(v.usage),
       purchaseDate: toKey(v.purchaseDate),
       entryDate: toKey(v.entryDate),
       installationDate: v.installationDate ? toKey(v.installationDate) : null,
@@ -103,17 +83,19 @@ export class EditSimModalComponent {
     return true;
   }
 
-  constructor(private fb: FormBuilder) {
+  constructor(private authService: AuthService, private fb: FormBuilder) {
     this.form = this.fb.group({
       iccid: ['', [
         Validators.required,
-        Validators.minLength(20),
+        Validators.minLength(19),
         Validators.maxLength(20),
         Validators.pattern(/^\d+$/)
       ]],
       model: ['', Validators.required],
       company: ['', Validators.required],
+      supplier: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      usage: ['GPS', Validators.required],
       purchaseDate: [null, Validators.required],
       entryDate: [null, Validators.required],
       installationDate: [null],
@@ -130,7 +112,7 @@ export class EditSimModalComponent {
       map(v => this.filterList((v ?? '').toString(), this.companyOptions))
     );
 
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    const role = this.authService.getUserRole();
 
     this.isSupportUser = role === 'soporte';
   }
@@ -142,7 +124,7 @@ export class EditSimModalComponent {
   }
 
   /** Abre el modal con los datos del SIM */
-  open(data: EditSimOpenData) {
+  open(data: SimItem) {
     this.currentId = data.id;
     this.show = true;
     this.lockBodyScroll();
@@ -151,7 +133,9 @@ export class EditSimModalComponent {
       iccid: data.iccid ?? '',
       model: data.model ?? '',
       company: data.company ?? '',
+      supplier: data.supplier ?? '',
       status: (data.status as DeviceStatus) ?? 'En inventario',
+      usage: data.usage ?? 'GPS',
       purchaseDate: this.toDate(data.purchaseDate),
       entryDate: this.toDate(data.entryDate),
       installationDate: this.toDate(data.installationDate ?? null),
@@ -188,7 +172,9 @@ export class EditSimModalComponent {
       iccid: String(v.iccid).trim(),
       model: String(v.model).trim(),
       company: String(v.company).trim(),
+      supplier: String(v.supplier).trim(),
       status: v.status as DeviceStatus,
+      usage: v.usage,
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       installationDate: v.installationDate ? this.toYMD(v.installationDate) : null,

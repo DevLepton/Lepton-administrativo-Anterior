@@ -1,19 +1,5 @@
 import { Component, ViewEncapsulation } from '@angular/core';
-
-export interface ViewSimData {
-  id: string;
-  iccid: string;
-  modelo: string;
-  compania: string;
-  estatus: string;
-  fechaCompra: string | Date | null;
-  fechaIngresoLepton: string | Date | null;
-  cliente?: string | null;
-  comentarios?: string | null;
-  netPrice: string | null;
-  grossPrice: string | null;
-  satCode: string | null;
-}
+import { SimItem } from '../../inventario/almacen/sims-tab/sims-tab.component';
 
 @Component({
   selector: 'app-view-sim-modal',
@@ -35,9 +21,9 @@ export class ViewSimModalComponent {
   }
 
   show = false;
-  data: ViewSimData | null = null;
+  data: SimItem | null = null;
 
-  open(d: ViewSimData) {
+  open(d: SimItem) {
     this.data = d;
     this.show = true;
     this.lockBodyScroll();

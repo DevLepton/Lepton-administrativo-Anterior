@@ -84,7 +84,7 @@
 
                     <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 SIM para ver'"
                         [matTooltipDisabled]="canViewOrEdit" matTooltipPosition="above">
-                        <button class="icon-button view-button" title="Ver" (click)="viewSelected()"
+                        <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelected()"
                             [disabled]="!canViewOrEdit">
                             <span class="material-icons">visibility</span>
                         </button>
@@ -92,7 +92,7 @@
 
                     <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 SIM para editar'"
                         [matTooltipDisabled]="canViewOrEdit" matTooltipPosition="above">
-                        <button class="icon-button edit-button" title="Editar" (click)="editSelected()"
+                        <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelected()"
                             [disabled]="!canViewOrEdit">
                             <span class="material-icons">edit</span>
                         </button>
@@ -102,7 +102,7 @@
                     <span *ngIf="isInventoryUser" class="tooltip-wrap"
                         [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 SIM para eliminar'"
                         [matTooltipDisabled]="selectedCount > 0" matTooltipPosition="above">
-                        <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelected()"
+                        <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
                             [disabled]="selectedCount === 0 || simsDeletingId === '__bulk__'">
                             <span class="material-icons">
                                 {{ simsDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
@@ -132,23 +132,29 @@
                         <th (click)="sortBy('iccid')" class="th-sort">
                             ICCID <span class="arrow material-icons">{{ arrowFor('iccid') }}</span>
                         </th>
-                        <th (click)="sortBy('modelo')" class="th-sort">
-                            Modelo <span class="arrow material-icons">{{ arrowFor('modelo') }}</span>
+                        <th (click)="sortBy('model')" class="th-sort">
+                            Modelo <span class="arrow material-icons">{{ arrowFor('model') }}</span>
                         </th>
-                        <th (click)="sortBy('compania')" class="th-sort">
-                            Compañía <span class="arrow material-icons">{{ arrowFor('compania') }}</span>
+                        <th (click)="sortBy('company')" class="th-sort">
+                            Compañía <span class="arrow material-icons">{{ arrowFor('company') }}</span>
                         </th>
-                        <th (click)="sortBy('estatus')" class="th-sort">
-                            Estatus <span class="arrow material-icons">{{ arrowFor('estatus') }}</span>
+                        <th (click)="sortBy('supplier')" class="th-sort">
+                            Proveedor <span class="arrow material-icons">{{ arrowFor('supplier') }}</span>
                         </th>
-                        <th (click)="sortBy('fechaCompra')" class="th-sort">
-                            Fecha de compra <span class="arrow material-icons">{{ arrowFor('fechaCompra') }}</span>
+                        <th (click)="sortBy('status')" class="th-sort">
+                            Estatus <span class="arrow material-icons">{{ arrowFor('status') }}</span>
                         </th>
-                        <th (click)="sortBy('fechaIngresoLepton')" class="th-sort">
-                            Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowFor('fechaIngresoLepton') }}</span>
+                        <th (click)="sortBy('purchaseDate')" class="th-sort">
+                            Fecha de compra <span class="arrow material-icons">{{ arrowFor('purchaseDate') }}</span>
                         </th>
-                        <th (click)="sortBy('cliente')" class="th-sort">
-                            Cliente <span class="arrow material-icons">{{ arrowFor('cliente') }}</span>
+                        <th (click)="sortBy('entryDate')" class="th-sort">
+                            Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowFor('entryDate') }}</span>
+                        </th>
+                        <th (click)="sortBy('usage')" class="th-sort">
+                            Uso <span class="arrow material-icons">{{ arrowFor('usage') }}</span>
+                        </th>
+                        <th (click)="sortBy('client')" class="th-sort">
+                            Cliente <span class="arrow material-icons">{{ arrowFor('client') }}</span>
                         </th>
 
                     </tr>
@@ -167,21 +173,23 @@
 
                         <td>{{ ((simsCurrentPage - 1) * simsPerPage + idx + 1) }}</td>
                         <td>{{ sim.iccid }}</td>
-                        <td>{{ sim.modelo }}</td>
-                        <td>{{ sim.compania }}</td>
+                        <td>{{ sim.model }}</td>
+                        <td>{{ sim.company }}</td>
+                        <td>{{ sim.supplier }}</td>
                         <td>
                             <span class="status-badge" [ngClass]="{
-      inv:  sim.estatus === 'En inventario',
-      cfg:  sim.estatus === 'En configuración',
-      inst: sim.estatus === 'Instalado',
-      ready: sim.estatus === 'Listo para usar',
-    }">
-                                {{ sim.estatus }}
+                                inv:  sim.status === 'En inventario',
+                                cfg:  sim.status === 'En configuración',
+                                inst: sim.status === 'Instalado',
+                                ready: sim.status === 'Listo para usar',
+                            }">
+                                {{ sim.status }}
                             </span>
                         </td>
-                        <td>{{ sim.fechaCompra | date:'dd MMM yyyy':'UTC' }}</td>
-                        <td>{{ sim.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-                        <td>{{ sim.cliente || 'Sin asignar' }}</td>
+                        <td>{{ sim.purchaseDate | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ sim.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
+                        <td>{{ sim.usage }}</td>
+                        <td>{{ sim.client || 'Sin asignar' }}</td>
                     </tr>
 
 
@@ -205,7 +213,7 @@
         </mat-paginator>
     </div>
     <app-new-sim-modal *ngIf="isInventoryUser" (simCreated)="onSimCreated($event)" (simsBulkCreated)="onSimsBulkCreated($event)"
-        [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies"></app-new-sim-modal>
+        [modelOptions]="uniqueSimModels" [companyOptions]="uniqueSimCompanies" [existingSims]="sims"></app-new-sim-modal>
     <app-view-sim-modal></app-view-sim-modal>
     <app-edit-sim-modal (simUpdated)="onSimUpdated($event)" [modelOptions]="uniqueSimModels"
         [companyOptions]="uniqueSimCompanies"></app-edit-sim-modal>

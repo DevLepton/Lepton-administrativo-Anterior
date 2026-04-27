@@ -93,7 +93,7 @@
 
           <span class="tooltip-wrap" [matTooltip]="canViewOrEditAccessory ? '' : 'Selecciona 1 accesorio para ver'"
             [matTooltipDisabled]="canViewOrEditAccessory" matTooltipPosition="above">
-            <button class="icon-button view-button" title="Ver" (click)="viewSelectedAccessory()"
+            <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelectedAccessory()"
               [disabled]="!canViewOrEditAccessory">
               <span class="material-icons">visibility</span>
             </button>
@@ -101,7 +101,7 @@
 
           <span class="tooltip-wrap" [matTooltip]="canViewOrEditAccessory ? '' : 'Selecciona 1 accesorio para editar'"
             [matTooltipDisabled]="canViewOrEditAccessory" matTooltipPosition="above">
-            <button class="icon-button edit-button" title="Editar" (click)="editSelectedAccessory()"
+            <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelectedAccessory()"
               [disabled]="!canViewOrEditAccessory">
               <span class="material-icons">edit</span>
             </button>
@@ -110,7 +110,7 @@
           <span *ngIf="isInventoryUser" class="tooltip-wrap"
             [matTooltip]="accessoriesSelectedCount > 0 ? '' : 'Selecciona al menos 1 accesorio para eliminar'"
             [matTooltipDisabled]="accessoriesSelectedCount > 0" matTooltipPosition="above">
-            <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedAccessories()"
+            <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedAccessories()"
               [disabled]="accessoriesSelectedCount === 0 || accessoriesDeletingId === '__bulk__'">
               <span class="material-icons">
                 {{ accessoriesDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}
@@ -144,26 +144,26 @@
             <th (click)="sortAccessoryBy('sn')" class="th-sort">
               S/N <span class="arrow material-icons">{{ arrowForAccessory('sn') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('nombre')" class="th-sort">
-              Nombre <span class="arrow material-icons">{{ arrowForAccessory('nombre') }}</span>
+            <th (click)="sortAccessoryBy('supplier')" class="th-sort">
+              Proveedor <span class="arrow material-icons">{{ arrowForAccessory('supplier') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('marca')" class="th-sort">
-              Marca <span class="arrow material-icons">{{ arrowForAccessory('marca') }}</span>
+            <th (click)="sortAccessoryBy('brand')" class="th-sort">
+              Marca <span class="arrow material-icons">{{ arrowForAccessory('brand') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('modelo')" class="th-sort">
-              Modelo <span class="arrow material-icons">{{ arrowForAccessory('modelo') }}</span>
+            <th (click)="sortAccessoryBy('model')" class="th-sort">
+              Modelo <span class="arrow material-icons">{{ arrowForAccessory('model') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('estatus')" class="th-sort">
-              Estatus <span class="arrow material-icons">{{ arrowForAccessory('estatus') }}</span>
+            <th (click)="sortAccessoryBy('status')" class="th-sort">
+              Estatus <span class="arrow material-icons">{{ arrowForAccessory('status') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('fechaCompra')" class="th-sort">
-              Fecha de compra <span class="arrow material-icons">{{ arrowForAccessory('fechaCompra') }}</span>
+            <th (click)="sortAccessoryBy('purchaseDate')" class="th-sort">
+              Fecha de compra <span class="arrow material-icons">{{ arrowForAccessory('purchaseDate') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('fechaIngresoLepton')" class="th-sort">
-              Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowForAccessory('fechaIngresoLepton') }}</span>
+            <th (click)="sortAccessoryBy('entryDate')" class="th-sort">
+              Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowForAccessory('entryDate') }}</span>
             </th>
-            <th (click)="sortAccessoryBy('cliente')" class="th-sort">
-              Cliente <span class="arrow material-icons">{{ arrowForAccessory('cliente') }}</span>
+            <th (click)="sortAccessoryBy('client')" class="th-sort">
+              Cliente <span class="arrow material-icons">{{ arrowForAccessory('client') }}</span>
             </th>
           </tr>
         </thead>
@@ -182,30 +182,30 @@
             </td>
             <td>{{ a.idAccesorio }}</td>
             <td>{{ a.sn }}</td>
-            <td>{{ a.nombre }}</td>
-            <td>{{ a.marca }}</td>
-            <td>{{ a.modelo }}</td>
+            <td>{{ a.supplier }}</td>
+            <td>{{ a.brand }}</td>
+            <td>{{ a.model }}</td>
             <td>
               <span class="status-badge" [ngClass]="{
-              inv:  a.estatus === 'En inventario',
-              cfg:  a.estatus === 'En configuración',
-              inst: a.estatus === 'Instalado',
-              ready: a.estatus === 'Listo para usar'
+              inv:  a.status === 'En inventario',
+              cfg:  a.status === 'En configuración',
+              inst: a.status === 'Instalado',
+              ready: a.status === 'Listo para usar'
             }">
-                {{ a.estatus }}
+                {{ a.status }}
               </span>
             </td>
             <td>
-              <ng-container *ngIf="a.fechaCompra; else externoTpl">
-                {{ a.fechaCompra | date:'dd MMM yyyy':'UTC' }}
+              <ng-container *ngIf="a.purchaseDate; else externoTpl">
+                {{ a.purchaseDate | date:'dd MMM yyyy':'UTC' }}
               </ng-container>
 
               <ng-template #externoTpl>
                 <span class="external-text">Externo a Leptón</span>
               </ng-template>
             </td>
-            <td>{{ a.fechaIngresoLepton | date:'dd MMM yyyy':'UTC' }}</td>
-            <td>{{ a.cliente || 'Sin asignar' }}</td>
+            <td>{{ a.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
+            <td>{{ a.client || 'Sin asignar' }}</td>
           </tr>
 
           <tr *ngIf="displayedAccessories.length === 0">
@@ -230,7 +230,7 @@
   <!-- Modales Accesorios -->
   <app-new-accessory-modal *ngIf="isInventoryUser" (accessoryCreated)="onAccessoryCreated($event)"
     (accessoriesBulkCreated)="onAccessoriesBulkCreated($event)" [modelOptions]="accessoryModelOptions"
-    [brandOptions]="accessoryBrandOptions">
+    [brandOptions]="accessoryBrandOptions" [existingAccessories]="accessories">
   </app-new-accessory-modal>
 
   <app-view-accessory-modal></app-view-accessory-modal>

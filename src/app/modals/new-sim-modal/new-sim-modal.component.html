@@ -22,9 +22,12 @@
                 (input)="digitsOnlyCtrl(form, 'iccid')" maxlength="20" />
               <mat-error *ngIf="form.get('iccid')?.hasError('required')">ICCID es requerido</mat-error>
               <mat-error *ngIf="form.get('iccid')?.hasError('minlength') || form.get('iccid')?.hasError('maxlength')">
-                Debe contener 20 dígitos
+                Debe contener 19-20 dígitos
               </mat-error>
               <mat-error *ngIf="form.get('iccid')?.hasError('pattern')">Solo números (0-9)</mat-error>
+              <mat-error *ngIf="form.get('iccid')?.hasError('duplicate')">
+                ICCID ya existe
+              </mat-error>
             </mat-form-field>
 
             <!-- Modelo -->
@@ -48,6 +51,13 @@
               <mat-error *ngIf="form.get('company')?.hasError('required')">Compañía es requerida</mat-error>
             </mat-form-field>
 
+            <!-- Proveedor -->
+              <mat-form-field appearance="outline">
+                <mat-label>Proveedor</mat-label>
+                <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+                <mat-error *ngIf="form.get('supplier')?.hasError('required')">Proveedor es requerido</mat-error>
+              </mat-form-field>
+
             <!-- Estatus -->
             <mat-form-field appearance="outline">
               <mat-label>Estatus</mat-label>
@@ -56,6 +66,15 @@
                 <mat-option value="Instalado">Instalado</mat-option>
               </mat-select>
               <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+            </mat-form-field>
+
+            <!-- Uso sugerido -->
+            <mat-form-field appearance="outline">
+              <mat-label>Uso sugerido</mat-label>
+              <mat-select formControlName="usage">
+                <mat-option value="GPS">GPS</mat-option>
+                <mat-option value="DashCam">DashCam</mat-option>
+              </mat-select>
             </mat-form-field>
 
             <!-- Fecha de compra -->
@@ -85,7 +104,7 @@
         </div>
 
         <footer class="modal__footer">
-          <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+          <button type="button" mat-button color="warn" (click)="close()">Cancelar</button>
           <button type="submit" mat-flat-button color="primary" [disabled]="form.invalid || loading">
             {{ loading ? 'Guardando...' : 'Guardar' }}
           </button>
@@ -145,6 +164,13 @@
                 <mat-error *ngIf="bulkForm.get('company')?.hasError('required')">Compañía es requerida</mat-error>
               </mat-form-field>
 
+              <!-- Proveedor -->
+              <mat-form-field appearance="outline">
+                <mat-label>Proveedor</mat-label>
+                <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+                <mat-error *ngIf="bulkForm.get('supplier')?.hasError('required')">Proveedor es requerido</mat-error>
+              </mat-form-field>
+
               <!-- Estatus -->
               <mat-form-field appearance="outline">
                 <mat-label>Estatus</mat-label>
@@ -153,6 +179,15 @@
                   <mat-option value="Instalado">Instalado</mat-option>
                 </mat-select>
                 <mat-error *ngIf="bulkForm.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+              </mat-form-field>
+
+              <!-- Uso sugerido -->
+              <mat-form-field appearance="outline">
+                <mat-label>Uso sugerido</mat-label>
+                <mat-select formControlName="usage">
+                  <mat-option value="GPS">GPS</mat-option>
+                  <mat-option value="DashCam">DashCam</mat-option>
+                </mat-select>
               </mat-form-field>
 
               <!-- Fecha de compra -->
@@ -187,6 +222,8 @@
         <input matInput formControlName="client" placeholder="Nombre del cliente" />
       </mat-form-field> -->
 
+              
+
               <!-- Comentarios -->
               <mat-form-field appearance="outline" class="col-span-2">
                 <mat-label>Comentarios (opcional)</mat-label>
@@ -208,9 +245,12 @@
                         autocomplete="off" maxlength="20" (input)="digitsOnlyFA(iccids, i)" />
                       <mat-error *ngIf="iccids.at(i).hasError('required')">Requerido</mat-error>
                       <mat-error *ngIf="iccids.at(i).hasError('minlength') || iccids.at(i).hasError('maxlength')">
-                        Debe contener 20 dígitos
+                        Debe contener 19-20 dígitos
                       </mat-error>
                       <mat-error *ngIf="iccids.at(i).hasError('pattern')">Solo números</mat-error>
+                      <mat-error *ngIf="iccids.at(i).hasError('duplicate')">
+                        ICCID duplicado
+                      </mat-error>
                     </mat-form-field>
                   </div>
                 </div>

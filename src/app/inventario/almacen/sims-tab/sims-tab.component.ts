@@ -8,19 +8,22 @@ import { EditSimModalComponent } from '../../../modals/edit-sim-modal/edit-sim-m
 import { ApiService, DeviceStatus } from '../../../services/api.service';
 import { PageEvent } from '@angular/material/paginator';
 
-interface SimItem {
+export interface SimItem {
   id: string;            // _id
   iccid: string;
-  modelo: string;        // model
-  compania: string;      // company
-  estatus: DeviceStatus;
-  fechaCompra: string | Date | null;
-  fechaIngresoLepton: string | Date | null;
-  cliente?: string;
+  model: string;        // model
+  company: string;      // company
+  supplier: string;     // supplier
+  status: DeviceStatus;
+  usage: string;
+  purchaseDate: string | Date | null;
+  entryDate: string | Date | null;
+  installationDate?: string | Date | null;
+  client?: string;
   comments?: string;
-  netPrice: string | null;
-  grossPrice: string | null;
-  satCode: string | null;
+  netPrice?: string | null;
+  grossPrice?: string | null;
+  satCode?: string | null;
 }
 
 @Component({
@@ -106,12 +109,14 @@ export class SimsTabComponent implements OnChanges {
     return {
       id: String(d._id),
       iccid: d.iccid ?? '',
-      modelo: d.model ?? '',
-      compania: d.company ?? '',
-      estatus: d.status ?? 'En inventario',
-      fechaCompra: d.purchaseDate ?? null,
-      fechaIngresoLepton: d.entryDate ?? null,
-      cliente: d.client ?? '',
+      model: d.model ?? '',
+      company: d.company ?? '',
+      supplier: d.supplier ?? '',
+      status: d.status ?? 'En inventario',
+      usage: d.usage ?? 'GPS',
+      purchaseDate: d.purchaseDate ?? null,
+      entryDate: d.entryDate ?? null,
+      client: d.client ?? '',
       comments: d.comments ?? '',
       netPrice: d.netPrice ?? null,
       grossPrice: d.grossPrice ?? null,
@@ -255,11 +260,11 @@ export class SimsTabComponent implements OnChanges {
 
     return (this.sims ?? []).filter(sim => {
       const okSearch = !q || this.s(sim.iccid).includes(q);
-      const okCompany = !fc || this.s(sim.compania) === fc;
-      const okStatus = !fs || this.s(sim.estatus) === fs;
+      const okCompany = !fc || this.s(sim.company) === fc;
+      const okStatus = !fs || this.s(sim.status) === fs;
 
-      const simPurchaseKey = this.dayKeyUTC(sim.fechaCompra);
-      const simEntryKey = this.dayKeyUTC(sim.fechaIngresoLepton);
+      const simPurchaseKey = this.dayKeyUTC(sim.purchaseDate);
+      const simEntryKey = this.dayKeyUTC(sim.entryDate);
 
       const okPurchase = !purchaseKey || (simPurchaseKey !== null && simPurchaseKey === purchaseKey);
       const okEntry = !entryKey || (simEntryKey !== null && simEntryKey === entryKey);
@@ -292,7 +297,7 @@ export class SimsTabComponent implements OnChanges {
       const av: any = (a as any)[key];
       const bv: any = (b as any)[key];
 
-      if (key === 'fechaCompra' || key === 'fechaIngresoLepton') {
+      if (key === 'purchaseDate' || key === 'entryDate') {
         return (this.ymdUtcMs(av) - this.ymdUtcMs(bv)) * dir;
       }
 
@@ -312,17 +317,17 @@ export class SimsTabComponent implements OnChanges {
 
   // ===== Uniques =====
   get uniqueSimModels(): string[] {
-    return Array.from(new Set((this.sims ?? []).map(s => s.modelo).filter(Boolean) as string[]))
+    return Array.from(new Set((this.sims ?? []).map(s => s.model).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
 
   get uniqueSimCompanies(): string[] {
-    return Array.from(new Set((this.sims ?? []).map(s => s.compania).filter(Boolean) as string[]))
+    return Array.from(new Set((this.sims ?? []).map(s => s.company).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
 
   get uniqueSimStatuses(): string[] {
-    return Array.from(new Set((this.sims ?? []).map(s => s.estatus).filter(Boolean) as string[]))
+    return Array.from(new Set((this.sims ?? []).map(s => s.status).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
 
@@ -382,13 +387,15 @@ export class SimsTabComponent implements OnChanges {
     this.viewSimModal.open({
       id: found.id,
       iccid: found.iccid,
-      modelo: found.modelo,
-      compania: found.compania,
-      estatus: found.estatus,
-      fechaCompra: found.fechaCompra ?? null,
-      fechaIngresoLepton: found.fechaIngresoLepton ?? null,
-      cliente: found.cliente ?? '',
-      comentarios: found.comments ?? '',
+      model: found.model,
+      company: found.company,
+      supplier: found.supplier,
+      status: found.status,
+      usage: found.usage,
+      purchaseDate: found.purchaseDate ?? null,
+      entryDate: found.entryDate ?? null,
+      client: found.client ?? '',
+      comments: found.comments ?? '',
       netPrice: found.netPrice ?? null,
       grossPrice: found.grossPrice ?? null,
       satCode: found.satCode ?? null,
@@ -402,13 +409,15 @@ export class SimsTabComponent implements OnChanges {
     this.editSimModal.open({
       id: found.id,
       iccid: found.iccid,
-      model: found.modelo,
-      company: found.compania,
-      status: (found.estatus as any) || 'En inventario',
-      purchaseDate: found.fechaCompra ?? null,
-      entryDate: found.fechaIngresoLepton ?? null,
+      model: found.model,
+      company: found.company,
+      supplier: found.supplier,
+      status: (found.status as any) || 'En inventario',
+      usage: found.usage || 'GPS',
+      purchaseDate: found.purchaseDate ?? null,
+      entryDate: found.entryDate ?? null,
       installationDate: null,
-      client: found.cliente ?? '',
+      client: found.client ?? '',
       comments: found.comments ?? ''
     });
   }
@@ -444,7 +453,7 @@ export class SimsTabComponent implements OnChanges {
 
     const selected = this.selectedSims;
     const htmlList = selected.slice(0, 8).map(s => `
-      <div><b>${s.iccid}</b> — ${s.modelo} — ${s.compania}</div>
+      <div><b>${s.iccid}</b> — ${s.model} — ${s.company}</div>
     `).join('');
 
     Swal.fire({
@@ -521,8 +530,8 @@ export class SimsTabComponent implements OnChanges {
       html: `
         <div style="text-align:center">
           <div><b>ICCID:</b> ${sim.iccid}</div>
-          <div><b>Modelo:</b> ${sim.modelo}</div>
-          <div><b>Compañía:</b> ${sim.compania}</div>
+          <div><b>Modelo:</b> ${sim.model}</div>
+          <div><b>Compañía:</b> ${sim.company}</div>
         </div>
         <br>Esta acción no se puede deshacer.
       `,

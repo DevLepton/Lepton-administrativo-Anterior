@@ -29,11 +29,11 @@
         <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
       </mat-form-field>
 
-      <!-- Nombre -->
+      <!-- Proveedor -->
       <mat-form-field appearance="outline">
-        <mat-label>Nombre</mat-label>
-        <input matInput formControlName="name" placeholder="Alias / Identificador" />
-        <mat-error *ngIf="form.get('name')?.hasError('required')">Nombre es requerido</mat-error>
+        <mat-label>Proveedor</mat-label>
+        <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+        <mat-error *ngIf="form.get('supplier')?.hasError('required')">Proveedor es requerido</mat-error>
       </mat-form-field>
 
       <!-- Marca -->

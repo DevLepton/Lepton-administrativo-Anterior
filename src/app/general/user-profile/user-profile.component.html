@@ -28,7 +28,7 @@
                     <span>{{ user?.email }}</span>
 
                     <span class="role-badge">
-                        {{ user?.role | titlecase }}
+                        {{ user?.role === 'cx' ? 'Customer Experience' : user?.role | titlecase }}
                     </span>
                 </div>
 

@@ -40,7 +40,7 @@
 
 .clients {
     overflow: auto;
-    scrollbar-width: none;
+    // scrollbar-width: none;
 }
 
 
@@ -139,8 +139,24 @@
     &.bad::before {
         background: #e74c3c;
     }
+
+    &.suspended::before {
+        background: #ffc800;
+    }
+
+    &.hidden::before {
+        background: #9b9b9b;
+    }
 }
 
+.info-icon {
+    position: absolute;
+    top: 10px;
+    right: 0;
+    font-size: 16px;
+    color: #888;
+    margin-left: 6px;
+}
 
 /* ================= CARDS ================= */
 .card {
@@ -152,6 +168,16 @@
 
 
 /* ================= BUCKETS ================= */
+.offline-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+
+    @media (max-width: 768px) {
+        grid-template-columns: 1fr;
+    }
+}
+
 .offline-card {
     margin-bottom: 8px;
     cursor: pointer;
@@ -192,6 +218,10 @@
 
 /* HEADER */
 .client-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+
     display: grid;
     grid-template-columns: 1fr auto auto;
     align-items: center;
@@ -262,6 +292,52 @@
     .warn {
         color: #ff3b30;
     }
+
+    .last-login {
+        font-size: 12px;
+        color: #888;
+    }
+}
+
+.hidden-icon {
+    font-weight: bold;
+    color: var(--color-danger);
+    border: 1px solid var(--color-danger);
+    border-radius: 50%;
+
+    width: 20px;
+    height: 20px;
+    min-width: 20px;
+    /* 🔥 evita que se comprima */
+    min-height: 20px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    font-size: 12px;
+
+    flex-shrink: 0;
+}
+
+.login-button {
+    display: flex;
+    place-items: center;
+
+    &:hover {
+        color: var(--color-primary) !important;
+    }
+}
+
+.clear-icon {
+  cursor: pointer;
+  opacity: 0.6;
+  transition: 0.2s;
+
+  &:hover {
+    opacity: 1;
+    transform: scale(1.1);
+  }
 }
 
 /* RIGHT */
@@ -372,7 +448,7 @@
 /* ================= TABLE ================= */
 .table-container {
     width: 100%;
-    max-height: 60vh;
+    max-height: none;
     overflow: auto;
     margin: 10px 0;
     border-radius: 10px;
@@ -428,6 +504,17 @@
 
 .ok {
     color: #34c759;
+    font-weight: 600;
+}
+
+.suspended {
+    color: #ffc800;
+    font-weight: 600;
+}
+
+.hidden {
+    color: #9b9b9b;
+    font-weight: 600;
 }
 
 .status-warning {
@@ -605,4 +692,45 @@
 
 .btn-excel {
     border-radius: 8px !important;
+}
+
+.sort-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.sort-controls {
+    position: absolute;
+    top: 100%;
+    left: 0;
+
+    display: flex;
+    flex-direction: column;
+
+    background: #fff;
+    border-radius: 10px;
+    min-width: 130px;
+
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+
+    opacity: 0;
+    transform: translateY(-10px);
+    pointer-events: none;
+
+    transition: all 0.2s ease;
+    z-index: 1000;
+
+    overflow: hidden;
+
+    button {
+        border-radius: 0;
+        color: black !important;
+        justify-content: flex-start !important;
+    }
+}
+
+.sort-controls.open {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
 }

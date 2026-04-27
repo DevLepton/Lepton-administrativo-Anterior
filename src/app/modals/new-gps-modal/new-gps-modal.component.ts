@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { map, Observable, startWith } from 'rxjs';
-import { DeviceStatus } from '../../services/api.service';
+import { DeviceStatus, GpsPayload } from '../../services/api.service';
 
 @Component({
   selector: 'app-new-gps-modal',
@@ -21,40 +21,15 @@ export class NewGpsModalComponent {
     this.unlockBodyScroll();
   }
 
+  @Input() existingDevices: { imei: string; sn: string }[] = [];
   @Input() modelOptions: string[] = [];
   @Input() brandOptions: string[] = [];
 
   /** Emite un solo GPS (pestaña Individual) */
-  @Output() gpsCreated = new EventEmitter<{
-    type: 'gps';
-    imei: string;
-    sn: string;
-    name: string;
-    brand: string;
-    model: string;
-    status: DeviceStatus;
-    purchaseDate: string | null;     // 'YYYY-MM-DD'
-    entryDate: string;        // 'YYYY-MM-DD'
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }>();
+  @Output() gpsCreated = new EventEmitter<GpsPayload>();
 
   /** Emite muchos GPS (pestaña Masivo) */
-  @Output() gpsBulkCreated = new EventEmitter<Array<{
-    type: 'gps';
-    imei: string;
-    sn: string;
-    name: string;
-    brand: string;
-    model: string;
-    status: DeviceStatus;
-    purchaseDate: string | null;     // 'YYYY-MM-DD'
-    entryDate: string;        // 'YYYY-MM-DD'
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }>>();
+  @Output() gpsBulkCreated = new EventEmitter<Array<GpsPayload>>();
 
   show = false;
   loading = false;
@@ -86,7 +61,7 @@ export class NewGpsModalComponent {
         Validators.minLength(3),
         Validators.maxLength(50)
       ]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -101,7 +76,7 @@ export class NewGpsModalComponent {
     // ====== MASIVO ======
     this.bulkForm = this.fb.group({
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(200)]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -112,6 +87,18 @@ export class NewGpsModalComponent {
       imeis: this.fb.array([this.buildImeiCtrl()]),
       sns: this.fb.array([this.buildSnCtrl()]),
     });
+
+    this.form.get('imei')?.addValidators(
+      this.duplicateFromExisting(() =>
+        this.existingDevices.map(d => d.imei)
+      )
+    );
+
+    this.form.get('sn')?.addValidators(
+      this.duplicateFromExisting(() =>
+        this.existingDevices.map(d => d.sn)
+      )
+    );
 
     // Autocomplete streams
     this.filteredModels$ = this.form.get('model')!.valueChanges.pipe(
@@ -136,6 +123,43 @@ export class NewGpsModalComponent {
       this.applyPurchaseExternal(this.bulkForm, !!isExternal);
     });
 
+    this.imeis.valueChanges.subscribe(() => {
+      this.imeis.controls.forEach(c => c.updateValueAndValidity({ emitEvent: false }));
+    });
+
+    this.sns.valueChanges.subscribe(() => {
+      this.sns.controls.forEach(c => c.updateValueAndValidity({ emitEvent: false }));
+    });
+
+  }
+
+  ngOnChanges() {
+    this.form.get('imei')?.updateValueAndValidity();
+    this.form.get('sn')?.updateValueAndValidity();
+
+    this.imeis.controls.forEach(c => c.updateValueAndValidity());
+    this.sns.controls.forEach(c => c.updateValueAndValidity());
+  }
+
+  private duplicateFromExisting(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      return getList().includes(value) ? { duplicate: true } : null;
+    };
+  }
+
+  private duplicateInArray(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      const list = getList();
+      const count = list.filter(v => v === value).length;
+
+      return count > 1 ? { duplicate: true } : null;
+    };
   }
 
   // ===== Helpers de lista/autocomplete =====
@@ -176,7 +200,7 @@ export class NewGpsModalComponent {
     this.form.reset({
       imei: '',
       sn: '',
-      name: '',
+      supplier: '',
       brand: '',
       model: '',
       status: 'En inventario',
@@ -193,7 +217,7 @@ export class NewGpsModalComponent {
     // Masivo
     this.bulkForm.reset({
       quantity: 1,
-      name: '',
+      supplier: '',
       brand: '',
       model: '',
       status: 'En inventario',
@@ -220,10 +244,10 @@ export class NewGpsModalComponent {
     const isExternal = !!this.form.get('purchaseExternal')!.value;
 
     this.gpsCreated.emit({
-      type: 'gps',
       imei: String(this.form.get('imei')!.value).trim(),
       sn: String(this.form.get('sn')!.value).trim(),
-      name: String(this.form.get('name')!.value).trim(),
+      supplier: String(this.form.get('supplier')!.value).trim(),
+      // name: String(this.form.get('name')!.value).trim(),
       brand: String(this.form.get('brand')!.value).trim(),
       model: String(this.form.get('model')!.value).trim(),
       status: this.form.get('status')!.value as DeviceStatus,
@@ -231,6 +255,7 @@ export class NewGpsModalComponent {
       purchaseDate: isExternal ? null : this.toYMD(this.form.get('purchaseDate')!.value),
       entryDate: this.toYMD(this.form.get('entryDate')!.value),
 
+      phoneNumber: null, // no hay campo en el form, se setea como null
       installationDate: this.form.get('installationDate')!.value
         ? this.toYMD(this.form.get('installationDate')!.value)
         : null,
@@ -254,13 +279,29 @@ export class NewGpsModalComponent {
   private buildImeiCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]
+      validators: [
+        Validators.required,
+        Validators.pattern(/^\d+$/),
+        Validators.minLength(14),
+        Validators.maxLength(20),
+        this.duplicateInArray(() => this.imeis.controls.map(c => c.value)),
+        this.duplicateFromExisting(() => this.existingDevices.map(d => d.imei))
+      ]
     });
   }
+
   private buildSnCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(3), Validators.maxLength(50)]
+      validators: [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+
+        // 👇 igual que IMEI
+        this.duplicateInArray(() => this.sns.controls.map(c => c.value)),
+        this.duplicateFromExisting(() => this.existingDevices.map(d => d.sn))
+      ]
     });
   }
 
@@ -297,18 +338,18 @@ export class NewGpsModalComponent {
     const isExternal = !!this.bulkForm.get('purchaseExternal')!.value;
 
     const common = {
-      name: String(this.bulkForm.get('name')!.value).trim(),
+      supplier: String(this.bulkForm.get('supplier')!.value).trim(),
       brand: String(this.bulkForm.get('brand')!.value).trim(),
       model: String(this.bulkForm.get('model')!.value).trim(),
       status: this.bulkForm.get('status')!.value as DeviceStatus,
       purchaseDate: isExternal ? null : this.toYMD(this.bulkForm.get('purchaseDate')!.value),
       entryDate: this.toYMD(this.bulkForm.get('entryDate')!.value),
+      phoneNumber: null, // no hay campo en el form, se setea como null
       comments: this.emptyToNull(this.bulkForm.get('comments')!.value),
     };
 
     const n = Math.min(this.imeis.length, this.sns.length);
     const payloads = Array.from({ length: n }, (_, i) => ({
-      type: 'gps' as const,
       imei: String(this.imeis.at(i).value).trim(),
       sn: String(this.sns.at(i).value).trim(),
       ...common

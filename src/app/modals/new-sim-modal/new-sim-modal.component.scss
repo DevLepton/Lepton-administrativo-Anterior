@@ -4,7 +4,8 @@
   z-index: 10001;
   width: 640px;
   max-width: calc(100% - 2rem);
-  height: 60vh;
+  min-height: 60vh;
+  max-height: 90vh;
   /* altura total del modal */
   background: #fff;
   border-radius: 14px;

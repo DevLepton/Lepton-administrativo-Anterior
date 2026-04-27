@@ -1,25 +1,11 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, startWith, Subscription } from 'rxjs';
-import { DeviceStatus } from '../../services/api.service';
-
-export interface EditAccessoryOpenData {
-  id: string;                        // _id de Mongo (para update endpoint)
-  accId: string;                     // device.id (id del accesorio en schema)
-  sn: string;                        // requerido y único
-  name: string;                      // device.name
-  brand: string;                     // device.brand
-  model: string;                     // device.model
-  status: DeviceStatus;              // device.status
-  purchaseDate: string | Date | null;// device.purchaseDate
-  entryDate: string | Date | null;   // device.entryDate
-  installationDate?: string | Date | null;
-  client?: string | null;
-  comments?: string | null;
-}
+import { AccessoryPayload, DeviceStatus } from '../../services/api.service';
+import { AuthService } from '../../services/auth.service';
 
 type AccessoryEditableKeys =
-  | 'accId' | 'sn' | 'name' | 'brand' | 'model' | 'status'
+  | 'accId' | 'sn' | 'supplier' | 'brand' | 'model' | 'status'
   | 'purchaseDate' | 'entryDate' | 'installationDate'
   | 'client' | 'comments';
 
@@ -46,19 +32,7 @@ export class EditAccessoryModalComponent {
 
   @Output() accessoryUpdated = new EventEmitter<{
     id: string; // _id mongo
-    payload: Partial<{
-      id: string;                 // 👈 OJO: backend espera "id" (no accId)
-      sn: string;
-      name: string;
-      brand: string;
-      model: string;
-      status: DeviceStatus;
-      purchaseDate: string;
-      entryDate: string;
-      installationDate: string | null;
-      client: string | null;
-      comments: string | null;
-    }>;
+    payload: Partial<Omit<AccessoryPayload, 'type'>>;
   }>();
 
   show = false;
@@ -75,11 +49,11 @@ export class EditAccessoryModalComponent {
 
   isSupportUser = false;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private authService: AuthService, private fb: FormBuilder) {
     this.form = this.fb.group({
       accId: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(80)]],
       sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -99,7 +73,7 @@ export class EditAccessoryModalComponent {
       map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
 
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    const role = this.authService.getUserRole();
 
     this.isSupportUser = role === 'soporte';
   }
@@ -141,7 +115,7 @@ export class EditAccessoryModalComponent {
     return {
       accId: t(v.accId),
       sn: t(v.sn),
-      name: t(v.name),
+      supplier: t(v.supplier),
       brand: t(v.brand),
       model: t(v.model),
       status: t(v.status),
@@ -162,15 +136,15 @@ export class EditAccessoryModalComponent {
   }
 
   // ===== API del modal =====
-  open(data: EditAccessoryOpenData) {
-    this.currentId = data.id;
+  open(data: AccessoryPayload) {
+    this.currentId = data.id || null;
     this.show = true;
     this.lockBodyScroll();
 
     this.form.reset({
-      accId: data.accId ?? '',
+      accId: data.idAccesorio ?? '',
       sn: data.sn ?? '',
-      name: data.name ?? '',
+      supplier: data.supplier ?? '',
       brand: data.brand ?? '',
       model: data.model ?? '',
       status: (data.status as DeviceStatus) ?? 'En inventario',
@@ -208,7 +182,7 @@ export class EditAccessoryModalComponent {
     const fullPayload: Record<AccessoryEditableKeys, any> = {
       accId: String(v.accId ?? '').trim(),
       sn: String(v.sn ?? '').trim(),
-      name: String(v.name ?? '').trim(),
+      supplier: String(v.supplier ?? '').trim(),
       brand: String(v.brand ?? '').trim(),
       model: String(v.model ?? '').trim(),
       status: v.status as DeviceStatus,

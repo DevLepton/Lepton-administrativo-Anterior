@@ -40,7 +40,7 @@
             <h3>{{ user.userName }}</h3>
             <!-- <p><strong>Nombre:</strong> {{ user.userName }}</p> -->
             <p><strong>Correo:</strong> {{ user.email }}</p>
-            <p><strong>Rol:</strong> {{ user.role.toUpperCase() }}</p>
+            <p><strong>Rol:</strong> {{ user.role === 'cx' ? 'CUSTOMER EXPERIENCE' : user.role.toUpperCase() }}</p>
         </div>
 
         <!-- Acciones -->

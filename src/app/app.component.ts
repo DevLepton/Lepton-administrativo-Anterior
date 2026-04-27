@@ -20,6 +20,8 @@ export class AppComponent implements OnInit {
   screenWidth = 0;
   isAuthenticated = false; // Estado de autenticación, inicialmente false
   isLoginRoute = false;
+  isRoleLoaded = false;
+
   constructor(private authService: AuthService, private router: Router, private toast: NgToastService) { }
 
   ngOnInit(): void {
@@ -27,6 +29,7 @@ export class AppComponent implements OnInit {
     const token = localStorage.getItem('token');
     if (token) {
       this.authService.setAuthenticationState(true);
+      // this.authService.loadUserRole();
     }
 
     // Suscribirse al estado de autenticación
@@ -37,13 +40,16 @@ export class AppComponent implements OnInit {
     // Verificar la ruta actual
     this.router.events.subscribe(event => {
       if (event instanceof NavigationEnd) {
-        this.isAuthenticated = this.authService.isLoggedIn();
+        // this.isAuthenticated = this.authService.isLoggedIn();
         this.isLoginRoute = this.router.url.includes('/login');
       }
     });
 
-
+    this.authService.roleLoaded$.subscribe(loaded => {
+      this.isRoleLoaded = loaded;
+    });
   }
+
   onToggLeSidenav(data: SideNavToggle): void {
     this.screenWidth = data.screenWidth;
     this.isSideNavCollapsed = data.collapsed;

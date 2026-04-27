@@ -5,25 +5,26 @@ import { catchError, forkJoin, of } from 'rxjs';
 import { NewGpsModalComponent } from '../../../modals/new-gps-modal/new-gps-modal.component';
 import { ViewGpsModalComponent } from '../../../modals/view-gps-modal/view-gps-modal.component';
 import { EditGpsModalComponent } from '../../../modals/edit-gps-modal/edit-gps-modal.component';
-import { ApiService, CreateGpsPayload, DeviceStatus } from '../../../services/api.service';
+import { ApiService, DeviceStatus, GpsPayload } from '../../../services/api.service';
 import { PageEvent } from '@angular/material/paginator';
 
-interface GpsItem {
+export interface GpsItem {
   id: string;                         // _id de Mongo
   imei: string;
   sn: string;
-  nombre: string;                     // name
-  marca: string;                      // brand
-  modelo: string;                     // model
-  estatus: DeviceStatus;
-  fechaCompra: string | Date | null;
-  fechaIngresoLepton: string | Date | null;
-  cliente?: string | null;
+  supplier: string;
+  name?: string | null;                     // name
+  brand: string;                      // brand
+  model: string;                     // model
+  status: DeviceStatus;
+  purchaseDate: string | Date | null;
+  entryDate: string | Date | null;
+  client?: string | null;
   comments?: string | null;
   installationDate?: string | Date | null;
-  netPrice: string | null;
-  grossPrice: string | null;
-  satCode: string | null;
+  netPrice?: string | null;
+  grossPrice?: string | null;
+  satCode?: string | null;
 }
 
 @Component({
@@ -110,15 +111,16 @@ export class GpsTabComponent implements OnChanges {
       id: String(d._id),
       imei: d.imei ?? '',
       sn: d.sn ?? '',
-      nombre: d.name ?? '',
-      marca: d.brand ?? '',
-      modelo: d.model ?? '',
-      estatus: d.status ?? 'En inventario',
+      supplier: d.supplier ?? '',
+      name: d.name ?? '',
+      brand: d.brand ?? '',
+      model: d.model ?? '',
+      status: d.status ?? 'En inventario',
 
-      fechaCompra: d.purchaseDate ?? null,
-      fechaIngresoLepton: d.entryDate ?? null,
+      purchaseDate: d.purchaseDate ?? null,
+      entryDate: d.entryDate ?? null,
 
-      cliente: d.client ?? null,
+      client: d.client ?? null,
       comments: d.comments ?? null,
       installationDate: d.installationDate ?? null,
 
@@ -166,12 +168,12 @@ export class GpsTabComponent implements OnChanges {
 
     return (this.gps ?? []).filter(g => {
       const okSearch = !q || this.s(g.imei).includes(q) || this.s(g.sn).includes(q);
-      const okBrand = !fBrand || this.s(g.marca) === fBrand;
-      const okModel = !fModel || this.s(g.modelo) === fModel;
-      const okStatus = !fStatus || this.s(g.estatus) === fStatus;
+      const okBrand = !fBrand || this.s(g.brand) === fBrand;
+      const okModel = !fModel || this.s(g.model) === fModel;
+      const okStatus = !fStatus || this.s(g.status) === fStatus;
 
-      const pKey = this.dayKeyUTC(g.fechaCompra);
-      const eKey = this.dayKeyUTC(g.fechaIngresoLepton);
+      const pKey = this.dayKeyUTC(g.purchaseDate);
+      const eKey = this.dayKeyUTC(g.entryDate);
       const okPurchase = !purchaseKey || (pKey !== null && pKey === purchaseKey);
       const okEntry = !entryKey || (eKey !== null && eKey === entryKey);
 
@@ -228,7 +230,7 @@ export class GpsTabComponent implements OnChanges {
       const av: any = (a as any)[key];
       const bv: any = (b as any)[key];
 
-      if (key === 'fechaCompra' || key === 'fechaIngresoLepton') {
+      if (key === 'purchaseDate' || key === 'entryDate') {
         return (this.ymdUtcMs(av) - this.ymdUtcMs(bv)) * dir;
       }
 
@@ -248,15 +250,15 @@ export class GpsTabComponent implements OnChanges {
 
   // ===== Unique options para filtros/modales =====
   get uniqueGpsBrands(): string[] {
-    return Array.from(new Set((this.gps ?? []).map(g => g.marca).filter(Boolean) as string[]))
+    return Array.from(new Set((this.gps ?? []).map(g => g.brand).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
   get uniqueGpsModels(): string[] {
-    return Array.from(new Set((this.gps ?? []).map(g => g.modelo).filter(Boolean) as string[]))
+    return Array.from(new Set((this.gps ?? []).map(g => g.model).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
   get uniqueGpsStatuses(): string[] {
-    return Array.from(new Set((this.gps ?? []).map(g => g.estatus).filter(Boolean) as string[]))
+    return Array.from(new Set((this.gps ?? []).map(g => g.status).filter(Boolean) as string[]))
       .sort((a, b) => a.localeCompare(b));
   }
 
@@ -266,20 +268,7 @@ export class GpsTabComponent implements OnChanges {
   // ===== CRUD =====
   nuevoGps() { this.newGpsModal?.open(); }
 
-  onGpsCreated(evt: {
-    type: 'gps';
-    imei: string;
-    sn: string;
-    name: string;
-    brand: string;
-    model: string;
-    status: DeviceStatus;
-    purchaseDate: string | null;
-    entryDate: string;
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }) {
+  onGpsCreated(evt: GpsPayload) {
     if (!this.isInventoryUser) return;
     this.apiService.createGps(evt as any).subscribe({
       next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS registrado', duration: 4000 }); this.refreshRequested.emit(); },
@@ -330,19 +319,19 @@ export class GpsTabComponent implements OnChanges {
       id: found.id,
       imei: found.imei,
       sn: found.sn,
-      name: found.nombre,
-      brand: found.marca,
-      model: found.modelo,
-      status: (found.estatus as any) || 'En inventario',
-      purchaseDate: found.fechaCompra ?? null,
-      entryDate: found.fechaIngresoLepton ?? null,
+      supplier: found.supplier ?? '',
+      brand: found.brand,
+      model: found.model,
+      status: (found.status as any) || 'En inventario',
+      purchaseDate: found.purchaseDate ?? null,
+      entryDate: found.entryDate ?? null,
       installationDate: found.installationDate ?? null,
-      client: found.cliente ?? '',
-      comments: found.comments ?? ''
+      client: found.client ?? '',
+      comments: found.comments ?? '',
     });
   }
 
-  onGpsUpdated(evt: { id: string; payload: Partial<Omit<CreateGpsPayload, 'type'>> }) {
+  onGpsUpdated(evt: { id: string; payload: Partial<Omit<GpsPayload, 'type'>> }) {
     this.apiService.updateGps(evt.id, evt.payload).subscribe({
       next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS actualizado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
@@ -360,8 +349,8 @@ export class GpsTabComponent implements OnChanges {
         <div style="text-align:center">
           <div><b>IMEI:</b> ${g.imei}</div>
           <div><b>Serie:</b> ${g.sn}</div>
-          <div><b>Modelo:</b> ${g.modelo}</div>
-          <div><b>Marca:</b> ${g.marca}</div>
+          <div><b>Modelo:</b> ${g.model}</div>
+          <div><b>Marca:</b> ${g.brand}</div>
         </div>
         <br>Esta acción no se puede deshacer.
       `,
@@ -404,14 +393,15 @@ export class GpsTabComponent implements OnChanges {
       id: found.id,
       imei: found.imei,
       sn: found.sn,
-      nombre: found.nombre,
-      marca: found.marca,
-      modelo: found.modelo,
-      estatus: found.estatus,
-      fechaCompra: found.fechaCompra ?? null,
-      fechaIngresoLepton: found.fechaIngresoLepton ?? null,
-      cliente: found.cliente ?? '',
-      comentarios: found.comments ?? '',
+      supplier: found.supplier,
+      name: found.name ?? null,
+      brand: found.brand,
+      model: found.model,
+      status: found.status,
+      purchaseDate: found.purchaseDate ?? null,
+      entryDate: found.entryDate ?? null,
+      client: found.client ?? '',
+      comments: found.comments ?? '',
       netPrice: found.netPrice ?? null,
       grossPrice: found.grossPrice ?? null,
       satCode: found.satCode ?? null,
@@ -487,7 +477,7 @@ export class GpsTabComponent implements OnChanges {
     const selected = this.selectedGpsItems;
 
     const htmlList = selected.slice(0, 8).map(g => `
-    <div><b>${g.imei}</b> — ${g.sn} — ${g.modelo}</div>
+    <div><b>${g.imei}</b> — ${g.sn} — ${g.model}</div>
   `).join('');
 
     Swal.fire({

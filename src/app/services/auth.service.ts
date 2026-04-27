@@ -1,23 +1,20 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
-import { apiUrl } from './api.service';
+import { ApiService, apiUrl } from './api.service';
 
 @Injectable({
   providedIn: 'root',
 })
 export class AuthService {
-  private authenticated = new BehaviorSubject<boolean>(this.checkAuthentication()); // Estado inicial
+
+  private userRole = new BehaviorSubject<string | null>(null);
+  userRole$ = this.userRole.asObservable();
+
+  private authenticated = new BehaviorSubject<boolean>(false); // Estado inicial
   isAuthenticated$ = this.authenticated.asObservable();
 
-  constructor(private http: HttpClient) { }
-
-  private checkAuthentication(): boolean {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      return localStorage.getItem('isAuthenticated') === 'true';
-    }
-    return false;
-  }
+  constructor(private http: HttpClient, private apiService: ApiService) { }
 
   login(credentials: { userName: string; password: string } | { email: string; password: string }): Observable<any> {
     // Envía una solicitud POST al backend con las credenciales
@@ -25,18 +22,15 @@ export class AuthService {
   }
 
   setAuthenticationState(isAuthenticated: boolean): void {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('isAuthenticated', isAuthenticated.toString());
-    }
     this.authenticated.next(isAuthenticated);
   }
 
   logout(): void {
     if (typeof window !== 'undefined' && window.localStorage) {
-      localStorage.setItem('isAuthenticated', 'false');
       localStorage.removeItem('token');
-      localStorage.removeItem('user'); 
+      localStorage.removeItem('user');
     }
+
     this.authenticated.next(false);
   }
 
@@ -44,8 +38,35 @@ export class AuthService {
     return !!localStorage.getItem('token');
   }
 
+  setUserRole(role: string) {
+    this.userRole.next(role);
+  }
+
+  private roleLoaded = new BehaviorSubject<boolean>(false);
+  roleLoaded$ = this.roleLoaded.asObservable();
+
+  loadUserRole(): Promise<void> {
+    return new Promise((resolve) => {
+      this.apiService.getProfile().subscribe({
+        next: (res: any) => {
+          const role = res?.user?.role?.toLowerCase() || null;
+
+          this.userRole.next(role);
+          this.roleLoaded.next(true);
+          resolve();
+        },
+        error: () => {
+          this.userRole.next(null);
+          this.roleLoaded.next(true);
+          this.logout();
+          resolve();
+        }
+      });
+    });
+  }
+
   getUserRole(): string | null {
-    return localStorage.getItem('user_role');
+    return this.userRole ? this.userRole.value : null;
   }
 
   getUser() {

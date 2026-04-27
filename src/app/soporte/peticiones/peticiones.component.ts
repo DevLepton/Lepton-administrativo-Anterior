@@ -6,6 +6,7 @@ import Swal from 'sweetalert2';
 import { catchError, firstValueFrom, forkJoin, Observable, of } from 'rxjs';
 import { NewRequestModalComponent } from '../../modals/new-request-modal/new-request-modal.component';
 import { EditRequestModalComponent } from '../../modals/edit-request-modal/edit-request-modal.component';
+import { AuthService } from '../../services/auth.service';
 
 interface RequestedDeviceItem {
   model: string;
@@ -46,7 +47,7 @@ export class PeticionesComponent implements OnInit {
   @ViewChild(NewRequestModalComponent) newRequestModal!: NewRequestModalComponent;
   @ViewChild(EditRequestModalComponent) editRequestModal!: EditRequestModalComponent;
 
-  constructor(private apiService: ApiService, private toast: NgToastService) { }
+  constructor(private authService: AuthService, private apiService: ApiService, private toast: NgToastService) { }
 
   isInventoryUser = false;
   isSupportUser = false;
@@ -86,7 +87,7 @@ export class PeticionesComponent implements OnInit {
   hayCambiosFlag = false;
 
   ngOnInit(): void {
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    const role = this.authService.getUserRole();
 
     this.isInventoryUser = role === 'inventario';
     this.isSupportUser = role === 'soporte';

@@ -3,6 +3,7 @@ import { ApiService, CreateRequestPayload, DeviceStatus, RequestedDeviceItem } f
 import { catchError, forkJoin, of } from 'rxjs';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
+import { AuthService } from '../../services/auth.service';
 
 interface MiniItem {
   modelo: string;
@@ -35,10 +36,10 @@ export class AlmacenComponent implements OnInit {
   simsFull: any[] = [];
   accessoriesFull: any[] = [];
 
-  constructor(private apiService: ApiService, private toast: NgToastService) { }
+  constructor(private authService: AuthService, private apiService: ApiService, private toast: NgToastService) { }
 
   ngOnInit(): void {
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    const role = this.authService.getUserRole();
 
     this.isInventoryUser = role === 'inventario';
     this.isSupportUser = role === 'soporte';
@@ -62,9 +63,9 @@ export class AlmacenComponent implements OnInit {
 
         const all = Array.isArray(res?.data) ? res.data : [];
 
-        this.gpsFull = all.filter((d: { type: any; }) => d.type === 'gps');
-        this.simsFull = all.filter((d: { type: any; }) => d.type === 'sim');
-        this.accessoriesFull = all.filter((d: { type: any; }) => d.type === 'accessory');
+        this.gpsFull = all.filter((d: { type: any; }) => d.type === 'gps').reverse();
+        this.simsFull = all.filter((d: { type: any; }) => d.type === 'sim').reverse();
+        this.accessoriesFull = all.filter((d: { type: any; }) => d.type === 'accessory').reverse();
 
         this.gpsResumen = this.gpsFull.map(d => ({
           modelo: d.model ?? '—',

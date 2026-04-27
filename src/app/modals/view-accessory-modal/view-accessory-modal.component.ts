@@ -1,21 +1,5 @@
 import { Component } from '@angular/core';
-
-export interface ViewAccessoryData {
-  idMongo: string;                    // _id de Mongo (para referencia si lo quieres)
-  id: string;                         // id del accesorio (schema)
-  sn: string;                         // requerido (no-sim)
-  nombre: string;                     // name
-  marca: string;                      // brand
-  modelo: string;                     // model
-  estatus: string;                    // status
-  fechaCompra: string | Date | null;  // purchaseDate
-  fechaIngresoLepton: string | Date | null; // entryDate
-  cliente?: string | null;
-  comentarios?: string | null;
-  netPrice: string | null;
-  grossPrice: string | null;
-  satCode: string | null;
-}
+import { AccessoryItem } from '../../inventario/almacen/accessories-tab/accessories-tab.component';
 
 @Component({
   selector: 'app-view-accessory-modal',
@@ -36,9 +20,9 @@ export class ViewAccessoryModalComponent {
   }
 
   show = false;
-  data: ViewAccessoryData | null = null;
+  data: AccessoryItem | null = null;
 
-  open(d: ViewAccessoryData) {
+  open(d: AccessoryItem) {
     this.data = d;
     this.show = true;
     this.lockBodyScroll();

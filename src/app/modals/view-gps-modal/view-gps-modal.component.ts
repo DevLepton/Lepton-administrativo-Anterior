@@ -1,21 +1,7 @@
 import { Component } from '@angular/core';
+import { GpsItem } from '../../inventario/almacen/gps-tab/gps-tab.component';
 
-export interface ViewGpsData {
-  id: string;
-  imei: string;
-  sn: string;
-  nombre: string;                     // name
-  marca: string;                      // brand
-  modelo: string;                     // model
-  estatus: string;                    // status
-  fechaCompra: string | Date | null;  // purchaseDate
-  fechaIngresoLepton: string | Date | null; // entryDate
-  cliente?: string | null;
-  comentarios?: string | null;
-  netPrice: string | null;
-  grossPrice: string | null;
-  satCode: string | null;
-}
+
 
 @Component({
   selector: 'app-view-gps-modal',
@@ -36,9 +22,9 @@ export class ViewGpsModalComponent {
   }
 
   show = false;
-  data: ViewGpsData | null = null;
+  data: GpsItem | null = null;
 
-  open(d: ViewGpsData) {
+  open(d: GpsItem) {
     this.data = d;
     this.show = true;
     this.lockBodyScroll();

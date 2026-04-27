@@ -21,6 +21,8 @@ export class InicioRedireccionComponent implements OnInit {
       this.router.navigate(['/peticiones']);
     } else if (role === 'finanzas') {
       this.router.navigate(['/clientes']);
+    } else if (role === 'cx') {
+      this.router.navigate(['/clientes']);
     } else {
       this.router.navigate(['/login']);
     }

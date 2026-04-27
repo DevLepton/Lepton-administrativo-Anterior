@@ -110,8 +110,10 @@ export class LoginComponent implements OnInit {
 
           const userRole = response.user.role;
 
+          this.authService.setUserRole(userRole);
+
           localStorage.setItem('token', response.token);
-          localStorage.setItem('user_role', userRole);
+          // localStorage.setItem('user_role', userRole);
           localStorage.setItem('user', JSON.stringify(response.user));
 
           this.authService.setAuthenticationState(true);
@@ -131,6 +133,8 @@ export class LoginComponent implements OnInit {
           } else if (userRole === 'inventario') {
             this.router.navigate(['/peticiones']);
           } else if (userRole === 'finanzas') {
+            this.router.navigate(['/clientes']);
+          } else if (userRole === 'cx') {
             this.router.navigate(['/clientes']);
           } else {
             // Rol desconocido, cerrar sesión o redirigir a login

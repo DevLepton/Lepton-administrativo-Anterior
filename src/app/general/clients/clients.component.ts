@@ -1,6 +1,6 @@
-import { Component, ElementRef, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ApiService, ClienteUI, TrackerUI } from '../../services/api.service';
-import { Subscription } from 'rxjs';
+import { Observable, Subscription } from 'rxjs';
 import datos from './datos.json';
 
 import {
@@ -19,8 +19,9 @@ import { ConfirmModalService } from '../../services/confirm-modal/confirm-modal-
 // import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx-js-style';
+import { AuthService } from '../../services/auth.service';
 
-type BucketKey = '+12H' | '+1D' | '+15D' | '+1M' | '+6M' | '+1A';
+type BucketKey = '+12H' | '+1D' | '+15D' | '+1M' | '+6M' | '+1A' | '+2A' | '+3A' | '+4A' | '+5A';
 
 type BucketItem = {
   label: BucketKey;
@@ -52,6 +53,7 @@ export class ClientsComponent implements OnInit {
 
   @ViewChild('clientsContainer') clientsContainer!: ElementRef;
   @ViewChildren('clientItem') clientItems!: QueryList<ElementRef>;
+  @ViewChild('sortWrapper') sortWrapper!: ElementRef;
 
   private STORAGE_KEYS = {
     columns: 'clients_selected_columns',
@@ -65,11 +67,16 @@ export class ClientsComponent implements OnInit {
 
   clientesFiltrados: ClienteUI[] = [];
 
+  private isUserAction = false;
+
   // KPIs
   totalClientes = 0;
   totalTrackers = 0;
   totalOnline = 0;
   totalOffline = 0;
+
+  totalSuspended = 0;
+  totalHidden = 0;
 
   loading = false;
 
@@ -85,7 +92,11 @@ export class ClientsComponent implements OnInit {
     { label: '+15D', value: 0 },
     { label: '+1M', value: 0 },
     { label: '+6M', value: 0 },
-    { label: '+1A', value: 0 }
+    { label: '+1A', value: 0 },
+    { label: '+2A', value: 0 },
+    { label: '+3A', value: 0 },
+    { label: '+4A', value: 0 },
+    { label: '+5A', value: 0 }
   ];
 
   availableColumns = [
@@ -141,7 +152,7 @@ export class ClientsComponent implements OnInit {
 
   onlyWithTrackers = false;
 
-  trackerFilter: 'all' | 'with' | 'without' = 'all';
+  trackerFilter: 'all' | 'with' | 'without' | 'suspended' | 'hidden' | 'offline' = 'all';
 
   activeTab: 'clients' | 'config' = 'clients';
 
@@ -164,8 +175,11 @@ export class ClientsComponent implements OnInit {
   editingExcludedId: number | null = null;
   editingExcludedTemp = '';
 
+  userRole$!: Observable<string | null>;
+
   isAdminUser = false;
   isSupportUser = false;
+  isCXUser = false;
 
   onlyActiveClients = false;
   excludeBlockedClients = false;
@@ -177,32 +191,10 @@ export class ClientsComponent implements OnInit {
   progress = 0;
   progressMessage = '';
 
-  isColumnVisible(col: string): boolean {
-    return this.selectedColumns.includes(col);
-  }
+  sortField: 'id' | 'nombre' | 'login' | 'ciudad' | 'total' | 'online' | 'offline' | null = 'id';
+  sortDirection: 'asc' | 'desc' = 'asc';
 
-  getStatusClass(status: string): string {
-    if (!status || status === 'ok') return 'ok';
-
-    if (status.includes('12H')) return 'status-warning';
-    if (status.includes('1D')) return 'status-warning';
-
-    return 'status-danger';
-  }
-
-  constructor(private api: ApiService, private confirm: ConfirmModalService,
-    private cdr: ChangeDetectorRef, private toast: NgToastService) { }
-
-  ngOnInit(): void {
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
-
-    this.isSupportUser = role === 'soporte';
-    this.isAdminUser = role === 'admin';
-
-    this.loadPreferences();
-    this.loadClientConfig();
-    this.loadData();
-  }
+  showSortControls = false;
 
   includeSensors = false;
   includeLogin = false;
@@ -210,6 +202,27 @@ export class ClientsComponent implements OnInit {
   private sub?: Subscription;
 
   sidebarCollapsed = false;
+
+  constructor(
+    private authService: AuthService,
+    private elRef: ElementRef,
+    private api: ApiService,
+    private confirm: ConfirmModalService,
+    private cdr: ChangeDetectorRef,
+    private toast: NgToastService
+  ) { }
+
+  ngOnInit(): void {
+    const role = this.authService.getUserRole();
+
+    this.isSupportUser = role === 'soporte';
+    this.isAdminUser = role === 'admin';
+    this.isCXUser = role === 'cx';
+    
+    this.loadPreferences();
+    this.loadClientConfig();
+    this.loadData();
+  }
 
   toggleSidebar() {
     this.sidebarCollapsed = !this.sidebarCollapsed;
@@ -285,6 +298,19 @@ export class ClientsComponent implements OnInit {
     }
   }
 
+  isColumnVisible(col: string): boolean {
+    return this.selectedColumns.includes(col);
+  }
+
+  getStatusClass(status: string): string {
+    if (!status || status === 'ok') return 'ok';
+
+    if (status.includes('12H')) return 'status-warning';
+    if (status.includes('1D')) return 'status-warning';
+
+    return 'status-danger';
+  }
+
   onSettingsChange() {
     this.savePreferences();
   }
@@ -344,7 +370,7 @@ export class ClientsComponent implements OnInit {
       error: () => {
         this.toast.error({
           detail: 'Error',
-          summary: 'No se pudo cargar la configuración',
+          summary: 'No se pudo cargar la información de los clientes',
           duration: 3000
         });
       }
@@ -557,77 +583,75 @@ export class ClientsComponent implements OnInit {
     this.newExcludedId = String(option.id);
   }
 
-  // loadData(forceRefresh = false) {
-  //   this.loading = true;
-
-  //   this.progress = 0;
-  //   this.progressMessage = 'Iniciando...';
-
-  //   this.sub?.unsubscribe();
-
-  //   this.sub = this.api.getFullClientsDataStream(
-  //     this.includeSensors,
-  //     this.includeLogin,
-  //     forceRefresh
-  //   ).subscribe({
-
-  //     next: (event) => {
-
-  //       // PROGRESO
-  //       if (event.type === 'progress') {
-  //         this.progress = event.progress;
-  //         this.progressMessage = event.message;
-
-  //         this.cdr.markForCheck();
-  //         return;
-  //       }
-
-  //       // FINAL
-  //       if (event.type === 'done') {
-
-  //         this.lastUpdate = new Date();
-
-  //         this.clientesFiltrados = [...event.data.clientes];
-
-  //         this.updateFilteredClients();
-
-  //         this.loading = false;
-  //         this.progress = 100;
-  //         this.progressMessage = 'Completado';
-
-  //         this.cdr.markForCheck();
-  //       }
-  //     },
-
-  //     error: (err) => {
-  //       console.error(err);
-
-  //       this.loading = false;
-  //       this.progressMessage = 'Error al cargar datos';
-
-  //       this.cdr.markForCheck();
-  //     }
-  //   });
-  // }
-
-  
-
   loadData(forceRefresh = false) {
     this.loading = true;
 
-    const res: any = datos;
+    this.progress = 0;
+    this.progressMessage = 'Iniciando...';
 
-    this.lastUpdate = new Date();
+    this.sub?.unsubscribe();
 
-    this.clientesFiltrados = [...res.clientes];
+    this.sub = this.api.getFullClientsDataStream(
+      this.includeSensors,
+      this.includeLogin,
+      forceRefresh
+    ).subscribe({
 
-    this.updateFilteredClients();
+      next: (event) => {
 
-    this.loading = false;
+        // PROGRESO
+        if (event.type === 'progress') {
+          this.progress = event.progress;
+          this.progressMessage = event.message;
 
-    // 🔥 CLAVE
-    this.cdr.markForCheck();
+          this.cdr.markForCheck();
+          return;
+        }
+
+        // FINAL
+        if (event.type === 'done') {
+
+          this.lastUpdate = new Date();
+
+          this.clientesFiltrados = [...event.data.clientes];
+
+          this.updateFilteredClients();
+
+          this.loading = false;
+          this.progress = 100;
+          this.progressMessage = 'Completado';
+
+          this.cdr.markForCheck();
+        }
+      },
+
+      error: (err) => {
+        console.error(err);
+
+        this.loading = false;
+        this.progressMessage = 'Error al cargar datos';
+
+        this.cdr.markForCheck();
+      }
+    });
   }
+
+  // loadData(forceRefresh = false) {
+  //   this.loading = true;
+
+  //   const res: any = datos;
+
+  //   this.lastUpdate = new Date();
+
+  //   this.clientesFiltrados = [...res.clientes];
+
+  //   this.updateFilteredClients();
+
+  //   this.loading = false;
+
+  //   // 🔥 CLAVE
+  //   this.cdr.markForCheck();
+  // }
 
   refreshClients() {
     this.loadData(true);
@@ -667,7 +691,8 @@ export class ClientsComponent implements OnInit {
 
   toggleClient(id: number) {
 
-    // 🔥 SI está en modo "todos", no colapsamos individualmente
+    this.isUserAction = true; // 👈 importante
+
     if (this.expandAll) {
       if (this.renderedClients.has(id)) {
         this.renderedClients.delete(id);
@@ -679,7 +704,6 @@ export class ClientsComponent implements OnInit {
       return;
     }
 
-    // 🔹 comportamiento normal (uno a la vez)
     if (this.expandedClient === id) {
       this.expandedClient = null;
       this.pendingScrollTo = null;
@@ -712,17 +736,22 @@ export class ClientsComponent implements OnInit {
 
   onAnimationDone(id: number) {
 
+    // ❌ IGNORAR si no viene de interacción del usuario
+    if (!this.isUserAction) return;
+
     // 🔥 SOLO destruir si NO estás en modo expandAll
     if (!this.expandAll && this.expandedClient !== id) {
       this.renderedClients.delete(id);
     }
 
-    // 🔥 scroll solo en modo individual
+    // 🔥 scroll al abrir
     if (!this.expandAll && this.pendingScrollTo === id && this.expandedClient === id) {
       this.pendingScrollTo = null;
 
       requestAnimationFrame(() => {
-        this.scrollToClient(id);
+        requestAnimationFrame(() => {
+          this.scrollToClient(id);
+        });
       });
     }
 
@@ -741,11 +770,26 @@ export class ClientsComponent implements OnInit {
     );
   }
 
+  openLogin(c: ClienteUI) {
+    const hash = this.activeClients[String(c.id)];
+    const url = `https://pro.lepton-seguridad.com/pro/demo/?session_key=${hash}`;
+    window.open(url, '_blank');
+  }
+
+  clearSearch() {
+    this.search = '';
+    this.updateFilteredClients();
+  }
+
   updateFilteredClients() {
     const s = this.search.toLowerCase().trim();
 
     let totalTrackers = 0;
     let totalOnline = 0;
+    let totalOffline = 0;
+
+    let totalSuspended = 0;
+    let totalHidden = 0;
 
     const buckets: Record<BucketKey, number> = {
       '+12H': 0,
@@ -753,7 +797,11 @@ export class ClientsComponent implements OnInit {
       '+15D': 0,
       '+1M': 0,
       '+6M': 0,
-      '+1A': 0
+      '+1A': 0,
+      '+2A': 0,
+      '+3A': 0,
+      '+4A': 0,
+      '+5A': 0
     };
 
     const result: ClienteUI[] = [];
@@ -778,17 +826,34 @@ export class ClientsComponent implements OnInit {
         c.nombre.toLowerCase().includes(s) ||
         c.login.toLowerCase().includes(s);
 
-      const trackers = c.trackers || [];
+      let trackers = c.trackers || [];
 
       let matchTrackers = true;
 
+      // 🔥 FILTRAR TRACKERS SEGÚN EL SELECTOR
       switch (this.trackerFilter) {
+
         case 'with':
           matchTrackers = trackers.length > 0;
           break;
 
         case 'without':
           matchTrackers = trackers.length === 0;
+          break;
+
+        case 'suspended':
+          matchTrackers = trackers.some(t => t.suspendido);
+          trackers = trackers.filter(t => t.suspendido);
+          break;
+
+        case 'hidden':
+          matchTrackers = trackers.some(t => t.hidden);
+          trackers = trackers.filter(t => t.hidden);
+          break;
+
+        case 'offline':
+          matchTrackers = trackers.some(t => t.minutosOffline >= 720);
+          trackers = trackers.filter(t => t.minutosOffline >= 720);
           break;
 
         case 'all':
@@ -800,6 +865,11 @@ export class ClientsComponent implements OnInit {
 
       let online = 0;
       let offline = 0;
+      let onlinekpi = 0;
+      let offlinekpi = 0;
+
+      let suspendedkpi = 0;
+      let hiddenkpi = 0;
 
       let bucketMatch = !this.selectedBucket;
 
@@ -808,19 +878,39 @@ export class ClientsComponent implements OnInit {
         const min = t.minutosOffline;
         const isOnline = min < 720;
 
+        if (t.suspendido && this.isValidTracker(t)) {
+          suspendedkpi++;
+        }
+
+        if (t.hidden && this.isValidTracker(t)) {
+          hiddenkpi++;
+        }
+
         if (isOnline) {
           online++;
+          if (this.isValidTracker(t)) {
+            onlinekpi++;
+          }
         } else {
           offline++;
-
+          if (this.isValidTracker(t)) {
+            offlinekpi++;
+          }
           let bucket: BucketKey | null = null;
 
-          if (min > 525600) bucket = '+1A';
-          else if (min > 259200) bucket = '+6M';
-          else if (min > 43200) bucket = '+1M';
-          else if (min > 21600) bucket = '+15D';
-          else if (min > 1440) bucket = '+1D';
-          else if (min > 720) bucket = '+12H';
+          const YEAR = 525600;
+
+          if (min >= YEAR * 5) bucket = '+5A';
+          else if (min >= YEAR * 4) bucket = '+4A';
+          else if (min >= YEAR * 3) bucket = '+3A';
+          else if (min >= YEAR * 2) bucket = '+2A';
+          else if (min >= YEAR) bucket = '+1A';
+
+          else if (min >= 259200) bucket = '+6M';
+          else if (min >= 43200) bucket = '+1M';
+          else if (min >= 21600) bucket = '+15D';
+          else if (min >= 1440) bucket = '+1D';
+          else if (min >= 720) bucket = '+12H';
 
           if (bucket) {
             buckets[bucket]++;
@@ -842,12 +932,17 @@ export class ClientsComponent implements OnInit {
 
       result.push({
         ...c,
+        trackers: trackers,
         total: trackers.length,
         online,
         offline
       });
 
-      totalOnline += online;
+      totalOnline += onlinekpi;
+      totalOffline += offlinekpi;
+
+      totalSuspended += suspendedkpi;
+      totalHidden += hiddenkpi;
     }
 
     // 🔥 asignar resultados
@@ -855,7 +950,11 @@ export class ClientsComponent implements OnInit {
     this.totalClientes = result.length;
     this.totalTrackers = totalTrackers;
     this.totalOnline = totalOnline;
-    this.totalOffline = totalTrackers - totalOnline;
+    // this.totalOffline = totalTrackers - totalOnline;
+    this.totalOffline = totalOffline;
+
+    this.totalSuspended = totalSuspended;
+    this.totalHidden = totalHidden;
 
     this.offlineBuckets = [
       { label: '+12H', value: buckets['+12H'] },
@@ -863,7 +962,11 @@ export class ClientsComponent implements OnInit {
       { label: '+15D', value: buckets['+15D'] },
       { label: '+1M', value: buckets['+1M'] },
       { label: '+6M', value: buckets['+6M'] },
-      { label: '+1A', value: buckets['+1A'] }
+      { label: '+1A', value: buckets['+1A'] },
+      { label: '+2A', value: buckets['+2A'] },
+      { label: '+3A', value: buckets['+3A'] },
+      { label: '+4A', value: buckets['+4A'] },
+      { label: '+5A', value: buckets['+5A'] }
     ];
 
     this.topOffline = [...result]
@@ -881,6 +984,10 @@ export class ClientsComponent implements OnInit {
       })
       .sort((a, b) => b.offline - a.offline)
       .slice(0, 10);
+
+    if (this.sortField) {
+      this.sortClients(this.sortField);
+    }
   }
 
   trackByClient(index: number, item: ClienteUI) {
@@ -890,12 +997,18 @@ export class ClientsComponent implements OnInit {
   matchBucket(t: TrackerUI, bucket: BucketKey): boolean {
     const min = t.minutosOffline;
 
-    if (min > 525600) return bucket === '+1A';
-    if (min > 259200) return bucket === '+6M';
-    if (min > 43200) return bucket === '+1M';
-    if (min > 21600) return bucket === '+15D';
-    if (min > 1440) return bucket === '+1D';
-    if (min > 720) return bucket === '+12H';
+    const YEAR = 525600;
+
+    if (min >= YEAR * 5) return bucket === '+5A';
+    if (min >= YEAR * 4) return bucket === '+4A';
+    if (min >= YEAR * 3) return bucket === '+3A';
+    if (min >= YEAR * 2) return bucket === '+2A';
+    if (min >= YEAR) return bucket === '+1A';
+    if (min >= 259200) return bucket === '+6M';
+    if (min >= 43200) return bucket === '+1M';
+    if (min >= 21600) return bucket === '+15D';
+    if (min >= 1440) return bucket === '+1D';
+    if (min >= 720) return bucket === '+12H';
 
     return false;
   }
@@ -913,6 +1026,10 @@ export class ClientsComponent implements OnInit {
       case '+1M': return '#ff3b30';
       case '+6M': return '#d63031';
       case '+1A': return '#a71d2a';
+      case '+2A': return '#8e1c25';
+      case '+3A': return '#7a1720';
+      case '+4A': return '#66121a';
+      case '+5A': return '#4d0d14';
       default: return '#ccc';
     }
   }
@@ -957,6 +1074,91 @@ export class ClientsComponent implements OnInit {
       this.filteredClientsList.every(c => this.selectedClients.has(c.id));
   }
 
+  @HostListener('document:click', ['$event'])
+  onClickOutside(event: Event) {
+    if (!this.sortWrapper?.nativeElement.contains(event.target)) {
+      this.showSortControls = false;
+      this.cdr.markForCheck();
+    }
+  }
+
+  toggleSortControls() {
+    this.showSortControls = !this.showSortControls;
+    this.cdr.markForCheck();
+  }
+
+  sortClients(field: typeof this.sortField, chanceDirection = false) {
+
+    if (this.sortField === field && chanceDirection) {
+      this.sortDirection = this.sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      this.sortField = field;
+      if (chanceDirection) {
+        this.sortDirection = 'asc';
+      }
+    }
+
+    const dir = this.sortDirection === 'asc' ? 1 : -1;
+
+    this.filteredClientsList.sort((a: any, b: any) => {
+
+      let valA: any;
+      let valB: any;
+
+      switch (field) {
+        case 'id':
+          valA = a.id;
+          valB = b.id;
+          break;
+
+        case 'nombre':
+          valA = a.nombre || '';
+          valB = b.nombre || '';
+          break;
+
+        case 'login':
+          valA = a.login || '';
+          valB = b.login || '';
+          break;
+
+        case 'ciudad':
+          valA = a.ciudad || '';
+          valB = b.ciudad || '';
+          break;
+
+        case 'total':
+          valA = a.total || 0;
+          valB = b.total || 0;
+          break;
+
+        case 'online':
+          valA = a.online || 0;
+          valB = b.online || 0;
+          break;
+
+        case 'offline':
+          valA = a.offline || 0;
+          valB = b.offline || 0;
+          break;
+
+        default:
+          return 0;
+      }
+
+      // 🔥 SI ES NÚMERO
+      if (typeof valA === 'number' && typeof valB === 'number') {
+        return (valA - valB) * dir;
+      }
+
+      // 🔥 SI ES TEXTO
+      return String(valA).localeCompare(String(valB), 'es', {
+        sensitivity: 'base'
+      }) * dir;
+    });
+
+    this.cdr.markForCheck();
+  }
+
   exportToExcel() {
     const selected = this.filteredClientsList.filter(c =>
       this.selectedClients.has(c.id)
@@ -990,7 +1192,11 @@ export class ClientsComponent implements OnInit {
       ['GPS Offline + 15D:', this.offlineBuckets.find(b => b.label === '+15D')?.value || 0],
       ['GPS Offline + 1M:', this.offlineBuckets.find(b => b.label === '+1M')?.value || 0],
       ['GPS Offline + 6M:', this.offlineBuckets.find(b => b.label === '+6M')?.value || 0],
-      ['GPS Offline + 1A:', this.offlineBuckets.find(b => b.label === '+1A')?.value || 0]
+      ['GPS Offline + 1A:', this.offlineBuckets.find(b => b.label === '+1A')?.value || 0],
+      ['GPS Offline + 2A:', this.offlineBuckets.find(b => b.label === '+2A')?.value || 0],
+      ['GPS Offline + 3A:', this.offlineBuckets.find(b => b.label === '+3A')?.value || 0],
+      ['GPS Offline + 4A:', this.offlineBuckets.find(b => b.label === '+4A')?.value || 0],
+      ['GPS Offline + 5A:', this.offlineBuckets.find(b => b.label === '+5A')?.value || 0],
     ];
 
 
@@ -1124,8 +1330,8 @@ export class ClientsComponent implements OnInit {
       { wch: pxToWch(160) },
       { wch: pxToWch(160) },
       { wch: pxToWch(160) },
-      { wch: pxToWch(235) },
-      { wch: pxToWch(240) },
+      { wch: pxToWch(340) },
+      { wch: pxToWch(340) },
       { wch: pxToWch(485) },
       { wch: pxToWch(265) },
       { wch: pxToWch(990) }

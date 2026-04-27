@@ -1,4 +1,4 @@
-import { LOCALE_ID, NgModule } from '@angular/core';
+import { APP_INITIALIZER, LOCALE_ID, NgModule } from '@angular/core';
 import { BrowserModule, provideClientHydration } from '@angular/platform-browser';
 import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 import { AppRoutingModule } from './app-routing.module';
@@ -8,7 +8,7 @@ import { SidenavComponent } from './sidenav/sidenav.component';
 import { DashboardComponent } from './dashboard/dashboard.component';
 import { ClientesComponent } from './clientes/clientes.component';
 import { PlanesComponent } from './planes/planes.component';
-import { DispositivosComponent} from './dispositivos/dispositivos.component';
+import { DispositivosComponent } from './dispositivos/dispositivos.component';
 import { ServiciosComponent } from './servicios/servicios.component';
 import { LoginComponent } from './login/login.component';
 import { ReactiveFormsModule } from '@angular/forms';
@@ -19,7 +19,7 @@ import { OverlayModule } from '@angular/cdk/overlay';
 import { CdkMenuModule } from '@angular/cdk/menu';
 import { FormsModule } from '@angular/forms';
 import { provideHttpClient, withFetch, withInterceptorsFromDi } from '@angular/common/http';
-import {NgToastModule} from 'ng-angular-popup';
+import { NgToastModule } from 'ng-angular-popup';
 import { MatTabsModule } from '@angular/material/tabs';
 import { MatInputModule } from '@angular/material/input';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -27,10 +27,10 @@ import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MAT_DATE_LOCALE, MatNativeDateModule } from '@angular/material/core';
 import { MatSelectModule } from '@angular/material/select';
 import { MatButtonModule } from '@angular/material/button';
-import {MatMenuModule} from '@angular/material/menu';
+import { MatMenuModule } from '@angular/material/menu';
 import { MatIconModule } from '@angular/material/icon';
 import { MatStepperModule } from '@angular/material/stepper';
-import {MatAutocompleteModule} from '@angular/material/autocomplete';
+import { MatAutocompleteModule } from '@angular/material/autocomplete';
 import { HTTP_INTERCEPTORS } from '@angular/common/http';
 
 import { RegisterPlanModalComponent } from './planes/actions/register-plan-modal/register-plan-modal.component';
@@ -87,8 +87,19 @@ import { ConfirmModalComponent } from './services/confirm-modal/confirm-modal.co
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserProfileComponent } from './general/user-profile/user-profile.component';
+import { A11yModule } from "@angular/cdk/a11y";
+import { AuthService } from './services/auth.service';
 
 registerLocaleData(es);
+
+export function initAuth(authService: AuthService) {
+  return () => {
+    if (authService.isLoggedIn()) {
+      return authService.loadUserRole();
+    }
+    return Promise.resolve();
+  };
+}
 
 @NgModule({
   declarations: [
@@ -174,7 +185,8 @@ registerLocaleData(es);
     MatButtonToggleModule,
     MatCheckboxModule,
     MatProgressSpinnerModule,
-],
+    A11yModule
+  ],
   providers: [
     provideClientHydration(),
     provideAnimationsAsync(),
@@ -182,7 +194,8 @@ registerLocaleData(es);
     { provide: HTTP_INTERCEPTORS, useClass: TokenInterceptor, multi: true },
     { provide: LOCALE_ID, useValue: 'es' },          // 👈 DatePipe y pipes en español
     { provide: MAT_DATE_LOCALE, useValue: 'es-MX' },
-    { provide: MatPaginatorIntl, useFactory: getSpanishPaginatorIntl }
+    { provide: MatPaginatorIntl, useFactory: getSpanishPaginatorIntl },
+    { provide: APP_INITIALIZER, useFactory: initAuth, deps: [AuthService], multi: true }
   ],
   bootstrap: [AppComponent]
 })

@@ -25,20 +25,26 @@
               <mat-error *ngIf="form.get('imei')?.hasError('minlength') || form.get('imei')?.hasError('maxlength')">
                 14–20 dígitos
               </mat-error>
+              <mat-error *ngIf="form.get('imei')?.hasError('duplicate')">
+                IMEI ya existe
+              </mat-error>
             </mat-form-field>
 
             <!-- Serie -->
             <mat-form-field appearance="outline">
               <mat-label>Serie (SN)</mat-label>
               <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
-              <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
+              <mat-error *ngIf="form.get('sn')?.hasError('required')">Número de serie es requerido</mat-error>
+              <mat-error *ngIf="form.get('sn')?.hasError('duplicate')">
+                Serie ya existe
+              </mat-error>
             </mat-form-field>
 
-            <!-- Nombre -->
+            <!-- Proveedor -->
             <mat-form-field appearance="outline">
-              <mat-label>Nombre</mat-label>
-              <input matInput formControlName="name" placeholder="Alias / Identificador" />
-              <mat-error *ngIf="form.get('name')?.hasError('required')">Nombre es requerido</mat-error>
+              <mat-label>Proveedor</mat-label>
+              <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+              <mat-error *ngIf="form.get('supplier')?.hasError('required')">Proveedor es requerido</mat-error>
             </mat-form-field>
 
             <!-- Marca -->
@@ -137,11 +143,11 @@
                 <mat-error *ngIf="bulkForm.get('quantity')?.invalid">Entre 1 y 200</mat-error>
               </mat-form-field>
 
-              <!-- Nombre común -->
+              <!-- Proveedor común -->
               <mat-form-field appearance="outline">
-                <mat-label>Nombre</mat-label>
-                <input matInput formControlName="name" placeholder="Alias / Identificador" />
-                <mat-error *ngIf="bulkForm.get('name')?.hasError('required')">Requerido</mat-error>
+                <mat-label>Proveedor</mat-label>
+                <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+                <mat-error *ngIf="bulkForm.get('supplier')?.hasError('required')">Requerido</mat-error>
               </mat-form-field>
 
               <!-- Marca -->
@@ -225,6 +231,9 @@
                         <mat-error *ngIf="imeis.at(i).hasError('minlength') || imeis.at(i).hasError('maxlength')">
                           14–20 dígitos
                         </mat-error>
+                        <mat-error *ngIf="imeis.at(i).hasError('duplicate')">
+                          IMEI duplicado
+                        </mat-error>
                       </mat-form-field>
 
                       <mat-form-field appearance="outline" class="w-full">
@@ -232,6 +241,9 @@
                         <input matInput [formControl]="sns.at(i)" placeholder="SN..." autocomplete="off"
                           maxlength="50" />
                         <mat-error *ngIf="sns.at(i).hasError('required')">Requerido</mat-error>
+                        <mat-error *ngIf="sns.at(i).hasError('duplicate')">
+                          Serie duplicada
+                        </mat-error>
                       </mat-form-field>
                     </div>
                   </div>

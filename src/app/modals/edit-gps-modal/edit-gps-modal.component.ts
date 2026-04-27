@@ -2,27 +2,13 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { map, Observable, startWith, Subscription } from 'rxjs';
 import { DeviceStatus } from '../../services/api.service';
-
-export interface EditGpsOpenData {
-  id: string;
-  imei: string;
-  sn: string;
-  name: string;
-  brand: string;
-  model: string;
-  status: DeviceStatus;
-  purchaseDate: string | Date | null;
-  entryDate: string | Date | null;
-  installationDate?: string | Date | null;
-  client?: string | null;
-  comments?: string | null;
-}
+import { GpsItem } from '../../inventario/almacen/gps-tab/gps-tab.component';
+import { AuthService } from '../../services/auth.service';
 
 type GpsEditableKeys =
-  | 'imei' | 'sn' | 'name' | 'brand' | 'model' | 'status'
+  | 'imei' | 'sn' | 'supplier' | 'brand' | 'model' | 'status'
   | 'purchaseDate' | 'entryDate' | 'installationDate'
   | 'client' | 'comments';
-
 
 @Component({
   selector: 'app-edit-gps-modal',
@@ -47,19 +33,7 @@ export class EditGpsModalComponent {
 
   @Output() gpsUpdated = new EventEmitter<{
     id: string;
-    payload: Partial<{
-      imei: string;
-      sn: string;
-      name: string;
-      brand: string;
-      model: string;
-      status: DeviceStatus;
-      purchaseDate: string;
-      entryDate: string;
-      installationDate: string | null;
-      client: string | null;
-      comments: string | null;
-    }>;
+    payload: Partial<Omit<GpsItem, 'id'>>;
   }>();
 
   show = false;
@@ -76,11 +50,11 @@ export class EditGpsModalComponent {
 
   isSupportUser = false;
 
-  constructor(private fb: FormBuilder) {
+  constructor(private authService: AuthService, private fb: FormBuilder) {
     this.form = this.fb.group({
       imei: ['', [Validators.required, Validators.pattern(/^\d+$/), Validators.minLength(14), Validators.maxLength(20)]],
       sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -100,7 +74,7 @@ export class EditGpsModalComponent {
       map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
 
-    const role = (localStorage.getItem('user_role') || '').toLowerCase();
+    const role = this.authService.getUserRole();
 
     this.isSupportUser = role === 'soporte';
   }
@@ -142,7 +116,7 @@ export class EditGpsModalComponent {
     return {
       imei: t(v.imei),
       sn: t(v.sn),
-      name: t(v.name),
+      supplier: t(v.supplier),
       brand: t(v.brand),
       model: t(v.model),
       status: t(v.status),
@@ -172,7 +146,7 @@ export class EditGpsModalComponent {
   }
 
   // ===== API del modal =====
-  open(data: EditGpsOpenData) {
+  open(data: GpsItem) {
     this.currentId = data.id;
     this.show = true;
     this.lockBodyScroll();
@@ -180,7 +154,7 @@ export class EditGpsModalComponent {
     this.form.reset({
       imei: data.imei ?? '',
       sn: data.sn ?? '',
-      name: data.name ?? '',
+      supplier: data.supplier ?? '',
       brand: data.brand ?? '',
       model: data.model ?? '',
       status: (data.status as DeviceStatus) ?? 'En inventario',
@@ -218,7 +192,7 @@ export class EditGpsModalComponent {
     const fullPayload: Record<GpsEditableKeys, any> = {
       imei: String(v.imei ?? '').trim(),
       sn: String(v.sn ?? '').trim(),
-      name: String(v.name ?? '').trim(),
+      supplier: String(v.supplier ?? '').trim(),
       brand: String(v.brand ?? '').trim(),
       model: String(v.model ?? '').trim(),
       status: v.status as DeviceStatus,

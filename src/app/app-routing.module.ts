@@ -1,11 +1,5 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
-import { DashboardComponent } from './dashboard/dashboard.component';
-import { ClientesComponent } from './clientes/clientes.component';
-import { ServiciosComponent } from './servicios/servicios.component';
-import { PlanesComponent } from './planes/planes.component';
-import { DispositivosComponent } from './dispositivos/dispositivos.component';
-import { PedidosComponent } from './pedidos/pedidos.component';
 
 import { LoginComponent } from './login/login.component';
 import { AuthGuard } from './auth/auth.guard';
@@ -37,7 +31,7 @@ const routes: Routes = [
         path: 'perfil',
         component: UserProfileComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas'] }
+        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'] }
       },
 
       ...dynamicRoutes,

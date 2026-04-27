@@ -10,24 +10,37 @@ export class NoAuthGuard implements CanActivate {
   constructor(private authService: AuthService, private router: Router) { }
 
   canActivate(): boolean {
-    if (this.authService.isLoggedIn()) {
-      const role = this.authService.getUserRole();
+    if (!this.authService.isLoggedIn()) {
+      return true;
+    }
 
-      if (role === 'admin') {
-        this.router.navigate(['/usuarios']);
-      } else if (role === 'soporte') {
-        this.router.navigate(['/peticiones']);
-      } else if (role === 'inventario') {
-        this.router.navigate(['/peticiones']);
-      } else if (role === 'finanzas') {
-        this.router.navigate(['/clientes']);
-      } else {
-        this.router.navigate(['/login']);
-      }
+    const role = this.authService.getUserRole();
 
+    // 🔥 CLAVE: si aún no hay rol, NO navegues
+    if (!role) {
       return false;
     }
 
-    return true; // Permite entrar si NO está logueado
+    switch (role) {
+      case 'admin':
+        this.router.navigate(['/usuarios']);
+        break;
+
+      case 'soporte':
+      case 'inventario':
+        this.router.navigate(['/peticiones']);
+        break;
+
+      case 'finanzas':
+      case 'cx':
+        this.router.navigate(['/clientes']);
+        break;
+
+      default:
+        this.authService.logout();
+        this.router.navigate(['/login']);
+    }
+
+    return false; // Permite entrar si NO está logueado
   }
 }

@@ -19,7 +19,7 @@
                     ICCID es requerido
                 </mat-error>
                 <mat-error *ngIf="form.get('iccid')?.hasError('minlength') || form.get('iccid')?.hasError('maxlength')">
-                    Debe contener 20 dígitos
+                    Debe contener 19-20 dígitos
                 </mat-error>
                 <mat-error *ngIf="form.get('iccid')?.hasError('pattern')">
                     Solo números (0-9)
@@ -36,6 +36,13 @@
                     </mat-option>
                 </mat-autocomplete>
                 <mat-error *ngIf="form.get('model')?.hasError('required')">Modelo es requerido</mat-error>
+            </mat-form-field>
+
+            <!-- Proveedor -->
+            <mat-form-field appearance="outline">
+                <mat-label>Proveedor</mat-label>
+                <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+                <mat-error *ngIf="form.get('supplier')?.hasError('required')">Requerido</mat-error>
             </mat-form-field>
 
             <!-- Compañía -->
@@ -93,8 +100,17 @@
                 <input matInput formControlName="client" placeholder="Nombre del cliente" />
             </mat-form-field> -->
 
+            <!-- Uso sugerido -->
+            <mat-form-field appearance="outline">
+                <mat-label>Uso sugerido</mat-label>
+                <mat-select formControlName="usage">
+                    <mat-option value="GPS">GPS</mat-option>
+                    <mat-option value="DashCam">DashCam</mat-option>
+                </mat-select>
+            </mat-form-field>
+
             <mat-form-field appearance="outline" class="col-span-2">
-                <mat-label>Comentarios (opcional)</mat-label>
+                <mat-label>Comentarios (opcional)2</mat-label>
                 <textarea matInput formControlName="comments" rows="3" placeholder="Notas adicionales..."></textarea>
             </mat-form-field>
         </div>

@@ -11,29 +11,30 @@
       <div class="row"><span>ID Accesorio</span><b>{{ data?.id || '—' }}</b></div>
       <div class="row"><span>Serie</span><b>{{ data?.sn || '—' }}</b></div>
 
-      <div class="row"><span>Nombre</span><b>{{ data?.nombre || '—' }}</b></div>
-      <div class="row"><span>Marca</span><b>{{ data?.marca || '—' }}</b></div>
-
-      <div class="row"><span>Modelo</span><b>{{ data?.modelo || '—' }}</b></div>
-      <div class="row"><span>Estatus</span><b>{{ data?.estatus || '—' }}</b></div>
-
+      <div class="row"><span>Marca</span><b>{{ data?.brand || '—' }}</b></div>
+      
+      <div class="row"><span>Modelo</span><b>{{ data?.model || '—' }}</b></div>
+      <div class="row"><span>Proveedor</span><b>{{ data?.supplier || '—' }}</b></div>
+      <div class="row"><span>Estatus</span><b>{{ data?.status || '—' }}</b></div>
+      
       <div class="row"><span>Precio neto</span><b>{{ data?.netPrice ? ('$ ' + data?.netPrice) : '—' }}</b></div>
       <div class="row"><span>Precio bruto</span><b>{{ data?.grossPrice ? ('$ ' + data?.grossPrice) : '—' }}</b></div>
       <div class="row"><span>Código SAT</span><b>{{ data?.satCode || '—' }}</b></div>
-
-      <div class="row"><span>Fecha de compra</span><b>{{ fmtDate(data?.fechaCompra) }}</b></div>
-      <div class="row"><span>Fecha de ingreso</span><b>{{ fmtDate(data?.fechaIngresoLepton) }}</b></div>
-
-      <div class="row"><span>Cliente</span><b>{{ data?.cliente || 'Sin asignar' }}</b></div>
+      
+      <div class="row"><span>Fecha de compra</span><b>{{ fmtDate(data?.purchaseDate) }}</b></div>
+      <div class="row"><span>Fecha de ingreso</span><b>{{ fmtDate(data?.entryDate) }}</b></div>
+      
+      <div class="row"><span>Nombre</span><b>{{ data?.name || '—' }}</b></div>
+      <div class="row"><span>Cliente</span><b>{{ data?.client || 'Sin asignar' }}</b></div>
 
       <div class="row col">
         <span>Comentarios</span>
-        <div class="box">{{ data?.comentarios || '—' }}</div>
+        <div class="box">{{ data?.comments || '—' }}</div>
       </div>
     </div>
   </div>
 
   <footer class="modal__footer">
-    <button mat-stroked-button color="primary" type="button" (click)="close()">Cerrar</button>
+    <button mat-button class="custom-button" color="warn" type="button" (click)="close()">Cerrar</button>
   </footer>
 </div>

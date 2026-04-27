@@ -8,17 +8,18 @@ import { ViewAccessoryModalComponent } from '../../../modals/view-accessory-moda
 import { EditAccessoryModalComponent } from '../../../modals/edit-accessory-modal/edit-accessory-modal.component';
 import { PageEvent } from '@angular/material/paginator';
 
-interface AccessoryItem {
+export interface AccessoryItem {
   id: string;                         // _id
   idAccesorio: string;                // schema id
   sn: string;
-  nombre: string;
-  marca: string;
-  modelo: string;
-  estatus: DeviceStatus;
-  fechaCompra: string | Date | null;
-  fechaIngresoLepton: string | Date | null;
-  cliente?: string | null;
+  supplier: string;
+  name: string;
+  brand: string;
+  model: string;
+  status: DeviceStatus;
+  purchaseDate: string | Date | null;
+  entryDate: string | Date | null;
+  client?: string | null;
   comments?: string | null;
   installationDate?: string | Date | null;
   netPrice: string | null;
@@ -108,13 +109,14 @@ export class AccessoriesTabComponent implements OnChanges {
       id: String(d._id),
       idAccesorio: String(d.id ?? ''),
       sn: d.sn ?? '',
-      nombre: d.name ?? '',
-      marca: d.brand ?? '',
-      modelo: d.model ?? '',
-      estatus: d.status ?? 'En inventario',
-      fechaCompra: d.purchaseDate ?? null,
-      fechaIngresoLepton: d.entryDate ?? null,
-      cliente: d.client ?? null,
+      supplier: d.supplier ?? '',
+      name: d.name ?? '',
+      brand: d.brand ?? '',
+      model: d.model ?? '',
+      status: d.status ?? 'En inventario',
+      purchaseDate: d.purchaseDate ?? null,
+      entryDate: d.entryDate ?? null,
+      client: d.client ?? null,
       comments: d.comments ?? null,
       installationDate: d.installationDate ?? null,
       netPrice: d.netPrice ?? null,
@@ -188,12 +190,12 @@ export class AccessoriesTabComponent implements OnChanges {
 
     return (this.accessories ?? []).filter(a => {
       const okSearch = !q || this.s(a.idAccesorio).includes(q) || this.s(a.sn).includes(q);
-      const okBrand = !fBrand || this.s(a.marca) === fBrand;
-      const okModel = !fModel || this.s(a.modelo) === fModel;
-      const okStatus = !fStatus || this.s(a.estatus) === fStatus;
+      const okBrand = !fBrand || this.s(a.brand) === fBrand;
+      const okModel = !fModel || this.s(a.model) === fModel;
+      const okStatus = !fStatus || this.s(a.status) === fStatus;
 
-      const pKey = this.dayKeyUTC(a.fechaCompra);
-      const eKey = this.dayKeyUTC(a.fechaIngresoLepton);
+      const pKey = this.dayKeyUTC(a.purchaseDate);
+      const eKey = this.dayKeyUTC(a.entryDate);
       const okPurchase = !purchaseKey || (pKey !== null && pKey === purchaseKey);
       const okEntry = !entryKey || (eKey !== null && eKey === entryKey);
 
@@ -222,7 +224,7 @@ export class AccessoriesTabComponent implements OnChanges {
       const av: any = (a as any)[key];
       const bv: any = (b as any)[key];
 
-      if (key === 'fechaCompra' || key === 'fechaIngresoLepton') {
+      if (key === 'purchaseDate' || key === 'entryDate') {
         return (this.ymdUtcMs(av) - this.ymdUtcMs(bv)) * dir;
       }
 
@@ -242,15 +244,15 @@ export class AccessoriesTabComponent implements OnChanges {
 
   // ===== uniques =====
   get uniqueAccessoryBrands(): string[] {
-    return Array.from(new Set((this.accessories ?? []).map(a => a.marca).filter(Boolean) as string[]))
+    return Array.from(new Set((this.accessories ?? []).map(a => a.brand).filter(Boolean) as string[]))
       .sort((x, y) => x.localeCompare(y));
   }
   get uniqueAccessoryModels(): string[] {
-    return Array.from(new Set((this.accessories ?? []).map(a => a.modelo).filter(Boolean) as string[]))
+    return Array.from(new Set((this.accessories ?? []).map(a => a.model).filter(Boolean) as string[]))
       .sort((x, y) => x.localeCompare(y));
   }
   get uniqueAccessoryStatuses(): string[] {
-    return Array.from(new Set((this.accessories ?? []).map(a => a.estatus).filter(Boolean) as string[]))
+    return Array.from(new Set((this.accessories ?? []).map(a => a.status).filter(Boolean) as string[]))
       .sort((x, y) => x.localeCompare(y));
   }
 
@@ -265,17 +267,18 @@ export class AccessoriesTabComponent implements OnChanges {
     if (!found) return this.toast.error({ detail: 'Error', summary: 'Accesorio no encontrado', duration: 4000 });
 
     this.viewAccessoryModal.open({
-      idMongo: found.id,
-      id: found.idAccesorio,
+      id: found.id,
+      idAccesorio: found.idAccesorio,
       sn: found.sn,
-      nombre: found.nombre,
-      marca: found.marca,
-      modelo: found.modelo,
-      estatus: found.estatus,
-      fechaCompra: found.fechaCompra,
-      fechaIngresoLepton: found.fechaIngresoLepton,
-      cliente: found.cliente ?? '',
-      comentarios: found.comments ?? '',
+      supplier: found.supplier,
+      name: found.name,
+      brand: found.brand,
+      model: found.model,
+      status: found.status,
+      purchaseDate: found.purchaseDate,
+      entryDate: found.entryDate,
+      client: found.client ?? '',
+      comments: found.comments ?? '',
       netPrice: found.netPrice ?? null,
       grossPrice: found.grossPrice ?? null,
       satCode: found.satCode ?? null,
@@ -288,16 +291,17 @@ export class AccessoriesTabComponent implements OnChanges {
 
     this.editAccessoryModal.open({
       id: found.id,
-      accId: found.idAccesorio,
+      idAccesorio: found.idAccesorio,
       sn: found.sn,
-      name: found.nombre,
-      brand: found.marca,
-      model: found.modelo,
-      status: (found.estatus as any) || 'En inventario',
-      purchaseDate: found.fechaCompra ?? null,
-      entryDate: found.fechaIngresoLepton ?? null,
+      supplier: found.supplier,
+      name: found.name,
+      brand: found.brand,
+      model: found.model,
+      status: (found.status as any) || 'En inventario',
+      purchaseDate: found.purchaseDate ?? null,
+      entryDate: found.entryDate ?? null,
       installationDate: found.installationDate ?? null,
-      client: found.cliente ?? '',
+      client: found.client ?? '',
       comments: found.comments ?? ''
     });
   }
@@ -309,8 +313,8 @@ export class AccessoriesTabComponent implements OnChanges {
         <div style="text-align:center">
           <div><b>ID:</b> ${a.idAccesorio || '—'}</div>
           <div><b>S/N:</b> ${a.sn || '—'}</div>
-          <div><b>Modelo:</b> ${a.modelo || '—'}</div>
-          <div><b>Marca:</b> ${a.marca || '—'}</div>
+          <div><b>Modelo:</b> ${a.model || '—'}</div>
+          <div><b>Marca:</b> ${a.brand || '—'}</div>
         </div>
         <br>Esta acción no se puede deshacer.
       `,
@@ -460,7 +464,7 @@ export class AccessoriesTabComponent implements OnChanges {
     const selected = this.selectedAccessoriesItems;
 
     const htmlList = selected.slice(0, 8).map(a => `
-    <div><b>${a.idAccesorio}</b> — ${a.sn} — ${a.modelo}</div>
+    <div><b>${a.idAccesorio}</b> — ${a.sn} — ${a.model}</div>
   `).join('');
 
     Swal.fire({

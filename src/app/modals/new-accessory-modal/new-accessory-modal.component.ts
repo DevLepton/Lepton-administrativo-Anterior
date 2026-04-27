@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Input, Output } from '@angular/core';
-import { FormArray, FormBuilder, FormControl, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormControl, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { map, Observable, startWith } from 'rxjs';
-import { DeviceStatus } from '../../services/api.service';
+import { AccessoryPayload, DeviceStatus } from '../../services/api.service';
 
 @Component({
   selector: 'app-new-accessory-modal',
@@ -22,41 +22,15 @@ export class NewAccessoryModalComponent {
     this.unlockBodyScroll();
   }
 
-
+  @Input() existingAccessories: { idAccesorio: string; sn: string }[] = [];
   @Input() modelOptions: string[] = [];
   @Input() brandOptions: string[] = [];
 
   /** Emite un solo Accesorio (pestaña Individual) */
-  @Output() accessoryCreated = new EventEmitter<{
-    type: 'accessory';
-    id: string;                 // 👈 campo "id" del accesorio (schema)
-    sn: string;
-    name: string;
-    brand: string;
-    model: string;
-    status: DeviceStatus;
-    purchaseDate: string | null;       // 'YYYY-MM-DD'
-    entryDate: string;          // 'YYYY-MM-DD'
-    installationDate?: string | null;
-    client?: string | null;
-    comments?: string | null;
-  }>();
+  @Output() accessoryCreated = new EventEmitter<AccessoryPayload>();
 
   /** Emite muchos Accesorios (pestaña Masivo) */
-  @Output() accessoriesBulkCreated = new EventEmitter<Array<{
-    type: 'accessory';
-    id: string;                 // 👈 campo "id" del accesorio
-    sn: string;
-    name: string;
-    brand: string;
-    model: string;
-    status: DeviceStatus;
-    purchaseDate: string | null;       // 'YYYY-MM-DD'
-    entryDate: string;          // 'YYYY-MM-DD'
-    installationDate?: string | null; // (en masivo lo dejamos null)
-    client?: string | null;           // (en masivo lo dejamos null)
-    comments?: string | null;
-  }>>();
+  @Output() accessoriesBulkCreated = new EventEmitter<Array<AccessoryPayload>>();
 
   show = false;
   loading = false;
@@ -79,7 +53,7 @@ export class NewAccessoryModalComponent {
     this.form = this.fb.group({
       id: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
       sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -94,7 +68,7 @@ export class NewAccessoryModalComponent {
     // ====== MASIVO ======
     this.bulkForm = this.fb.group({
       quantity: [1, [Validators.required, Validators.min(1), Validators.max(200)]],
-      name: ['', Validators.required],
+      supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
@@ -105,6 +79,18 @@ export class NewAccessoryModalComponent {
       ids: this.fb.array([this.buildIdCtrl()]),
       sns: this.fb.array([this.buildSnCtrl()]),
     });
+
+    this.form.get('id')?.addValidators(
+      this.duplicateFromExisting(() =>
+        this.existingAccessories.map(a => a.idAccesorio)
+      )
+    );
+
+    this.form.get('sn')?.addValidators(
+      this.duplicateFromExisting(() =>
+        this.existingAccessories.map(a => a.sn)
+      )
+    );
 
     // Autocomplete streams
     this.filteredModels$ = this.form.get('model')!.valueChanges.pipe(
@@ -128,6 +114,47 @@ export class NewAccessoryModalComponent {
     this.bulkForm.get('purchaseExternal')!.valueChanges.subscribe(isExternal => {
       this.applyPurchaseExternal(this.bulkForm, !!isExternal);
     });
+
+    this.ids.valueChanges.subscribe(() => {
+      this.ids.controls.forEach(c =>
+        c.updateValueAndValidity({ emitEvent: false })
+      );
+    });
+
+    this.sns.valueChanges.subscribe(() => {
+      this.sns.controls.forEach(c =>
+        c.updateValueAndValidity({ emitEvent: false })
+      );
+    });
+  }
+
+  ngOnChanges() {
+    this.form.get('id')?.updateValueAndValidity();
+    this.form.get('sn')?.updateValueAndValidity();
+
+    this.ids.controls.forEach(c => c.updateValueAndValidity());
+    this.sns.controls.forEach(c => c.updateValueAndValidity());
+  }
+
+  private duplicateFromExisting(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      return getList().includes(value) ? { duplicate: true } : null;
+    };
+  }
+
+  private duplicateInArray(getList: () => string[]) {
+    return (control: AbstractControl): ValidationErrors | null => {
+      const value = (control.value || '').trim();
+      if (!value) return null;
+
+      const list = getList();
+      const count = list.filter(v => v === value).length;
+
+      return count > 1 ? { duplicate: true } : null;
+    };
   }
 
   // ===== Helpers de lista/autocomplete =====
@@ -167,7 +194,7 @@ export class NewAccessoryModalComponent {
     this.form.reset({
       id: '',
       sn: '',
-      name: '',
+      supplier: '',
       brand: '',
       model: '',
       status: 'En inventario',
@@ -184,7 +211,7 @@ export class NewAccessoryModalComponent {
     // Masivo
     this.bulkForm.reset({
       quantity: 1,
-      name: '',
+      supplier: '',
       brand: '',
       model: '',
       status: 'En inventario',
@@ -215,7 +242,7 @@ export class NewAccessoryModalComponent {
       type: 'accessory',
       id: String(v.id).trim(),
       sn: String(v.sn).trim(),
-      name: String(v.name).trim(),
+      supplier: String(v.supplier).trim(),
       brand: String(v.brand).trim(),
       model: String(v.model).trim(),
       status: v.status as DeviceStatus,
@@ -244,13 +271,28 @@ export class NewAccessoryModalComponent {
   private buildIdCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(2), Validators.maxLength(60)]
+      validators: [
+        Validators.required,
+        Validators.minLength(2),
+        Validators.maxLength(60),
+
+        this.duplicateInArray(() => this.ids.controls.map(c => c.value)),
+        this.duplicateFromExisting(() => this.existingAccessories.map(a => a.idAccesorio))
+      ]
     });
   }
+
   private buildSnCtrl(): FormControl<string> {
     return new FormControl<string>('', {
       nonNullable: true,
-      validators: [Validators.required, Validators.minLength(3), Validators.maxLength(50)]
+      validators: [
+        Validators.required,
+        Validators.minLength(3),
+        Validators.maxLength(50),
+
+        this.duplicateInArray(() => this.sns.controls.map(c => c.value)),
+        this.duplicateFromExisting(() => this.existingAccessories.map(a => a.sn))
+      ]
     });
   }
 
@@ -288,7 +330,7 @@ export class NewAccessoryModalComponent {
     const isExternal = !!this.bulkForm.get('purchaseExternal')!.value;
 
     const common = {
-      name: String(v.name).trim(),
+      supplier: String(v.supplier).trim(),
       brand: String(v.brand).trim(),
       model: String(v.model).trim(),
       status: v.status as DeviceStatus,

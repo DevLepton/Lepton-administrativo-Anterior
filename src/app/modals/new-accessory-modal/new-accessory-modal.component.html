@@ -23,6 +23,9 @@
               <mat-error *ngIf="form.get('id')?.hasError('minlength') || form.get('id')?.hasError('maxlength')">
                 2–60 caracteres
               </mat-error>
+              <mat-error *ngIf="form.get('id')?.hasError('duplicate')">
+                ID ya existe
+              </mat-error>
             </mat-form-field>
 
             <!-- Serie -->
@@ -30,13 +33,16 @@
               <mat-label>Serie (SN)</mat-label>
               <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
               <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
+              <mat-error *ngIf="form.get('sn')?.hasError('duplicate')">
+                Serie ya existe
+              </mat-error>
             </mat-form-field>
 
-            <!-- Nombre -->
+            <!-- Proveedor -->
             <mat-form-field appearance="outline">
-              <mat-label>Nombre</mat-label>
-              <input matInput formControlName="name" placeholder="Nombre del accesorio / Alias" />
-              <mat-error *ngIf="form.get('name')?.hasError('required')">Nombre es requerido</mat-error>
+              <mat-label>Proveedor</mat-label>
+              <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+              <mat-error *ngIf="form.get('supplier')?.hasError('required')">Proveedor es requerido</mat-error>
             </mat-form-field>
 
             <!-- Marca -->
@@ -102,7 +108,7 @@
           </div>
         </div>
         <footer class="modal__footer">
-          <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+          <button type="button" mat-button color="warn" (click)="close()">Cancelar</button>
           <button type="submit" mat-flat-button color="primary" [disabled]="form.invalid || loading">
             {{ loading ? 'Guardando...' : 'Guardar' }}
           </button>
@@ -134,11 +140,11 @@
                 <mat-error *ngIf="bulkForm.get('quantity')?.invalid">Entre 1 y 50</mat-error>
               </mat-form-field>
 
-              <!-- Nombre común -->
+              <!-- Proveedor común -->
               <mat-form-field appearance="outline">
-                <mat-label>Nombre</mat-label>
-                <input matInput formControlName="name" placeholder="Nombre del accesorio / Alias" />
-                <mat-error *ngIf="bulkForm.get('name')?.hasError('required')">Requerido</mat-error>
+                <mat-label>Proveedor</mat-label>
+                <input matInput formControlName="supplier" placeholder="Nombre del proveedor" />
+                <mat-error *ngIf="bulkForm.get('supplier')?.hasError('required')">Requerido</mat-error>
               </mat-form-field>
 
               <!-- Marca -->
@@ -220,6 +226,9 @@
                         <mat-error *ngIf="ids.at(i).hasError('minlength') || ids.at(i).hasError('maxlength')">
                           2–60 caracteres
                         </mat-error>
+                        <mat-error *ngIf="ids.at(i).hasError('duplicate')">
+                          ID duplicado
+                        </mat-error>
                       </mat-form-field>
 
                       <mat-form-field appearance="outline" class="w-full">
@@ -227,6 +236,9 @@
                         <input matInput [formControl]="sns.at(i)" placeholder="SN..." autocomplete="off"
                           maxlength="50" />
                         <mat-error *ngIf="sns.at(i).hasError('required')">Requerido</mat-error>
+                        <mat-error *ngIf="sns.at(i).hasError('duplicate')">
+                          Serie duplicada
+                        </mat-error>
                       </mat-form-field>
                     </div>
                   </div>
@@ -237,7 +249,7 @@
         </div>
 
         <footer class="modal__footer">
-          <button type="button" mat-stroked-button (click)="close()">Cancelar</button>
+          <button type="button" mat-button color="warn" (click)="close()">Cancelar</button>
           <button type="submit" mat-flat-button color="primary"
             [disabled]="bulkForm.invalid || ids.length === 0 || sns.length === 0 || loading">
             {{ loading ? 'Guardando...' : 'Guardar lote' }}
