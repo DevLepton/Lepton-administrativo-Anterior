@@ -32,7 +32,7 @@ export class EditGpsModalComponent {
   @Input() brandOptions: string[] = [];
 
   @Output() gpsUpdated = new EventEmitter<{
-    id: string;
+    ids: string[];
     payload: Partial<Omit<GpsItem, 'id'>>;
   }>();
 
@@ -49,6 +49,9 @@ export class EditGpsModalComponent {
   private changesSub?: Subscription;
 
   isSupportUser = false;
+
+  isBulkEdit = false;
+  bulkIds: string[] = [];
 
   constructor(private authService: AuthService, private fb: FormBuilder) {
     this.form = this.fb.group({
@@ -146,24 +149,39 @@ export class EditGpsModalComponent {
   }
 
   // ===== API del modal =====
-  open(data: GpsItem) {
-    this.currentId = data.id;
+  open(data: GpsItem | GpsItem[]) {
+    const list = Array.isArray(data) ? data : [data];
+
+    this.isBulkEdit = list.length > 1;
+    this.bulkIds = list.map(x => x.id);
+
+    const first = list[0];
+
+    this.currentId = first.id;
     this.show = true;
     this.lockBodyScroll();
 
     this.form.reset({
-      imei: data.imei ?? '',
-      sn: data.sn ?? '',
-      supplier: data.supplier ?? '',
-      brand: data.brand ?? '',
-      model: data.model ?? '',
-      status: (data.status as DeviceStatus) ?? 'En inventario',
-      purchaseDate: this.toDate(data.purchaseDate),
-      entryDate: this.toDate(data.entryDate),
-      installationDate: this.toDate(data.installationDate ?? null),
-      client: data.client ?? '',
-      comments: data.comments ?? '',
+      imei: first.imei ?? '',
+      sn: first.sn ?? '',
+      supplier: first.supplier ?? '',
+      brand: first.brand ?? '',
+      model: first.model ?? '',
+      status: (first.status as DeviceStatus) ?? 'En inventario',
+      purchaseDate: this.toDate(first.purchaseDate),
+      entryDate: this.toDate(first.entryDate),
+      installationDate: this.toDate(first.installationDate ?? null),
+      client: first.client ?? '',
+      comments: first.comments ?? '',
     });
+
+    if (this.isBulkEdit) {
+      this.form.get('imei')?.disable({ emitEvent: false });
+      this.form.get('sn')?.disable({ emitEvent: false });
+    } else {
+      this.form.get('imei')?.enable({ emitEvent: false });
+      this.form.get('sn')?.enable({ emitEvent: false });
+    }
 
     this.initialSnapshot = this.snapshotForm();
     this.hasChanges = false;
@@ -213,9 +231,19 @@ export class EditGpsModalComponent {
       }
     }
 
+    if (this.isBulkEdit) {
+      delete changedOnly.imei;
+      delete changedOnly.sn;
+    }
+
     this.gpsUpdated.emit({
-      id: this.currentId,
-      payload: Object.keys(changedOnly).length ? changedOnly : fullPayload, // fallback por si acaso
+      ids: this.isBulkEdit
+        ? this.bulkIds
+        : [this.currentId!],
+
+      payload: Object.keys(changedOnly).length
+        ? changedOnly
+        : fullPayload,
     });
 
     this.loading = false;

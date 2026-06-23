@@ -5,7 +5,7 @@ import { AccessoryPayload, DeviceStatus } from '../../services/api.service';
 import { AuthService } from '../../services/auth.service';
 
 type AccessoryEditableKeys =
-  | 'accId' | 'sn' | 'supplier' | 'brand' | 'model' | 'status'
+  | 'accId' | 'sn' | 'supplier' | 'brand' | 'model' | 'status' | 'configured'
   | 'purchaseDate' | 'entryDate' | 'installationDate'
   | 'client' | 'comments';
 
@@ -31,7 +31,7 @@ export class EditAccessoryModalComponent {
   @Input() brandOptions: string[] = [];
 
   @Output() accessoryUpdated = new EventEmitter<{
-    id: string; // _id mongo
+    ids: string[];
     payload: Partial<Omit<AccessoryPayload, 'type'>>;
   }>();
 
@@ -52,11 +52,13 @@ export class EditAccessoryModalComponent {
   constructor(private authService: AuthService, private fb: FormBuilder) {
     this.form = this.fb.group({
       accId: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(80)]],
-      sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      sn: ['', [Validators.minLength(3), Validators.maxLength(50)]],
       supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      configured: ['null'],
+      purchaseExternal: [false],
       purchaseDate: [null, Validators.required],
       entryDate: [null, Validators.required],
       installationDate: [null],
@@ -72,6 +74,10 @@ export class EditAccessoryModalComponent {
       startWith(''),
       map(v => this.filterList((v ?? '').toString(), this.brandOptions))
     );
+
+    this.form.get('purchaseExternal')!.valueChanges.subscribe(isExternal => {
+      this.applyPurchaseExternal(this.form, !!isExternal);
+    });
 
     const role = this.authService.getUserRole();
 
@@ -119,6 +125,7 @@ export class EditAccessoryModalComponent {
       brand: t(v.brand),
       model: t(v.model),
       status: t(v.status),
+      configured: v.configured,
       purchaseDate: toKey(v.purchaseDate),
       entryDate: toKey(v.entryDate),
       installationDate: v.installationDate ? toKey(v.installationDate) : null,
@@ -135,26 +142,64 @@ export class EditAccessoryModalComponent {
     return true;
   }
 
+  private applyPurchaseExternal(group: FormGroup, isExternal: boolean) {
+    const purchaseCtrl = group.get('purchaseDate');
+    if (!purchaseCtrl) return;
+
+    if (isExternal) {
+      purchaseCtrl.setValue(null, { emitEvent: false });
+      purchaseCtrl.disable({ emitEvent: false });
+
+    } else {
+      purchaseCtrl.enable({ emitEvent: false });
+
+      if (!purchaseCtrl.value) {
+        purchaseCtrl.setValue(new Date(), { emitEvent: false });
+      }
+    }
+  }
+
+  isBulkEdit = false;
+  bulkIds: string[] = [];
+
   // ===== API del modal =====
-  open(data: AccessoryPayload) {
-    this.currentId = data.id || null;
+  open(data: AccessoryPayload | AccessoryPayload[]) {
+    const list = Array.isArray(data) ? data : [data];
+
+    this.isBulkEdit = list.length > 1;
+    this.bulkIds = list.map(x => x.id!).filter(Boolean);
+
+    const first = list[0];
+
+    this.currentId = first.id || null;
     this.show = true;
     this.lockBodyScroll();
 
+    const isExternal = !first.purchaseDate;
+
     this.form.reset({
-      accId: data.idAccesorio ?? '',
-      sn: data.sn ?? '',
-      supplier: data.supplier ?? '',
-      brand: data.brand ?? '',
-      model: data.model ?? '',
-      status: (data.status as DeviceStatus) ?? 'En inventario',
-      purchaseDate: this.toDate(data.purchaseDate),
-      entryDate: this.toDate(data.entryDate),
-      installationDate: this.toDate(data.installationDate ?? null),
-      client: data.client ?? '',
-      comments: data.comments ?? '',
+      accId: first.idAccesorio ?? '',
+      sn: first.sn ?? '',
+      supplier: first.supplier ?? '',
+      brand: first.brand ?? '',
+      model: first.model ?? '',
+      status: (first.status as DeviceStatus) ?? 'En inventario',
+      configured: first.configured === true ? 'true' : first.configured === false ? 'false' : 'null',
+      purchaseExternal: isExternal,
+      purchaseDate: this.toDate(first.purchaseDate),
+      entryDate: this.toDate(first.entryDate),
+      installationDate: this.toDate(first.installationDate ?? null),
+      client: first.client ?? '',
+      comments: first.comments ?? '',
     });
 
+    if (this.isBulkEdit) {
+      this.form.get('accId')?.disable({ emitEvent: false });
+    } else {
+      this.form.get('accId')?.enable({ emitEvent: false });
+    }
+
+    this.applyPurchaseExternal(this.form, isExternal);
     this.initialSnapshot = this.snapshotForm();
     this.hasChanges = false;
 
@@ -178,6 +223,8 @@ export class EditAccessoryModalComponent {
     const v = this.form.value;
     const current: Record<AccessoryEditableKeys, any> = this.snapshotForm();
 
+    const isExternal = !!this.form.get('purchaseExternal')!.value;
+
     // payload completo (normalizado)
     const fullPayload: Record<AccessoryEditableKeys, any> = {
       accId: String(v.accId ?? '').trim(),
@@ -186,7 +233,8 @@ export class EditAccessoryModalComponent {
       brand: String(v.brand ?? '').trim(),
       model: String(v.model ?? '').trim(),
       status: v.status as DeviceStatus,
-      purchaseDate: this.toYMD(v.purchaseDate),
+      configured: v.configured === 'true' ? true : v.configured === 'false' ? false : null,
+      purchaseDate: isExternal ? null : this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
       installationDate: v.installationDate ? this.toYMD(v.installationDate) : null,
       client: this.emptyToNull(v.client),
@@ -204,10 +252,18 @@ export class EditAccessoryModalComponent {
 
     // 🔁 traducir accId -> id (backend)
     const out: any = { ...(Object.keys(changedOnly).length ? changedOnly : fullPayload) };
+
+    if (this.isBulkEdit) {
+      delete out.accId;
+      delete out.id;
+    }
+
     if ('accId' in out) { out.id = out.accId; delete out.accId; }
 
     this.accessoryUpdated.emit({
-      id: this.currentId,
+      ids: this.isBulkEdit
+        ? this.bulkIds
+        : [this.currentId!],
       payload: out,
     });
 

@@ -16,7 +16,8 @@
       <div class="row"><span>Modelo</span><b>{{ data?.model || '—' }}</b></div>
       <div class="row"><span>Proveedor</span><b>{{ data?.supplier || '—' }}</b></div>
       <div class="row"><span>Estatus</span><b>{{ data?.status || '—' }}</b></div>
-      
+      <div class="row"><span>Ensamblado</span><b>{{ data?.configured === true ? 'Ensamblado' : data?.configured === false ? 'No ensamblado' : 'No aplica' }}</b></div>
+
       <div class="row"><span>Precio neto</span><b>{{ data?.netPrice ? ('$ ' + data?.netPrice) : '—' }}</b></div>
       <div class="row"><span>Precio bruto</span><b>{{ data?.grossPrice ? ('$ ' + data?.grossPrice) : '—' }}</b></div>
       <div class="row"><span>Código SAT</span><b>{{ data?.satCode || '—' }}</b></div>

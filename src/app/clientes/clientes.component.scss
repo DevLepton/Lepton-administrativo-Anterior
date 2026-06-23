@@ -180,18 +180,18 @@
       }
 
       .edit-button {
-          background-color: #0074ff;
+          background-color: var(--color-warning);
 
           &:hover {
-              background-color: #1565c0;
+              background-color: var(--color-warning-hover);
           }
       }
 
       .delete-button {
-          background-color: #ff4c4c;
+          background-color: var(--color-danger);
 
           &:hover {
-              background-color: #e53935;
+              background-color: var(--color-danger-hover);
           }
       }
 
@@ -206,17 +206,17 @@
           text-transform: capitalize;
 
           &.status-activo {
-              background-color: #28a745;
+              background-color: var(--color-success);
               color: white;
           }
 
           &.status-inactivo {
-              background-color: #dc3545;
+              background-color: var(--color-danger);
               color: white;
           }
 
           &.status-pendiente {
-              background-color: #f1c40f;
+              background-color: var(--color-warning);
               color: white;
           }
       }

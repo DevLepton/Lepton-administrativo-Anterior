@@ -374,7 +374,6 @@
     cursor: default;
 }
 
-
 .last-update {
     font-size: 0.8rem;
     color: #888;
@@ -471,6 +470,7 @@
     font-weight: 600;
     text-align: left;
     padding: 10px;
+    white-space: nowrap;
     border-bottom: 1px solid #e5e7eb;
 }
 
@@ -733,4 +733,9 @@
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
+}
+
+::ng-deep .multiline-tooltip {
+  white-space: pre-line !important;
+  max-width: 420px !important;
 }

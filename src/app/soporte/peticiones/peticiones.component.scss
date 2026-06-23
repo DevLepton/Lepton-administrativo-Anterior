@@ -113,10 +113,10 @@
   }
 
   .edit-button {
-    background-color: var(--color-primary);
+    background-color: var(--color-warning);
 
     &:hover:not(:disabled) {
-      background-color: var(--color-primary-hover);
+      background-color: var(--color-warning-hover);
     }
   }
 
@@ -718,6 +718,11 @@ mat-paginator {
   background: #fff;
 }
 
+.petition-actions:has(button) {
+display: flex;
+gap: 10px;
+}
+
 .send-button {
   display: inline-flex;
   align-items: center;
@@ -741,6 +746,10 @@ mat-paginator {
   &:not(.return) {
     background: #1f9d84;
   }
+}
+
+.edit-mode {
+  background: #f59e0b;
 }
 
 /* icono */

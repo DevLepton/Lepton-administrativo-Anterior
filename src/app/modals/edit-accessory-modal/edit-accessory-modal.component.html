@@ -2,7 +2,12 @@
 
 <div class="modal" *ngIf="show">
   <header class="modal__header">
-    <h3>Editar Accesorio</h3>
+    <h3>
+      {{ isBulkEdit
+      ? ('Editar ' + bulkIds.length + ' accesorios')
+      : 'Editar Accesorio'
+      }}
+    </h3>
     <button mat-icon-button (click)="close()" aria-label="Cerrar">
       <mat-icon>close</mat-icon>
     </button>
@@ -12,9 +17,10 @@
     <div class="grid">
 
       <!-- ID Accesorio (schema: id) -->
-      <mat-form-field appearance="outline">
+      <mat-form-field *ngIf="!isBulkEdit" appearance="outline">
         <mat-label>ID Accesorio</mat-label>
-        <input matInput formControlName="accId" placeholder="ACC-001 / SERIAL-ID..." autocomplete="off" maxlength="80" />
+        <input matInput formControlName="accId" placeholder="ACC-001 / SERIAL-ID..." autocomplete="off"
+          maxlength="80" />
         <mat-error *ngIf="form.get('accId')?.hasError('required')">ID es requerido</mat-error>
       </mat-form-field>
 
@@ -22,7 +28,7 @@
       <mat-form-field appearance="outline">
         <mat-label>Serie (SN)</mat-label>
         <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
-        <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
+        <!-- <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error> -->
       </mat-form-field>
 
       <!-- Proveedor -->
@@ -64,14 +70,35 @@
         <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
       </mat-form-field>
 
-      <!-- Fechas -->
       <mat-form-field appearance="outline">
-        <mat-label>Fecha de compra</mat-label>
-        <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
-        <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
-        <mat-datepicker #pd></mat-datepicker>
-        <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">Requerida</mat-error>
+        <mat-label>Ensamblado</mat-label>
+
+        <mat-select formControlName="configured">
+          <mat-option value="null">No aplica</mat-option>
+          <mat-option value="false">No ensamblado</mat-option>
+          <mat-option value="true">Ensamblado</mat-option>
+        </mat-select>
       </mat-form-field>
+
+      <!-- Fechas -->
+      <div class="purchase-row">
+        <mat-form-field appearance="outline" class="purchase-field">
+          <mat-label>Fecha de compra</mat-label>
+
+          <input matInput [matDatepicker]="pd" formControlName="purchaseDate" />
+
+          <mat-datepicker-toggle matSuffix [for]="pd"></mat-datepicker-toggle>
+          <mat-datepicker #pd></mat-datepicker>
+
+          <mat-error *ngIf="form.get('purchaseDate')?.hasError('required')">
+            Requerida
+          </mat-error>
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="purchaseExternal">
+          Externo
+        </mat-slide-toggle>
+      </div>
 
       <mat-form-field appearance="outline">
         <mat-label>Fecha de ingreso</mat-label>

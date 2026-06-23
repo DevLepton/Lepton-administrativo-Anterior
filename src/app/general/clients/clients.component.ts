@@ -20,12 +20,39 @@ import { ConfirmModalService } from '../../services/confirm-modal/confirm-modal-
 import { saveAs } from 'file-saver';
 import * as XLSX from 'xlsx-js-style';
 import { AuthService } from '../../services/auth.service';
+import { ExportExcelService } from '../../services/export-excel.service';
 
 type BucketKey = '+12H' | '+1D' | '+15D' | '+1M' | '+6M' | '+1A' | '+2A' | '+3A' | '+4A' | '+5A';
 
 type BucketItem = {
   label: BucketKey;
   value: number;
+};
+
+type SortDirection = 'asc' | 'desc';
+
+type TrackerSortField =
+  'id' |
+  'nombre' |
+  'imei' |
+  'sim' |
+  'plan' |
+  'modelo' |
+  'clon' |
+  'suspendido' |
+  'hidden' |
+  'sdc1' |
+  'sdc2' |
+  'sdc Acumulado' |
+  'canbus' |
+  'ultima Conexion UTC' |
+  'ultima Conexion Local' |
+  'tiempo Offline' |
+  'status Soporte';
+
+type TrackerSortState = {
+  field: TrackerSortField | null;
+  direction: SortDirection | null;
 };
 
 @Component({
@@ -142,6 +169,15 @@ export class ClientsComponent implements OnInit {
     'status Soporte'
   ];
 
+  isSensorColumn(col: string): boolean {
+    return [
+      'sdc1',
+      'sdc2',
+      'sdc Acumulado',
+      'canbus'
+    ].includes(col);
+  }
+
   filteredClientsList: ClienteUI[] = [];
 
   selectedColumns: string[] = [...this.availableColumns];
@@ -152,7 +188,7 @@ export class ClientsComponent implements OnInit {
 
   onlyWithTrackers = false;
 
-  trackerFilter: 'all' | 'with' | 'without' | 'suspended' | 'hidden' | 'offline' = 'all';
+  trackerFilter: 'all' | 'with' | 'without' | 'suspended' | 'hidden' | 'offline' | 'no-use-month' = 'all';
 
   activeTab: 'clients' | 'config' = 'clients';
 
@@ -191,17 +227,25 @@ export class ClientsComponent implements OnInit {
   progress = 0;
   progressMessage = '';
 
-  sortField: 'id' | 'nombre' | 'login' | 'ciudad' | 'total' | 'online' | 'offline' | null = 'id';
+  sortField: 'id' | 'nombre' | 'email' | 'login' | 'ciudad' | 'total' | 'online' | 'offline' | null = 'id';
   sortDirection: 'asc' | 'desc' = 'asc';
+
+  trackerSortStates: Record<number, TrackerSortState> = {};
 
   showSortControls = false;
 
   includeSensors = false;
   includeLogin = false;
 
+  requestIncludeSensors = false;
+  requestIncludeLogin = false;
+
   private sub?: Subscription;
 
   sidebarCollapsed = false;
+
+  missingActiveClients: ClienteUI[] = [];
+  showMissingAlert = false;
 
   constructor(
     private authService: AuthService,
@@ -209,7 +253,8 @@ export class ClientsComponent implements OnInit {
     private api: ApiService,
     private confirm: ConfirmModalService,
     private cdr: ChangeDetectorRef,
-    private toast: NgToastService
+    private toast: NgToastService,
+    private exportExcel: ExportExcelService
   ) { }
 
   ngOnInit(): void {
@@ -218,7 +263,7 @@ export class ClientsComponent implements OnInit {
     this.isSupportUser = role === 'soporte';
     this.isAdminUser = role === 'admin';
     this.isCXUser = role === 'cx';
-    
+
     this.loadPreferences();
     this.loadClientConfig();
     this.loadData();
@@ -359,6 +404,8 @@ export class ClientsComponent implements OnInit {
       next: (res: any) => {
         this.activeClients = res.activeClients || {};
         this.excludedAccounts = (res.excludedAccounts || []).sort((a: number, b: number) => a - b);
+
+        this.checkMissingActiveClients();
 
         this.originalActiveClients = { ...this.activeClients };
         this.originalExcludedAccounts = [...this.excludedAccounts];
@@ -611,9 +658,14 @@ export class ClientsComponent implements OnInit {
         // FINAL
         if (event.type === 'done') {
 
+          this.requestIncludeSensors = event.data.includeSensors || false;
+          this.requestIncludeLogin = event.data.includeLogin || false;
+
           this.lastUpdate = new Date();
 
-          this.clientesFiltrados = [...event.data.clientes];
+          this.clientesFiltrados = [...event.data.clients];
+
+          this.checkMissingActiveClients();
 
           this.updateFilteredClients();
 
@@ -641,9 +693,14 @@ export class ClientsComponent implements OnInit {
 
   //   const res: any = datos;
 
+  //   this.requestIncludeSensors = res.includeSensors || false;
+  //   this.requestIncludeLogin = res.includeLogin || false;
+
   //   this.lastUpdate = new Date();
 
-  //   this.clientesFiltrados = [...res.clientes];
+  //   this.clientesFiltrados = [...res.clients];
+
+  //   this.checkMissingActiveClients();
 
   //   this.updateFilteredClients();
 
@@ -690,8 +747,7 @@ export class ClientsComponent implements OnInit {
   }
 
   toggleClient(id: number) {
-
-    this.isUserAction = true; // 👈 importante
+    this.isUserAction = true;
 
     if (this.expandAll) {
       if (this.renderedClients.has(id)) {
@@ -707,10 +763,24 @@ export class ClientsComponent implements OnInit {
     if (this.expandedClient === id) {
       this.expandedClient = null;
       this.pendingScrollTo = null;
+
+      if (this.renderedClients.has(id)) {
+        this.renderedClients.delete(id);
+      }
     } else {
-      this.pendingScrollTo = id;
+      if (!this.expandAll) {
+        this.renderedClients.clear();
+      }
       this.expandedClient = id;
       this.renderedClients.add(id);
+
+      this.cdr.detectChanges();
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          this.scrollToClient(id);
+        });
+      });
     }
 
     this.cdr.markForCheck();
@@ -736,15 +806,15 @@ export class ClientsComponent implements OnInit {
 
   onAnimationDone(id: number) {
 
-    // ❌ IGNORAR si no viene de interacción del usuario
+    // IGNORAR si no viene de interacción del usuario
     if (!this.isUserAction) return;
 
-    // 🔥 SOLO destruir si NO estás en modo expandAll
+    // SOLO destruir si NO estás en modo expandAll
     if (!this.expandAll && this.expandedClient !== id) {
       this.renderedClients.delete(id);
     }
 
-    // 🔥 scroll al abrir
+    // scroll al abrir
     if (!this.expandAll && this.pendingScrollTo === id && this.expandedClient === id) {
       this.pendingScrollTo = null;
 
@@ -755,7 +825,7 @@ export class ClientsComponent implements OnInit {
       });
     }
 
-    this.cdr.markForCheck();
+    // this.cdr.markForCheck();
   }
 
   filterByBucket(label: BucketKey) {
@@ -810,12 +880,12 @@ export class ClientsComponent implements OnInit {
 
       const idStr = String(c.id);
 
-      // ✅ SOLO ACTIVOS
+      // SOLO ACTIVOS
       if (this.onlyActiveClients && !this.activeClients[idStr]) {
         continue;
       }
 
-      // 🚫 EXCLUIR BLOQUEADOS
+      // EXCLUIR BLOQUEADOS
       if (this.excludeBlockedClients && this.excludedAccounts.includes(c.id)) {
         continue;
       }
@@ -854,6 +924,10 @@ export class ClientsComponent implements OnInit {
         case 'offline':
           matchTrackers = trackers.some(t => t.minutosOffline >= 720);
           trackers = trackers.filter(t => t.minutosOffline >= 720);
+          break;
+
+        case 'no-use-month':
+          matchTrackers = trackers.length > 0 && c.ultimoIngreso === 'Sin uso en el último mes';
           break;
 
         case 'all':
@@ -932,7 +1006,7 @@ export class ClientsComponent implements OnInit {
 
       result.push({
         ...c,
-        trackers: trackers,
+        trackers: this.getSortedTrackersForClient(c.id, trackers),
         total: trackers.length,
         online,
         offline
@@ -1087,6 +1161,34 @@ export class ClientsComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  private parseUltimoIngreso(value: string): number {
+    if (!value) return 0;
+
+    // casos especiales
+    if (value.includes('Sin uso')) return 0;
+
+    const fechaTexto = value.split(' - ')[0]?.trim();
+
+    const match = fechaTexto.match(
+      /^(\d{2})-(\d{2})-(\d{4}) (\d{2}):(\d{2}):(\d{2})$/
+    );
+
+    if (!match) return 0;
+
+    const [, dd, mm, yyyy, hh, mi, ss] = match;
+
+    const fecha = new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      Number(hh),
+      Number(mi),
+      Number(ss)
+    );
+
+    return fecha.getTime();
+  }
+
   sortClients(field: typeof this.sortField, chanceDirection = false) {
 
     if (this.sortField === field && chanceDirection) {
@@ -1116,9 +1218,14 @@ export class ClientsComponent implements OnInit {
           valB = b.nombre || '';
           break;
 
-        case 'login':
+        case 'email':
           valA = a.login || '';
           valB = b.login || '';
+          break;
+
+        case 'login':
+          valA = this.parseUltimoIngreso(a.ultimoIngreso);
+          valB = this.parseUltimoIngreso(b.ultimoIngreso);
           break;
 
         case 'ciudad':
@@ -1159,7 +1266,240 @@ export class ClientsComponent implements OnInit {
     this.cdr.markForCheck();
   }
 
+  sortClientTrackers(client: ClienteUI, field: TrackerSortField) {
+    const current = this.trackerSortStates[client.id];
+
+    if (!current || current.field !== field) {
+      this.trackerSortStates[client.id] = {
+        field,
+        direction: 'asc'
+      };
+    } else if (current.direction === 'asc') {
+      this.trackerSortStates[client.id] = {
+        field,
+        direction: 'desc'
+      };
+    } else {
+      delete this.trackerSortStates[client.id];
+    }
+
+    client.trackers = this.getSortedTrackersForClient(client.id, client.trackers);
+    this.cdr.markForCheck();
+  }
+
+  getTrackerSortIcon(clientId: number, field: TrackerSortField): string {
+    const state = this.trackerSortStates[clientId];
+
+    if (!state || state.field !== field) {
+      return 'unfold_more';
+    }
+
+    return state.direction === 'asc' ? 'arrow_upward' : 'arrow_downward';
+  }
+
+  private getSortedTrackersForClient(clientId: number, fallbackTrackers: TrackerUI[]): TrackerUI[] {
+    const state = this.trackerSortStates[clientId];
+    const trackers = this.getBaseTrackersForClient(clientId, fallbackTrackers);
+
+    if (!state?.field || !state.direction) {
+      return trackers;
+    }
+
+    const dir = state.direction === 'asc' ? 1 : -1;
+
+    return [...trackers].sort((a, b) => {
+      const valA = this.getTrackerSortValue(a, state.field!);
+      const valB = this.getTrackerSortValue(b, state.field!);
+
+      return this.compareTrackerValues(valA, valB, dir);
+    });
+  }
+
+  private getBaseTrackersForClient(clientId: number, fallbackTrackers: TrackerUI[]): TrackerUI[] {
+    const source = this.clientesFiltrados.find(c => c.id === clientId);
+    let trackers = source?.trackers ? [...source.trackers] : [...fallbackTrackers];
+
+    switch (this.trackerFilter) {
+      case 'suspended':
+        trackers = trackers.filter(t => t.suspendido);
+        break;
+
+      case 'hidden':
+        trackers = trackers.filter(t => t.hidden);
+        break;
+
+      case 'offline':
+        trackers = trackers.filter(t => t.minutosOffline >= 720);
+        break;
+    }
+
+    return trackers;
+  }
+
+  private getTrackerSortValue(t: TrackerUI, field: TrackerSortField): string | number | boolean {
+    switch (field) {
+      case 'id':
+        return t.id || 0;
+
+      case 'nombre':
+        return t.nombre || '';
+
+      case 'imei':
+        return t.imei || '';
+
+      case 'sim':
+        return t.sim || '';
+
+      case 'plan':
+        return t.plan || '';
+
+      case 'modelo':
+        return t.modelo || '';
+
+      case 'clon':
+        return t.clon;
+
+      case 'suspendido':
+        return t.suspendido;
+
+      case 'hidden':
+        return t.hidden;
+
+      case 'sdc1':
+        return t.sdc1 || '';
+
+      case 'sdc2':
+        return t.sdc2 || '';
+
+      case 'sdc Acumulado':
+        return t.sdcAcumulado || '';
+
+      case 'canbus':
+        return t.canbus || '';
+
+      case 'ultima Conexion UTC':
+        return this.parseTrackerDate(t.ultimaConexionUTC);
+
+      case 'ultima Conexion Local':
+        return this.parseTrackerDate(t.ultimaConexionLocal) || this.parseTrackerDate(t.ultimaConexionUTC);
+
+      case 'tiempo Offline':
+        return t.minutosOffline || 0;
+
+      case 'status Soporte':
+        return t.statusSoporte || '';
+    }
+  }
+
+  private compareTrackerValues(
+    valA: string | number | boolean,
+    valB: string | number | boolean,
+    dir: number
+  ): number {
+    const emptyA = valA === null || valA === undefined || valA === '';
+    const emptyB = valB === null || valB === undefined || valB === '';
+
+    if (emptyA && emptyB) return 0;
+    if (emptyA) return 1;
+    if (emptyB) return -1;
+
+    if (typeof valA === 'number' && typeof valB === 'number') {
+      return (valA - valB) * dir;
+    }
+
+    if (typeof valA === 'boolean' && typeof valB === 'boolean') {
+      return (Number(valA) - Number(valB)) * dir;
+    }
+
+    return String(valA).localeCompare(String(valB), 'es', {
+      numeric: true,
+      sensitivity: 'base'
+    }) * dir;
+  }
+
+  private parseTrackerDate(value: string): number {
+    if (!value) return 0;
+
+    const utcMatch = value.match(
+      /^(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2}):(\d{2})$/
+    );
+
+    if (utcMatch) {
+      const [, yyyy, mm, dd, hh, mi, ss] = utcMatch;
+      return new Date(
+        Number(yyyy),
+        Number(mm) - 1,
+        Number(dd),
+        Number(hh),
+        Number(mi),
+        Number(ss)
+      ).getTime();
+    }
+
+    const localMatch = value.match(
+      /^(\d{1,2})\/(\d{1,2})\/(\d{4}),\s*(\d{1,2}):(\d{2}):(\d{2})\s*([ap])\.?\s*m\.?$/i
+    );
+
+    if (!localMatch) return 0;
+
+    const [, dd, mm, yyyy, hour, mi, ss, meridiem] = localMatch;
+    let hh = Number(hour);
+
+    if (meridiem.toLowerCase() === 'p' && hh < 12) hh += 12;
+    if (meridiem.toLowerCase() === 'a' && hh === 12) hh = 0;
+
+    return new Date(
+      Number(yyyy),
+      Number(mm) - 1,
+      Number(dd),
+      hh,
+      Number(mi),
+      Number(ss)
+    ).getTime();
+  }
+
+  checkMissingActiveClients() {
+    const missing = this.clientesFiltrados.filter(c => {
+      const trackers = c.trackers || [];
+      const hasTrackers = trackers.length > 0;
+      const hasClone = trackers.some(t => t.clon);
+      const exists = !!this.activeClients[String(c.id)];
+      const excluded = this.excludedAccounts.includes(c.id);
+
+      return hasTrackers && !hasClone && !exists && !excluded;
+    });
+
+    this.missingActiveClients = missing;
+    this.showMissingAlert = missing.length > 0;
+  }
+
+  get missingActiveTooltip(): string {
+    const max = 10;
+
+    const header =
+      `Hay ${this.missingActiveCount} ` +
+      `${this.missingActiveCount === 1 ? 'cliente' : 'clientes'} ` +
+      `sin registrar en la lista de activos`;
+
+    const visible = this.missingActiveClients.slice(0, max);
+
+    let list = visible
+      .map(c => `#${c.id} ${c.nombre}`)
+      .join('\n');
+
+    if (this.missingActiveClients.length > max) {
+      list += `\n... y ${this.missingActiveClients.length - max} más`;
+    }
+
+    return `${header}\n\n${list}`;
+  }
+
+  get missingActiveCount(): number {
+    return this.missingActiveClients.length;
+  }
+
   exportToExcel() {
+
     const selected = this.filteredClientsList.filter(c =>
       this.selectedClients.has(c.id)
     );
@@ -1173,184 +1513,21 @@ export class ClientsComponent implements OnInit {
       return;
     }
 
-    const ws = XLSX.utils.aoa_to_sheet([]);
-
-    const now = new Date().toLocaleString();
-
-    XLSX.utils.sheet_add_aoa(ws, [
-      [`Fecha: ${now}`]
-    ], { origin: { r: 0, c: 0 } });
-
-    const kpis = [
-      ['Clientes sin usar plataforma:', this.totalClientes],
-      ['Número de Dispositivos:', this.totalTrackers],
-      ['Dispositivos Online:', this.totalOnline],
-      ['Dispositivos Offline:', this.totalOffline],
-      ['Porcentaje Online:', `${Math.round((this.totalOnline / (this.totalTrackers || 1)) * 100)}%`],
-      ['GPS Offline + 12H:', this.offlineBuckets.find(b => b.label === '+12H')?.value || 0],
-      ['GPS Offline + 1D:', this.offlineBuckets.find(b => b.label === '+1D')?.value || 0],
-      ['GPS Offline + 15D:', this.offlineBuckets.find(b => b.label === '+15D')?.value || 0],
-      ['GPS Offline + 1M:', this.offlineBuckets.find(b => b.label === '+1M')?.value || 0],
-      ['GPS Offline + 6M:', this.offlineBuckets.find(b => b.label === '+6M')?.value || 0],
-      ['GPS Offline + 1A:', this.offlineBuckets.find(b => b.label === '+1A')?.value || 0],
-      ['GPS Offline + 2A:', this.offlineBuckets.find(b => b.label === '+2A')?.value || 0],
-      ['GPS Offline + 3A:', this.offlineBuckets.find(b => b.label === '+3A')?.value || 0],
-      ['GPS Offline + 4A:', this.offlineBuckets.find(b => b.label === '+4A')?.value || 0],
-      ['GPS Offline + 5A:', this.offlineBuckets.find(b => b.label === '+5A')?.value || 0],
-    ];
-
-
-    XLSX.utils.sheet_add_aoa(ws, kpis, { origin: { r: 2, c: 0 } });
-
-    let currentRow = 0;
-    const startCol = 3; // desplazamiento a la derecha
-
-    selected.forEach(cliente => {
-
-      const headers = [
-        `${cliente.id}`,
-        `${cliente.nombre}`,
-        `${cliente.login}`,
-        `${cliente.ciudad || '-'}`,
-        `${cliente.trackers?.length || 0}`,
-        'Nombre en plataforma',
-        'IMEI',
-        'SIM',
-        'Plan',
-        'Modelo GPS',
-        'Clon',
-        'Suspendido',
-        'Hidden',
-        'SDC1',
-        'SDC2',
-        'SDC Acumulado',
-        'CAN Bus',
-        'Última Conexión UTC',
-        'Última Conexión Tepic',
-        'Tiempo Offline',
-        'Status Soporte',
-        'Último ingreso'
-      ];
-
-      const headerRow = currentRow; // guarda la fila
-
-      XLSX.utils.sheet_add_aoa(ws, [headers], { origin: { r: headerRow, c: startCol } });
-
-      headers.forEach((_, i) => {
-        const ref = XLSX.utils.encode_cell({ r: headerRow, c: startCol + i });
-
-        if (ws[ref]) {
-          ws[ref].s = {
-            font: { bold: true },
-            fill: { fgColor: { rgb: "EAEAEA" } },
-            alignment: { horizontal: "center" }
-          };
-        }
-      });
-
-      currentRow++;
-
-      // 🔽 TRACKERS
-      cliente.trackers?.forEach(t => {
-        XLSX.utils.sheet_add_aoa(ws, [[
-          '',
-          '',
-          '',
-          '',
-          '',
-          t.nombre,
-          t.imei,
-          t.sim,
-          t.plan,
-          t.modelo,
-          t.clon ? 'TRUE' : 'FALSE',
-          t.suspendido ? 'TRUE' : 'FALSE',
-          t.hidden ? 'TRUE' : 'FALSE',
-          t.sdc1 || '',
-          t.sdc2 || '',
-          t.sdcAcumulado || '',
-          t.canbus || '',
-          t.ultimaConexionUTC,
-          t.ultimaConexionLocal,
-          t.tiempoOffline,
-          t.statusSoporte,
-          cliente.ultimoIngreso || ''
-        ]], { origin: { r: currentRow, c: startCol } });
-
-        currentRow++;
-      });
-
-      currentRow += 2;
+    this.exportExcel.exportClients({
+      allClients: this.clientesFiltrados,
+      activeClients: this.activeClients,
+      excludedAccounts: this.excludedAccounts,
+      selected,
+      totalClientes: this.totalClientes,
+      filteredClientsList: this.filteredClientsList,
+      totalTrackers: this.totalTrackers,
+      totalOnline: this.totalOnline,
+      totalOffline: this.totalOffline,
+      totalSuspended: this.totalSuspended,
+      totalHidden: this.totalHidden,
+      offlineBuckets: this.offlineBuckets
     });
 
-    const range = XLSX.utils.decode_range(ws['!ref'] || '');
-
-    for (let R = 0; R <= range.e.r; ++R) {
-      for (let C = 0; C <= range.e.c; ++C) {
-
-        const ref = XLSX.utils.encode_cell({ r: R, c: C });
-        const cell = ws[ref];
-
-        if (!cell || !cell.v) continue;
-
-        const value = String(cell.v);
-
-        // KPI labels
-        if (C === 0 && value.includes(':')) {
-          ws[ref].s = { font: { bold: true } };
-        }
-
-        // Fecha
-        if (value.includes('Fecha:')) {
-          ws[ref].s = { font: { bold: true } };
-        }
-      }
-    }
-
-    const pxToWch = (px: number) => Math.round(px / 12);
-
-    ws['!cols'] = [
-      { wch: 30 }, // KPI label
-      { wch: 10 }, // KPI value
-      { wch: 10 },  // espacio
-      { wch: pxToWch(135) },
-      { wch: pxToWch(510) },
-      { wch: pxToWch(320) },
-      { wch: pxToWch(200) },
-      { wch: pxToWch(150) },
-      { wch: pxToWch(600) },
-      { wch: pxToWch(210) },
-      { wch: pxToWch(180) },
-      { wch: pxToWch(200) },
-      { wch: pxToWch(205) },
-      { wch: pxToWch(120) },
-      { wch: pxToWch(175) },
-      { wch: pxToWch(135) },
-      { wch: pxToWch(160) },
-      { wch: pxToWch(160) },
-      { wch: pxToWch(160) },
-      { wch: pxToWch(160) },
-      { wch: pxToWch(340) },
-      { wch: pxToWch(340) },
-      { wch: pxToWch(485) },
-      { wch: pxToWch(265) },
-      { wch: pxToWch(990) }
-    ];
-
-    // ============================
-    // 📦 EXPORT
-    // ============================
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Clientes');
-
-    const buffer = XLSX.write(wb, {
-      bookType: 'xlsx',
-      type: 'array',
-      cellStyles: true
-    });
-
-    const blob = new Blob([buffer], { type: 'application/octet-stream' });
-    saveAs(blob, 'Detalles Clientes.xlsx');
   }
 
 }

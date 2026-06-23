@@ -6,6 +6,19 @@ import { DeviceStatus } from '../../services/api.service';
 import { SimItem } from '../../inventario/almacen/sims-tab/sims-tab.component';
 import { AuthService } from '../../services/auth.service';
 
+type SimEditableKeys =
+  | 'iccid'
+  | 'model'
+  | 'company'
+  | 'status'
+  | 'supplier'
+  | 'usage'
+  | 'purchaseDate'
+  | 'entryDate'
+  | 'installationDate'
+  | 'client'
+  | 'comments';
+
 @Component({
   selector: 'app-edit-sim-modal',
   templateUrl: './edit-sim-modal.component.html',
@@ -28,7 +41,8 @@ export class EditSimModalComponent {
   @Input() companyOptions: string[] = [];
 
   @Output() simUpdated = new EventEmitter<{
-    id: string; payload: Omit<SimItem, 'id'>;
+    ids: string[];
+    payload: Partial<Omit<SimItem, 'id'>>;
   }>();
 
   show = false;
@@ -44,6 +58,9 @@ export class EditSimModalComponent {
   private changesSub?: Subscription;
 
   isSupportUser = false;
+
+  isBulkEdit = false;
+  bulkIds: string[] = [];
 
   private snapshotForm() {
     const v = this.form.getRawValue();
@@ -124,24 +141,38 @@ export class EditSimModalComponent {
   }
 
   /** Abre el modal con los datos del SIM */
-  open(data: SimItem) {
-    this.currentId = data.id;
+  open(data: SimItem | SimItem[]) {
+
+    const list = Array.isArray(data) ? data : [data];
+
+    this.isBulkEdit = list.length > 1;
+    this.bulkIds = list.map(x => x.id);
+
+    const first = list[0];
+
+    this.currentId = first.id;
     this.show = true;
     this.lockBodyScroll();
 
     this.form.reset({
-      iccid: data.iccid ?? '',
-      model: data.model ?? '',
-      company: data.company ?? '',
-      supplier: data.supplier ?? '',
-      status: (data.status as DeviceStatus) ?? 'En inventario',
-      usage: data.usage ?? 'GPS',
-      purchaseDate: this.toDate(data.purchaseDate),
-      entryDate: this.toDate(data.entryDate),
-      installationDate: this.toDate(data.installationDate ?? null),
-      client: data.client ?? '',
-      comments: data.comments ?? '',
+      iccid: first.iccid ?? '',
+      model: first.model ?? '',
+      company: first.company ?? '',
+      supplier: first.supplier ?? '',
+      status: (first.status as DeviceStatus) ?? 'En inventario',
+      usage: first.usage ?? 'GPS',
+      purchaseDate: this.toDate(first.purchaseDate),
+      entryDate: this.toDate(first.entryDate),
+      installationDate: this.toDate(first.installationDate ?? null),
+      client: first.client ?? '',
+      comments: first.comments ?? '',
     });
+
+    if (this.isBulkEdit) {
+      this.form.get('iccid')?.disable({ emitEvent: false });
+    } else {
+      this.form.get('iccid')?.enable({ emitEvent: false });
+    }
 
     // Tomamos la "foto" inicial y marcamos sin cambios
     this.initialSnapshot = this.snapshotForm();
@@ -163,27 +194,68 @@ export class EditSimModalComponent {
 
 
   submit() {
+
     if (this.form.invalid || !this.currentId) return;
+
     this.loading = true;
+
     const v = this.form.value;
 
-    const payload = {
+    const current = this.snapshotForm();
+
+    const fullPayload = {
       type: 'sim' as const,
-      iccid: String(v.iccid).trim(),
-      model: String(v.model).trim(),
-      company: String(v.company).trim(),
-      supplier: String(v.supplier).trim(),
+
+      iccid: String(v.iccid ?? '').trim(),
+      model: String(v.model ?? '').trim(),
+      company: String(v.company ?? '').trim(),
+      supplier: String(v.supplier ?? '').trim(),
+
       status: v.status as DeviceStatus,
+
       usage: v.usage,
+
       purchaseDate: this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
-      installationDate: v.installationDate ? this.toYMD(v.installationDate) : null,
+
+      installationDate: v.installationDate
+        ? this.toYMD(v.installationDate)
+        : null,
+
       client: this.emptyToNull(v.client),
       comments: this.emptyToNull(v.comments),
     };
 
-    this.simUpdated.emit({ id: this.currentId, payload });
+    const changedOnly: Partial<Record<SimEditableKeys, any>> = {};
+
+    const keys = Object.keys(current) as SimEditableKeys[];
+
+    for (const k of keys) {
+
+      if (
+        !this.initialSnapshot ||
+        current[k] !== this.initialSnapshot[k]
+      ) {
+        changedOnly[k] = (fullPayload as any)[k];
+      }
+    }
+
+    if (this.isBulkEdit) {
+      delete changedOnly.iccid;
+    }
+
+    this.simUpdated.emit({
+      ids: this.isBulkEdit
+        ? this.bulkIds
+        : [this.currentId],
+
+      payload: Object.keys(changedOnly).length
+        ? changedOnly
+        : fullPayload
+    });
+
     this.loading = false;
+
     this.close();
   }
 

@@ -1,5 +1,5 @@
 {
-    "clientes": [
+    "clients": [
         {
             "id": 46207,
             "nombre": "José Carlos Soporte Leptón",
@@ -51069,5 +51069,7 @@
             "ultimoIngreso": "Sin uso en el último mes",
             "hasHidden": false
         }
-    ]
+    ],
+    "includeSensors": false,
+    "includeLogin": true
 }

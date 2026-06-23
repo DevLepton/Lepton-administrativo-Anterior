@@ -2,7 +2,12 @@
 
 <div class="modal" *ngIf="show">
     <header class="modal__header">
-        <h3>Editar SIM</h3>
+        <h3>
+            {{ isBulkEdit
+            ? ('Editar ' + bulkIds.length + ' SIMs')
+            : 'Editar SIM'
+            }}
+        </h3>
         <button mat-icon-button (click)="close()" aria-label="Cerrar">
             <mat-icon>close</mat-icon>
         </button>
@@ -11,7 +16,7 @@
     <form [formGroup]="form" (ngSubmit)="submit()" class="modal__body compact">
         <div class="grid">
             <!-- ICCID -->
-            <mat-form-field appearance="outline">
+            <mat-form-field *ngIf="!isBulkEdit" appearance="outline">
                 <mat-label>ICCID</mat-label>
                 <input matInput formControlName="iccid" placeholder="123456789..." inputmode="numeric"
                     autocomplete="off" (input)="digitsOnly('iccid')" maxlength="20" />

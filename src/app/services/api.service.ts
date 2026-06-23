@@ -99,22 +99,9 @@ export interface ClienteUI {
 }
 
 export interface FullClientsResponse {
-  clientes: ClienteUI[];
-
-  kpis: {
-    totalClientes: number;
-    totalTrackers: number;
-    online: number;
-    offline: number;
-    porcentajeOnline: number;
-
-    offline12h: number;
-    offline1d: number;
-    offline15d: number;
-    offline1m: number;
-    offline6m: number;
-    offline1a: number;
-  };
+  clients: ClienteUI[];
+  includeSensors: boolean;
+  includeLogin: boolean;
 }
 
 /* ====================== Tipos Devices ====================== */
@@ -183,6 +170,7 @@ export interface AccessoryPayload {
   brand: string;
   model: string;
   status: DeviceStatus;
+  configured?: boolean | null;
   purchaseDate: string | Date | null;       // 'YYYY-MM-DD'
   entryDate: string | Date | null;          // 'YYYY-MM-DD'
   installationDate?: string | Date | null; // (en masivo lo dejamos null)
@@ -251,15 +239,11 @@ export interface RequestsQuery {
 export const apiUrl = 'http://localhost:3103';
 // export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
-// Mostrar sin uso y ordenar for fecha ultima conexion, Sincronizar con listo para usar, Qrs
-// Que Admin también pueda hacer peticiones
-// Crear otro campo para accesorios para identificar cuáles ya están configurados
-// Contadores en las pestañas de los dispositivos
-// En el excel incluír el contador de los suspendidos y hidden
-// Nombre del excel "Detalles Clientes 2026 04 25"
-// Dejar un último login por usuario en el excel
-// Agregar una alerta a la sección de clientes para mostrar si hay clientes que no estén registrados en la lista de clientes activos (de clientes con dispositivos, comparalos con la lista de clientes activos, si hay alguno que no esté registrado, mostrar una alerta indicando cuáles son esos clientes para que se agreguen a la lista)
-// Si no hay datos de sensores, que se muestre ese mensaje en laas celdas de la tabla
+// Qrs
+// Que se puedan hacer búsquedas por IMEI y sim en la tabla de clientes
+// Al eliminar una petición que pregunte si se quiere cambiar el estatus de los dispositivos de configuración a "En inventario"
+// Agregar a la tabla de dispositivos la columna con los comentarios.
+// Agregar una opción al sincronizar para hacer la búsqueda de IMEI solo en la cuenta de soporte o en todas las cuentas. 
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -326,7 +310,7 @@ export class ApiService {
   getProfile(): Observable<any> {
     return this.http.get(`${apiUrl}/users/profile`);
   }
-  
+
   updateUser(id: number, user: any): Observable<any> { return this.http.put(`${apiUrl}/users/${id}`, user); }
   //   updateUser(id: string, data: any) {
   //   return this.http.put(`${apiUrl}/users/${id}`, data);
@@ -351,7 +335,7 @@ export class ApiService {
       status?: string;
       includeIds?: string[];
     },
-    forceRefresh = false
+    forceRefresh = false 
   ): Observable<any> {
 
     if (!this.devicesCache$ || forceRefresh) {
@@ -405,6 +389,27 @@ export class ApiService {
     return this.http.delete(`${apiUrl}/devices/${id}`);
   }
 
+  bulkUpdateSims(ids: string[], payload: UpdateSimPayload): Observable<any> {
+    const body: any = {
+      ids,
+      payload: { ...payload }
+    };
+
+    if ('purchaseDate' in body.payload) {
+      body.payload.purchaseDate = this.toIsoDate(body.payload.purchaseDate);
+    }
+
+    if ('entryDate' in body.payload) {
+      body.payload.entryDate = this.toIsoDate(body.payload.entryDate);
+    }
+
+    if ('installationDate' in body.payload) {
+      body.payload.installationDate = this.toIsoDate(body.payload.installationDate);
+    }
+
+    return this.http.put(`${apiUrl}/devices/bulk`, body);
+  }
+
   /* ====================== GPS (devices?type=gps) ====================== */
   getGps(query?: GpsQuery): Observable<any> {
     const params = this.buildHttpParams({ type: 'gps', ...query });
@@ -433,6 +438,31 @@ export class ApiService {
   }
   deleteGps(id: string): Observable<any> {
     return this.http.delete(`${apiUrl}/devices/${id}`);
+  }
+
+  bulkUpdateGps(
+    ids: string[],
+    payload: UpdateGpsPayload
+  ): Observable<any> {
+
+    const body: any = {
+      ids,
+      payload: { ...payload }
+    };
+
+    if ('purchaseDate' in body.payload) {
+      body.payload.purchaseDate = this.toIsoDate(body.payload.purchaseDate);
+    }
+
+    if ('entryDate' in body.payload) {
+      body.payload.entryDate = this.toIsoDate(body.payload.entryDate);
+    }
+
+    if ('installationDate' in body.payload) {
+      body.payload.installationDate = this.toIsoDate(body.payload.installationDate);
+    }
+
+    return this.http.put(`${apiUrl}/devices/bulk`, body);
   }
 
   /* ====================== Events ====================== */
@@ -500,6 +530,27 @@ export class ApiService {
   }
   deleteAccessory(id: string): Observable<any> {
     return this.http.delete(`${apiUrl}/devices/${id}`);
+  }
+
+  bulkUpdateAccessories(ids: string[], payload: UpdateAccessoryPayload): Observable<any> {
+    const body: any = {
+      ids,
+      payload: { ...payload }
+    };
+
+    if ('purchaseDate' in body.payload) {
+      body.payload.purchaseDate = this.toIsoDate(body.payload.purchaseDate);
+    }
+
+    if ('entryDate' in body.payload) {
+      body.payload.entryDate = this.toIsoDate(body.payload.entryDate);
+    }
+
+    if ('installationDate' in body.payload) {
+      body.payload.installationDate = this.toIsoDate(body.payload.installationDate);
+    }
+
+    return this.http.put(`${apiUrl}/devices/bulk`, body);
   }
 
   /* ====================== PETICIONES (requests) ====================== */
@@ -691,6 +742,10 @@ export class ApiService {
         eventSource.close();
       };
     });
+  }
+
+  syncGpsWithNavixy(userId: number): Observable<any> {
+    return this.http.get(`${apiUrl}/clients/navixy-trackers/${userId}`);
   }
 
 }

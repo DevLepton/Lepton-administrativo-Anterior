@@ -58,6 +58,13 @@
                         Sin dispositivos
                     </mat-option>
 
+                    <span [matTooltip]="!requestIncludeLogin ? 'La consulta no tiene información del último login' : ''"
+                        [matTooltipDisabled]="requestIncludeLogin">
+                        <mat-option [disabled]="!requestIncludeLogin" value="no-use-month">
+                            Sin uso en el último mes
+                        </mat-option>
+                    </span>
+
                 </mat-select>
             </mat-form-field>
 
@@ -122,6 +129,11 @@
 
             </mat-checkbox>
 
+            <mat-icon matTooltipClass="multiline-tooltip" *ngIf="showMissingAlert && (isAdminUser || isSupportUser)" color="warn"
+                [matTooltip]="missingActiveTooltip" matTooltipClass="multiline-tooltip">
+                warning
+            </mat-icon>
+
             <div class="sort-wrapper" #sortWrapper>
 
                 <button mat-button class="custom-button" (click)="toggleSortControls(); stop($event);">
@@ -139,8 +151,8 @@
                         Nombre {{ sortField === 'nombre' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
                     </button>
 
-                    <button mat-button (click)="sortClients('login', true)">
-                        Correo {{ sortField === 'login' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    <button mat-button (click)="sortClients('email', true)">
+                        Correo {{ sortField === 'email' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
                     </button>
 
                     <button mat-button (click)="sortClients('ciudad', true)">
@@ -157,6 +169,10 @@
 
                     <button mat-button (click)="sortClients('offline', true)">
                         Offline {{ sortField === 'offline' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
+                    </button>
+
+                    <button mat-button (click)="sortClients('login', true)">
+                        Último login {{ sortField === 'login' ? (sortDirection === 'asc' ? '↑' : '↓') : '' }}
                     </button>
 
                 </div>
@@ -199,6 +215,8 @@
 
             <!-- CLIENTES -->
             <div class="clients" #clientsContainer>
+                <span *ngIf="filteredClientsList.length === 0" class="external-text"
+                    style="display: block; text-align: center;"> Sin clientes que mostrar</span>
 
                 <div class="client" #clientItem *ngFor="let c of filteredClientsList; trackBy: trackByClient">
 
@@ -252,7 +270,13 @@
                                     <!-- ID -->
                                     <ng-container matColumnDef="id">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('id')"> ID
+                                            [class.hidden-col]="!visibleColumnsSet.has('id')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'id')"
+                                                matTooltip="Ordenar por ID">
+                                                ID
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'id') }}</mat-icon>
+                                            </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('id')"> {{ t.id }} </td>
@@ -261,7 +285,13 @@
                                     <!-- Nombre -->
                                     <ng-container matColumnDef="nombre">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('nombre')"> Nombre en Plataforma
+                                            [class.hidden-col]="!visibleColumnsSet.has('nombre')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'nombre')"
+                                                matTooltip="Ordenar por nombre">
+                                                Nombre en Plataforma
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'nombre') }}</mat-icon>
+                                            </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('nombre')"> {{ t.nombre }} </td>
@@ -270,7 +300,14 @@
                                     <!-- IMEI -->
                                     <ng-container matColumnDef="imei">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('imei')"> IMEI </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('imei')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'imei')"
+                                                matTooltip="Ordenar por IMEI">
+                                                IMEI
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'imei') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('imei')"> {{ t.imei }} </td>
                                     </ng-container>
@@ -278,7 +315,14 @@
                                     <!-- SIM -->
                                     <ng-container matColumnDef="sim">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('sim')"> SIM </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('sim')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'sim')"
+                                                matTooltip="Ordenar por SIM">
+                                                SIM
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'sim') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('sim')">
                                             {{ t.sim }} </td>
@@ -287,7 +331,14 @@
                                     <!-- PLAN -->
                                     <ng-container matColumnDef="plan">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('plan')"> Plan </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('plan')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'plan')"
+                                                matTooltip="Ordenar por plan">
+                                                Plan
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'plan') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('plan')"> {{ t.plan }} </td>
                                     </ng-container>
@@ -295,7 +346,14 @@
                                     <!-- MODELO -->
                                     <ng-container matColumnDef="modelo">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('modelo')"> Modelo GPS </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('modelo')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'modelo')"
+                                                matTooltip="Ordenar por modelo">
+                                                Modelo GPS
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'modelo') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('modelo')"> {{ t.modelo }} </td>
                                     </ng-container>
@@ -303,7 +361,14 @@
                                     <!-- CLON -->
                                     <ng-container matColumnDef="clon">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('clon')"> Clon </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('clon')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'clon')"
+                                                matTooltip="Ordenar por clon">
+                                                Clon
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'clon') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('clon')">
                                             <span [class.bad]="t.clon">{{ t.clon ? 'TRUE' : 'FALSE' }}</span>
@@ -313,7 +378,14 @@
                                     <!-- SUSPENDIDO -->
                                     <ng-container matColumnDef="suspendido">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('suspendido')"> Suspendido </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('suspendido')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'suspendido')"
+                                                matTooltip="Ordenar por suspendido">
+                                                Suspendido
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'suspendido') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('suspendido')">
                                             {{ t.suspendido ? 'TRUE' : 'FALSE' }}
@@ -323,7 +395,14 @@
                                     <!-- HIDDEN -->
                                     <ng-container matColumnDef="hidden">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('hidden')"> Hidden </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('hidden')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'hidden')"
+                                                matTooltip="Ordenar por hidden">
+                                                Hidden
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'hidden') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('hidden')">
                                             <span [class.bad]="t.hidden">{{ t.hidden ? 'TRUE' : 'FALSE' }}</span>
@@ -333,48 +412,97 @@
                                     <!-- SDC1 -->
                                     <ng-container matColumnDef="sdc1">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('sdc1')"> SDC1 </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc1')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'sdc1')"
+                                                matTooltip="Ordenar por SDC1">
+                                                SDC1
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'sdc1') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('sdc1')">
-                                            {{ t.sdc1 || '-' }}
+
+                                            <ng-container *ngIf="requestIncludeSensors; else noSensors">
+                                                {{ t.sdc1 || '-' }}
+                                            </ng-container>
+
                                         </td>
                                     </ng-container>
 
                                     <!-- SDC2 -->
                                     <ng-container matColumnDef="sdc2">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('sdc2')"> SDC2 </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc2')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'sdc2')"
+                                                matTooltip="Ordenar por SDC2">
+                                                SDC2
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'sdc2') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('sdc2')">
-                                            {{ t.sdc2 || '-' }}
+
+                                            <ng-container *ngIf="requestIncludeSensors; else noSensors">
+                                                {{ t.sdc2 || '-' }}
+                                            </ng-container>
+
                                         </td>
                                     </ng-container>
 
                                     <!-- SDC ACUMULADO -->
                                     <ng-container matColumnDef="sdc Acumulado">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('sdc Acumulado')"> SDC Acumulado
+                                            [class.hidden-col]="!visibleColumnsSet.has('sdc Acumulado')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'sdc Acumulado')"
+                                                matTooltip="Ordenar por SDC acumulado">
+                                                SDC Acumulado
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'sdc Acumulado') }}</mat-icon>
+                                            </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('sdc Acumulado')">
-                                            {{ t.sdcAcumulado || '-' }}
+
+                                            <ng-container *ngIf="requestIncludeSensors; else noSensors">
+                                                {{ t.sdcAcumulado || '-' }}
+                                            </ng-container>
+
                                         </td>
                                     </ng-container>
 
                                     <!-- CANBUS -->
                                     <ng-container matColumnDef="canbus">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('canbus')"> CAN Bus </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('canbus')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'canbus')"
+                                                matTooltip="Ordenar por CAN Bus">
+                                                CAN Bus
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'canbus') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('canbus')">
-                                            {{ t.canbus || '-' }}
+
+                                            <ng-container *ngIf="requestIncludeSensors; else noSensors">
+                                                {{ t.canbus || '-' }}
+                                            </ng-container>
+
                                         </td>
                                     </ng-container>
 
                                     <!-- UTC -->
                                     <ng-container matColumnDef="ultima Conexion UTC">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')"> UTC
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'ultima Conexion UTC')"
+                                                matTooltip="Ordenar por UTC">
+                                                UTC
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion UTC') }}</mat-icon>
+                                            </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion UTC')">
@@ -385,8 +513,14 @@
                                     <!-- ÚLTIMA CONEXIÓN -->
                                     <ng-container matColumnDef="ultima Conexion Local">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion Local')"> Última
-                                            Conexión </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion Local')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'ultima Conexion Local')"
+                                                matTooltip="Ordenar por ultima conexion">
+                                                Última Conexión
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion Local') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('ultima Conexion Local')">
                                             {{ t.ultimaConexionLocal }}
@@ -396,8 +530,13 @@
                                     <!-- TIEMPO OFFLINE -->
                                     <ng-container matColumnDef="tiempo Offline">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')"> Tiempo
-                                            Offline
+                                            [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'tiempo Offline')"
+                                                matTooltip="Ordenar por tiempo offline">
+                                                Tiempo Offline
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'tiempo Offline') }}</mat-icon>
+                                            </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('tiempo Offline')">
@@ -408,7 +547,14 @@
                                     <!-- STATUS -->
                                     <ng-container matColumnDef="status Soporte">
                                         <th mat-header-cell *matHeaderCellDef
-                                            [class.hidden-col]="!visibleColumnsSet.has('status Soporte')"> Status </th>
+                                            [class.hidden-col]="!visibleColumnsSet.has('status Soporte')">
+                                            <button type="button" mat-button
+                                                (click)="stop($event); sortClientTrackers(c, 'status Soporte')"
+                                                matTooltip="Ordenar por status">
+                                                Status
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'status Soporte') }}</mat-icon>
+                                            </button>
+                                        </th>
                                         <td mat-cell *matCellDef="let t"
                                             [class.hidden-col]="!visibleColumnsSet.has('status Soporte')">
                                             <span [ngClass]="getStatusClass(t.statusSoporte)">
@@ -420,6 +566,11 @@
                                     <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
                                     <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
 
+                                    <ng-template #noSensors>
+                                        <mat-icon
+                                            matTooltip="No hay información de sensores porque la consulta se hizo sin ese filtro"
+                                            class="info-icon" style="position: unset;">info</mat-icon>
+                                    </ng-template>
                                 </table>
                             </div>
                         </ng-container>
@@ -725,4 +876,4 @@
         </div>
     </div>
 </div>
-<app-confirm-modal></app-confirm-modal>
+<!-- <app-confirm-modal></app-confirm-modal> -->

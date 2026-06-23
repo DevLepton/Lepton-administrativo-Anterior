@@ -49,6 +49,7 @@ export class PeticionesComponent implements OnInit {
 
   constructor(private authService: AuthService, private apiService: ApiService, private toast: NgToastService) { }
 
+  isAdminUser = false;
   isInventoryUser = false;
   isSupportUser = false;
 
@@ -89,6 +90,7 @@ export class PeticionesComponent implements OnInit {
   ngOnInit(): void {
     const role = this.authService.getUserRole();
 
+    this.isAdminUser = role === 'admin';
     this.isInventoryUser = role === 'inventario';
     this.isSupportUser = role === 'soporte';
 
@@ -662,6 +664,10 @@ export class PeticionesComponent implements OnInit {
   }
 
   responderPeticion(r: PeticionItem) {
+    this.editandoRespuesta = false;
+    this.modoValidacion = false;
+    this.hayCambiosFlag = false;
+
     this.peticionAResponder = r;
     this.responding = true;
 
@@ -851,6 +857,8 @@ export class PeticionesComponent implements OnInit {
   }
 
   editarRespuesta(r: PeticionItem) {
+    this.modoValidacion = false;
+    this.hayCambiosFlag = false;
     this.peticionAResponder = r;
     this.responding = true;
     this.editandoRespuesta = true;
@@ -898,12 +906,14 @@ export class PeticionesComponent implements OnInit {
   }
 
   validarPeticion(r: PeticionItem) {
+    this.editandoRespuesta = false;
+    this.hayCambiosFlag = false;
+
     this.dispositivosValidacion = [];
 
     this.peticionAValidar = r;
     this.responding = true;
     this.modoValidacion = true;
-    this.editandoRespuesta = false;
 
     this.responseComments = r.comments || '';
 
@@ -959,7 +969,8 @@ export class PeticionesComponent implements OnInit {
   eliminarDispositivoUnitario(index: number) {
 
     const item = this.dispositivosValidacion[index];
-
+    console.log(index)
+    console.log(this.dispositivosValidacion)
     // 👉 si ya tiene dispositivo asignado
     if (item.id) {
 

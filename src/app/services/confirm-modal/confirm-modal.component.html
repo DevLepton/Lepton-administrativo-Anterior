@@ -1,6 +1,4 @@
-<div *ngIf="confirm.show"
-     class="modal-backdrop"
-     (click)="onBackdropClick($event)">
+<div *ngIf="confirm.show" class="modal-backdrop" (click)="onBackdropClick($event)">
 
   <div class="panel" (click)="$event.stopPropagation()">
 
@@ -11,8 +9,10 @@
     <p [innerHTML]="confirm.options?.message"></p>
 
     <div class="actions">
-      <button mat-flat-button class="custom-button" color="warn" (click)="confirm.cancel()">
-        {{ confirm.options?.cancelText || 'Cancelar' }}
+      <button *ngIf="confirm.options?.cancelText" mat-flat-button class="custom-button" color="warn"
+        (click)="confirm.cancel()">
+
+        {{ confirm.options?.cancelText }}
       </button>
 
       <button mat-flat-button class="custom-button" color="primary" (click)="confirm.confirm()">

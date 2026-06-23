@@ -136,3 +136,16 @@ select {
     color: red;
   }
 }
+
+.purchase-row{
+  display: flex;
+  gap: .75rem;
+
+  .mat-mdc-slide-toggle {
+    margin-top: 0.8rem;
+  }
+}
+
+.purchase-field{
+  flex: 1;
+}

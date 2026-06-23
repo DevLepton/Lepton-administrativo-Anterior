@@ -79,7 +79,7 @@
       <!-- ================= ACCIONES ================= -->
       <div class="actions-top">
 
-        <button class="new-button" *ngIf="isSupportUser" (click)="nuevaPeticion()">
+        <button class="new-button" *ngIf="isAdminUser || isSupportUser" (click)="nuevaPeticion()">
           <span class="material-icons" style="font-weight: bold;">add</span> Nueva Petición
         </button>
 
@@ -91,7 +91,7 @@
           </button>
         </span>
 
-        <span class="tooltip-wrap" *ngIf="isSupportUser"
+        <span class="tooltip-wrap" *ngIf="isAdminUser || isSupportUser"
           [matTooltip]="canViewOrEditRequest ? '' : 'Selecciona 1 petición para editar'"
           [matTooltipDisabled]="canViewOrEditRequest" matTooltipPosition="above">
           <button class="icon-button edit-button" title="Editar" (click)="editSelectedRequest()"
@@ -100,7 +100,7 @@
           </button>
         </span>
 
-        <span class="tooltip-wrap" *ngIf="isSupportUser"
+        <span class="tooltip-wrap" *ngIf="isAdminUser || isSupportUser"
           [matTooltip]="requestsSelectedCount > 0 ? '' : 'Selecciona al menos 1 petición para eliminar'"
           [matTooltipDisabled]="requestsSelectedCount > 0" matTooltipPosition="above">
           <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedRequests()"
@@ -205,14 +205,15 @@
                   </ng-template>
                 </td>
 
-                <td>
-                  <button *ngIf="isSupportUser && r.estatus === 'Atendida'" class="icon-button validate-button"
-                    (click)="validarPeticion(r); $event.stopPropagation()" matTooltip="Validar petición">
+                <td class="petition-actions">
+                  <button *ngIf="(isAdminUser || isSupportUser) && r.estatus === 'Atendida'"
+                    class="icon-button validate-button" (click)="validarPeticion(r); $event.stopPropagation()"
+                    matTooltip="Validar petición">
                     <span class="material-icons">fact_check</span>
                   </button>
 
                   <!-- RESPONDER -->
-                  <button *ngIf="isInventoryUser && r.estatus === 'Pendiente' && !r.fechaRespuesta"
+                  <button *ngIf="(isAdminUser || isInventoryUser) && r.estatus === 'Pendiente' && !r.fechaRespuesta"
                     class="icon-button response-button" (click)="responderPeticion(r); $event.stopPropagation()"
                     matTooltip="Responder petición">
                     <span class="material-icons">reply</span>
@@ -220,7 +221,7 @@
 
                   <!-- EDITAR RESPUESTA -->
                   <button
-                    *ngIf="isInventoryUser && ((r.estatus === 'Pendiente' && r.fechaRespuesta) || r.estatus === 'Atendida')"
+                    *ngIf="(isAdminUser || isInventoryUser) && ((r.estatus === 'Pendiente' && r.fechaRespuesta) || r.estatus === 'Atendida')"
                     class="icon-button edit-button" (click)="editarRespuesta(r); $event.stopPropagation()"
                     matTooltip="Editar respuesta">
                     <span class="material-icons">edit</span>
@@ -348,24 +349,40 @@
   <div class="respuesta-container">
 
     <div class="respuesta-header">
-      <button class="back-button" (click)="this.tipoSeleccionado = 'gps'; responding = false;">
+      <button class="back-button" (click)="this.tipoSeleccionado = 'gps'; responding = false; modoValidacion = false;">
         <span class="material-icons">arrow_back</span>
         Regresar
       </button>
       <div class="header-bar">
         <h2>
-          {{ modoValidacion ? 'Validar petición' : 'Responder petición' }}
+          {{
+          modoValidacion
+          ? 'Validar petición'
+          : editandoRespuesta
+          ? 'Editar respuesta'
+          : 'Responder petición'
+          }}
         </h2>
 
-        <button class="send-button custom-button" (click)="enviarRespuesta()" [disabled]="!modoValidacion && !hayCambios()"
-          [class.disabled]="!modoValidacion && !hayCambios()" [class.return]="hayCambiosFlag && modoValidacion">
+        <button class="send-button custom-button" (click)="enviarRespuesta()"
+          [disabled]="!modoValidacion && !hayCambios()" [class.disabled]="!modoValidacion && !hayCambios()"
+          [class.return]="hayCambios() && modoValidacion" [class.edit-mode]="editandoRespuesta">
 
           <span class="material-icons">
-            {{ modoValidacion && !hayCambios() ? 'check_circle' : 'send' }}
+            {{
+            modoValidacion
+            ? (hayCambios() ? 'undo' : 'check_circle')
+            : editandoRespuesta
+            ? 'edit'
+            : 'send'
+            }}
           </span>
 
-          {{ modoValidacion
+          {{
+          modoValidacion
           ? (hayCambios() ? 'Devolver petición' : 'Aceptar petición')
+          : editandoRespuesta
+          ? 'Guardar cambios'
           : 'Enviar respuesta'
           }}
 
@@ -434,7 +451,7 @@
                 <div class="device-actions">
 
                   <button class="return-button" (click)="eliminarDispositivoUnitario(i); $event.stopPropagation()"
-                    title="Eliminar dispositivo" *ngIf="isSupportUser">
+                    title="Eliminar dispositivo" *ngIf="modoValidacion && (isAdminUser || isSupportUser)">
                     <span class="material-icons">delete</span>
                   </button>
 
@@ -477,7 +494,8 @@
                 </mat-autocomplete>
               </mat-form-field>
 
-              <button mat-flat-button class="custom-button" color="primary" (click)="agregarDispositivoUnitario()" [disabled]="!nuevoModelo">
+              <button mat-flat-button class="custom-button" color="primary" (click)="agregarDispositivoUnitario()"
+                [disabled]="!nuevoModelo">
                 Agregar
               </button>
 
@@ -485,7 +503,7 @@
           </div>
         </ng-container>
 
-        <div class="panel comentarios-panel" *ngIf="isSupportUser">
+        <div class="panel comentarios-panel" *ngIf="isAdminUser || isSupportUser">
 
           <div class="panel-header">
             <span class="material-icons">comment</span>
@@ -503,7 +521,7 @@
         </div>
 
         <!-- ================= INVENTARIO ================= -->
-        <ng-container *ngIf="isInventoryUser && !modoValidacion">
+        <ng-container *ngIf="(isAdminUser || isInventoryUser) && !modoValidacion">
 
           <div class="panel">
             <div class="panel-header">

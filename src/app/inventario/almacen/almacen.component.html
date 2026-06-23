@@ -15,23 +15,66 @@
             <div class="resumen-kpis">
               <div class="kpi-card kpi-main">
                 <div class="kpi-title">Total en existencia</div>
-                <div class="kpi-value">{{ totalDevicesInStock }}</div>
+                <div class="kpi-inline">
+                  <div class="kpi-value">{{ totalDevicesInStock }}</div>
+                  <div class="kpi-breakdown">
+                    <div class="kpi-chip inv">
+                      <span>En inventario - {{ totalInventoryCount }}</span>
+                    </div>
+
+                    <div class="kpi-chip cfg">
+                      <span>En configuración - {{ totalConfigurationCount }}</span>
+                    </div>
+                  </div>
+                </div>
                 <div class="kpi-sub">GPS + SIM + Accesorios (En inventario / En configuración)</div>
               </div>
 
               <div class="kpi-card">
                 <div class="kpi-title">GPS en existencia</div>
-                <div class="kpi-value">{{ gpsInStockCount }}</div>
+                <div class="kpi-inline">
+                  <div class="kpi-value">{{ gpsInStockCount }}</div>
+                  <div class="kpi-breakdown">
+                    <div class="kpi-chip inv">
+                      <span>En inventario - {{ gpsInventoryCount }}</span>
+                    </div>
+
+                    <div class="kpi-chip cfg">
+                      <span>En configuración - {{ gpsConfigurationCount }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="kpi-card">
                 <div class="kpi-title">SIM en existencia</div>
-                <div class="kpi-value">{{ simsInStockCount }}</div>
+                <div class="kpi-inline">
+                  <div class="kpi-value">{{ simsInStockCount }}</div>
+                  <div class="kpi-breakdown">
+                    <div class="kpi-chip inv">
+                      <span>En inventario - {{ simsInventoryCount }}</span>
+                    </div>
+
+                    <div class="kpi-chip cfg">
+                      <span>En configuración - {{ simsConfigurationCount }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               <div class="kpi-card">
                 <div class="kpi-title">Accesorios en existencia</div>
-                <div class="kpi-value">{{ accessoriesInStockCount }}</div>
+                <div class="kpi-inline">
+                  <div class="kpi-value">{{ accessoriesInStockCount }}</div>
+                  <div class="kpi-breakdown">
+                    <div class="kpi-chip inv">
+                      <span>En inventario - {{ accessoriesInventoryCount }}</span>
+                    </div>
+                    <div class="kpi-chip cfg">
+                      <span>En configuración - {{ accessoriesConfigurationCount }}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -48,28 +91,36 @@
                 <div class="resumen-table" *ngIf="gpsByModelInStock.length; else gpsEmpty">
                   <div class="resumen-row resumen-head">
                     <div>Modelo</div>
-                    <div>Cantidad</div>
-                    <div>Estatus</div>
+                    <div>Total</div>
+                    <div>En inventario</div>
+                    <div>En configuración</div>
                     <div *ngIf="isSupportUser">Acción</div>
                   </div>
 
                   <div class="resumen-row" *ngFor="let it of gpsByModelInStock">
                     <div class="model">{{ it.modelo }}</div>
-                    <div class="qty">{{ it.cantidad }}</div>
+
+                    <div class="qty">
+                      {{ it.total }}
+                    </div>
+
                     <div class="badge">
-                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                        {{ stockBadgeText(it.cantidad) }}
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.inventario)">
+                        {{ stockBadgeText(it.inventario) }} ({{ it.inventario }})
                       </span>
                     </div>
 
-                    <div *ngIf="isSupportUser">
+                    <div class="qty qty-cfg">
+                      {{ it.configuracion }}
+                    </div>
 
+                    <div *ngIf="isSupportUser">
                       <button type="button" class="req-icon-btn"
                         (pointerdown)="$event.preventDefault(); $event.stopPropagation(); addRequestedModel(it.modelo); openRequestSidebar()"
                         title="Solicitar" aria-label="Solicitar">
+
                         <span class="material-icons">playlist_add</span>
                       </button>
-
                     </div>
                   </div>
                 </div>
@@ -85,18 +136,27 @@
                 <div class="resumen-table" *ngIf="simsByModelInStock.length; else simEmpty">
                   <div class="resumen-row resumen-head">
                     <div>Modelo</div>
-                    <div>Cantidad</div>
-                    <div>Estatus</div>
+                    <div>Total</div>
+                    <div>En inventario</div>
+                    <div>En configuración</div>
                     <div *ngIf="isSupportUser">Acción</div>
                   </div>
 
                   <div class="resumen-row" *ngFor="let it of simsByModelInStock">
                     <div class="model">{{ it.modelo }}</div>
-                    <div class="qty">{{ it.cantidad }}</div>
+
+                    <div class="qty">
+                      {{ it.total }}
+                    </div>
+
                     <div class="badge">
-                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                        {{ stockBadgeText(it.cantidad) }}
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.inventario)">
+                        {{ stockBadgeText(it.inventario) }} ({{ it.inventario }})
                       </span>
+                    </div>
+
+                    <div class="qty qty-cfg">
+                      {{ it.configuracion }}
                     </div>
 
                     <div *ngIf="isSupportUser">
@@ -120,18 +180,26 @@
                 <div class="resumen-table" *ngIf="accessoriesByModelInStock.length; else accEmpty">
                   <div class="resumen-row resumen-head">
                     <div>Modelo</div>
-                    <div>Cantidad</div>
-                    <div>Estatus</div>
+                    <div>Total</div>
+                    <div>En inventario</div>
+                    <div>En configuración</div>
                     <div *ngIf="isSupportUser">Acción</div>
                   </div>
 
                   <div class="resumen-row" *ngFor="let it of accessoriesByModelInStock">
                     <div class="model">{{ it.modelo }}</div>
-                    <div class="qty">{{ it.cantidad }}</div>
+                    <div class="qty">
+                      {{ it.total }}
+                    </div>
+
                     <div class="badge">
-                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.cantidad)">
-                        {{ stockBadgeText(it.cantidad) }}
+                      <span class="stock-badge" [ngClass]="stockBadgeClass(it.inventario)">
+                        {{ stockBadgeText(it.inventario) }} ({{ it.inventario }})
                       </span>
+                    </div>
+                    
+                    <div class="qty qty-cfg">
+                      {{ it.configuracion }}
                     </div>
 
                     <div *ngIf="isSupportUser">
@@ -221,8 +289,8 @@
               Limpiar
             </button>
 
-            <button mat-flat-button color="primary" type="button" class="custom-button" (click)="createRequestFromSidebar()"
-              [disabled]="requestedItems.length === 0 || creatingRequest">
+            <button mat-flat-button color="primary" type="button" class="custom-button"
+              (click)="createRequestFromSidebar()" [disabled]="requestedItems.length === 0 || creatingRequest">
               {{ creatingRequest ? 'Creando…' : 'Crear petición' }}
             </button>
           </div>
@@ -243,7 +311,7 @@
 
     <!-- ============= TABS COMPONENTIZADOS ============= -->
     <mat-tab label="GPS's">
-      <app-gps-tab [gpsData]="gpsFull" [isInventoryUser]="isInventoryUser"
+      <app-gps-tab [gpsData]="gpsFull" [isInventoryUser]="isInventoryUser" [isSupportUser]="isSupportUser"
         (refreshRequested)="loadResumen(true)"></app-gps-tab>
     </mat-tab>
 

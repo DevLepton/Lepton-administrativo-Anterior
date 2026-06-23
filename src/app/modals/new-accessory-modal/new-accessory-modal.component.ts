@@ -52,11 +52,12 @@ export class NewAccessoryModalComponent {
     // ====== INDIVIDUAL ======
     this.form = this.fb.group({
       id: ['', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]],
-      sn: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(50)]],
+      sn: ['', [Validators.minLength(3), Validators.maxLength(50)]],
       supplier: ['', Validators.required],
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      configured: ['null'],
       purchaseExternal: [false],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
@@ -72,6 +73,7 @@ export class NewAccessoryModalComponent {
       brand: ['', Validators.required],
       model: ['', Validators.required],
       status: ['En inventario', Validators.required],
+      configured: ['null'],
       purchaseExternal: [false],
       purchaseDate: [today, Validators.required],
       entryDate: [today, Validators.required],
@@ -86,11 +88,11 @@ export class NewAccessoryModalComponent {
       )
     );
 
-    this.form.get('sn')?.addValidators(
-      this.duplicateFromExisting(() =>
-        this.existingAccessories.map(a => a.sn)
-      )
-    );
+    // this.form.get('sn')?.addValidators(
+    //   this.duplicateFromExisting(() =>
+    //     this.existingAccessories.map(a => a.sn)
+    //   )
+    // );
 
     // Autocomplete streams
     this.filteredModels$ = this.form.get('model')!.valueChanges.pipe(
@@ -198,6 +200,7 @@ export class NewAccessoryModalComponent {
       brand: '',
       model: '',
       status: 'En inventario',
+      configured: 'null',
       purchaseExternal: false,
       purchaseDate: today,
       entryDate: today,
@@ -215,6 +218,7 @@ export class NewAccessoryModalComponent {
       brand: '',
       model: '',
       status: 'En inventario',
+      configured: 'null',
       purchaseExternal: false,
       purchaseDate: today,
       entryDate: today,
@@ -246,6 +250,7 @@ export class NewAccessoryModalComponent {
       brand: String(v.brand).trim(),
       model: String(v.model).trim(),
       status: v.status as DeviceStatus,
+      configured: v.configured === 'true' ? true : v.configured === 'false' ? false : null,
 
       purchaseDate: isExternal ? null : this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),
@@ -286,12 +291,12 @@ export class NewAccessoryModalComponent {
     return new FormControl<string>('', {
       nonNullable: true,
       validators: [
-        Validators.required,
+        // Validators.required,
         Validators.minLength(3),
         Validators.maxLength(50),
 
-        this.duplicateInArray(() => this.sns.controls.map(c => c.value)),
-        this.duplicateFromExisting(() => this.existingAccessories.map(a => a.sn))
+        // this.duplicateInArray(() => this.sns.controls.map(c => c.value)),
+        // this.duplicateFromExisting(() => this.existingAccessories.map(a => a.sn))
       ]
     });
   }
@@ -334,6 +339,7 @@ export class NewAccessoryModalComponent {
       brand: String(v.brand).trim(),
       model: String(v.model).trim(),
       status: v.status as DeviceStatus,
+      configured: v.configured === 'true' ? true : v.configured === 'false' ? false : null,
 
       purchaseDate: isExternal ? null : this.toYMD(v.purchaseDate),
       entryDate: this.toYMD(v.entryDate),

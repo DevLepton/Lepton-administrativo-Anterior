@@ -185,7 +185,7 @@ export function initAuth(authService: AuthService) {
     MatButtonToggleModule,
     MatCheckboxModule,
     MatProgressSpinnerModule,
-    A11yModule
+    A11yModule,
   ],
   providers: [
     provideClientHydration(),

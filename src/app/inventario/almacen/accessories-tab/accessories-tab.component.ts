@@ -17,6 +17,7 @@ export interface AccessoryItem {
   brand: string;
   model: string;
   status: DeviceStatus;
+  configured?: boolean | null;
   purchaseDate: string | Date | null;
   entryDate: string | Date | null;
   client?: string | null;
@@ -114,6 +115,7 @@ export class AccessoriesTabComponent implements OnChanges {
       brand: d.brand ?? '',
       model: d.model ?? '',
       status: d.status ?? 'En inventario',
+      configured: d.configured ?? null,
       purchaseDate: d.purchaseDate ?? null,
       entryDate: d.entryDate ?? null,
       client: d.client ?? null,
@@ -275,6 +277,7 @@ export class AccessoriesTabComponent implements OnChanges {
       brand: found.brand,
       model: found.model,
       status: found.status,
+      configured: found.configured ?? null,
       purchaseDate: found.purchaseDate,
       entryDate: found.entryDate,
       client: found.client ?? '',
@@ -298,6 +301,7 @@ export class AccessoriesTabComponent implements OnChanges {
       brand: found.brand,
       model: found.model,
       status: (found.status as any) || 'En inventario',
+      configured: found.configured ?? null,
       purchaseDate: found.purchaseDate ?? null,
       entryDate: found.entryDate ?? null,
       installationDate: found.installationDate ?? null,
@@ -386,12 +390,29 @@ export class AccessoriesTabComponent implements OnChanges {
     });
   }
 
-  onAccessoryUpdated(evt: { id: string; payload: any }) {
-    this.apiService.updateAccessory(evt.id, evt.payload).subscribe({
-      next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio actualizado', duration: 4000 }); this.refreshRequested.emit(); },
+  onAccessoryUpdated(evt: { ids: string[]; payload: any }) {
+    this.apiService.bulkUpdateAccessories(
+      evt.ids,
+      evt.payload
+    ).subscribe({
+      next: () => {
+        this.toast.success({
+          detail: 'Éxito',
+          summary: `${evt.ids.length} accesorio(s) actualizado(s)`,
+          duration: 4000
+        });
+
+        this.refreshRequested.emit();
+      },
+
       error: (err) => {
-        const msg = err?.error?.error || 'Error al actualizar Accesorio';
-        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+        const msg = err?.error?.error || 'Error al actualizar Accesorios';
+
+        this.toast.error({
+          detail: 'Error',
+          summary: msg,
+          duration: 6000
+        });
       }
     });
   }
@@ -453,8 +474,26 @@ export class AccessoriesTabComponent implements OnChanges {
   }
 
   editSelectedAccessory() {
-    if (!this.canViewOrEditAccessory) return;
-    this.editarAccesorio(this.selectedAccessoriesItems[0]);
+    if (this.accessoriesSelectedCount === 0) return;
+
+    this.editAccessoryModal.open(
+      this.selectedAccessoriesItems.map(x => ({
+        id: x.id,
+        idAccesorio: x.idAccesorio,
+        sn: x.sn,
+        supplier: x.supplier,
+        name: x.name,
+        brand: x.brand,
+        model: x.model,
+        status: x.status as any,
+        configured: x.configured ?? null,
+        purchaseDate: x.purchaseDate ?? null,
+        entryDate: x.entryDate ?? null,
+        installationDate: x.installationDate ?? null,
+        client: x.client ?? '',
+        comments: x.comments ?? ''
+      }))
+    );
   }
 
   deleteSelectedAccessories() {
@@ -525,6 +564,85 @@ export class AccessoriesTabComponent implements OnChanges {
         }
       });
     });
+  }
+
+  accessoryPanelCollapsed = false;
+
+  toggleAccessoryPanel() {
+    this.accessoryPanelCollapsed = !this.accessoryPanelCollapsed;
+  }
+
+  statusClass(status: string): string {
+    const s = (status || '').toLowerCase();
+
+    if (s.includes('inventario')) return 'inv';
+    if (s.includes('configuración')) return 'cfg';
+    if (s.includes('instalado')) return 'inst';
+    if (s.includes('listo')) return 'ready';
+
+    return 'default';
+  }
+
+  get accessoryStatsSource(): AccessoryItem[] {
+    return this.accessoriesFiltered;
+  }
+
+  get accessoryTotalCount(): number {
+    return this.accessoryStatsSource.length;
+  }
+
+  get accessoryStatusCounts() {
+    const map = new Map<string, number>();
+
+    this.accessoryStatsSource.forEach(x => {
+      map.set(x.status, (map.get(x.status) || 0) + 1);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }
+
+  get accessoryModelCounts() {
+    const map = new Map<string, number>();
+
+    this.accessoryStatsSource.forEach(x => {
+      const key = x.model || 'Sin modelo';
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }
+
+  get accessoryConfiguredCounts() {
+
+    let configured = 0;
+    let notConfigured = 0;
+    let undefinedValue = 0;
+
+    this.accessoryStatsSource.forEach(x => {
+
+      if (x.configured === true) configured++;
+      else if (x.configured === false) notConfigured++;
+      else undefinedValue++;
+    });
+
+    return [
+      {
+        name: 'Ensamblado',
+        qty: configured
+      },
+      {
+        name: 'No ensamblado',
+        qty: notConfigured
+      },
+      {
+        name: 'No aplica',
+        qty: undefinedValue
+      }
+    ];
   }
 
 }

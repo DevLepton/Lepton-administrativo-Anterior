@@ -99,10 +99,11 @@
             </button>
           </span>
 
-          <span class="tooltip-wrap" [matTooltip]="canViewOrEditAccessory ? '' : 'Selecciona 1 accesorio para editar'"
-            [matTooltipDisabled]="canViewOrEditAccessory" matTooltipPosition="above">
+          <span class="tooltip-wrap"
+            [matTooltip]="accessoriesSelectedCount > 0 ? '' : 'Selecciona al menos 1 accesorio para editar'"
+            [matTooltipDisabled]="accessoriesSelectedCount > 0" matTooltipPosition="above">
             <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelectedAccessory()"
-              [disabled]="!canViewOrEditAccessory">
+              [disabled]="accessoriesSelectedCount === 0 || accessoriesDeletingId === '__bulk__'">
               <span class="material-icons">edit</span>
             </button>
           </span>
@@ -117,115 +118,174 @@
               </span>
             </button>
           </span>
+
+          <button mat-button class="custom-button" (click)="toggleAccessoryPanel()"
+            matTooltip="{{ accessoryPanelCollapsed ? 'Mostrar contadores' : 'Ocultar contadores' }}">
+            <span class="material-icons">
+              {{ accessoryPanelCollapsed ? 'chevron_left' : 'chevron_right' }}
+            </span>
+          </button>
+
         </div>
       </div>
     </div>
   </div>
 
   <!-- ===== Tabla Accesorios ===== -->
-  <div class="table-container">
-    <div class="table-scroll">
-      <table class="table">
-        <thead>
-          <tr>
-            <!-- ✅ seleccionar todo -->
-            <th class="th-check">
-              <input type="checkbox" [checked]="isAllAccessoriesVisibleSelected"
-                [indeterminate]="isSomeAccessoriesVisibleSelected"
-                (change)="toggleSelectAllAccessoriesVisible($any($event.target).checked)"
-                aria-label="Seleccionar todos" />
-            </th>
+  <div class="gps-layout">
+    <div class="table-container">
+      <div class="table-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <!-- ✅ seleccionar todo -->
+              <th class="th-check">
+                <input type="checkbox" [checked]="isAllAccessoriesVisibleSelected"
+                  [indeterminate]="isSomeAccessoriesVisibleSelected"
+                  (change)="toggleSelectAllAccessoriesVisible($any($event.target).checked)"
+                  aria-label="Seleccionar todos" />
+              </th>
 
-            <th>No.</th>
+              <th>No.</th>
 
-            <th (click)="sortAccessoryBy('idAccesorio')" class="th-sort">
-              ID <span class="arrow material-icons">{{ arrowForAccessory('idAccesorio') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('sn')" class="th-sort">
-              S/N <span class="arrow material-icons">{{ arrowForAccessory('sn') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('supplier')" class="th-sort">
-              Proveedor <span class="arrow material-icons">{{ arrowForAccessory('supplier') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('brand')" class="th-sort">
-              Marca <span class="arrow material-icons">{{ arrowForAccessory('brand') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('model')" class="th-sort">
-              Modelo <span class="arrow material-icons">{{ arrowForAccessory('model') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('status')" class="th-sort">
-              Estatus <span class="arrow material-icons">{{ arrowForAccessory('status') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('purchaseDate')" class="th-sort">
-              Fecha de compra <span class="arrow material-icons">{{ arrowForAccessory('purchaseDate') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('entryDate')" class="th-sort">
-              Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowForAccessory('entryDate') }}</span>
-            </th>
-            <th (click)="sortAccessoryBy('client')" class="th-sort">
-              Cliente <span class="arrow material-icons">{{ arrowForAccessory('client') }}</span>
-            </th>
-          </tr>
-        </thead>
+              <th (click)="sortAccessoryBy('idAccesorio')" class="th-sort">
+                ID <span class="arrow material-icons">{{ arrowForAccessory('idAccesorio') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('sn')" class="th-sort">
+                S/N <span class="arrow material-icons">{{ arrowForAccessory('sn') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('supplier')" class="th-sort">
+                Proveedor <span class="arrow material-icons">{{ arrowForAccessory('supplier') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('brand')" class="th-sort">
+                Marca <span class="arrow material-icons">{{ arrowForAccessory('brand') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('model')" class="th-sort">
+                Modelo <span class="arrow material-icons">{{ arrowForAccessory('model') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('configured')" class="th-sort">
+                Ensamblado <span class="arrow material-icons">{{ arrowForAccessory('configured') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('status')" class="th-sort">
+                Estatus <span class="arrow material-icons">{{ arrowForAccessory('status') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('purchaseDate')" class="th-sort">
+                Fecha de compra <span class="arrow material-icons">{{ arrowForAccessory('purchaseDate') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('entryDate')" class="th-sort">
+                Fecha ingreso Leptón <span class="arrow material-icons">{{ arrowForAccessory('entryDate') }}</span>
+              </th>
+              <th (click)="sortAccessoryBy('client')" class="th-sort">
+                Cliente <span class="arrow material-icons">{{ arrowForAccessory('client') }}</span>
+              </th>
+            </tr>
+          </thead>
 
-        <tbody *ngIf="!accessoriesLoading; else accessoriesLoadingTpl">
-          <tr *ngFor="let a of displayedAccessories; let idx = index" (click)="toggleAccessoryRowByClick(a)"
-            [class.row-selected]="isAccessorySelected(a.id)" style="cursor:pointer;">
+          <tbody *ngIf="!accessoriesLoading; else accessoriesLoadingTpl">
+            <tr *ngFor="let a of displayedAccessories; let idx = index" (click)="toggleAccessoryRowByClick(a)"
+              [class.row-selected]="isAccessorySelected(a.id)" style="cursor:pointer;">
 
-            <td class="td-check" (click)="toggleAccessoryRowByClick(a); $event.stopPropagation()">
-              <input type="checkbox" [checked]="isAccessorySelected(a.id)"
-                (change)="toggleAccessoryRowSelection(a, $any($event.target).checked)"
-                (click)="$event.stopPropagation()" aria-label="Seleccionar accesorio" />
-            </td>
+              <td class="td-check" (click)="toggleAccessoryRowByClick(a); $event.stopPropagation()">
+                <input type="checkbox" [checked]="isAccessorySelected(a.id)"
+                  (change)="toggleAccessoryRowSelection(a, $any($event.target).checked)"
+                  (click)="$event.stopPropagation()" aria-label="Seleccionar accesorio" />
+              </td>
 
-            <td>{{ ((accessoriesCurrentPage - 1) * accessoriesPerPage + idx + 1) }}
-            </td>
-            <td>{{ a.idAccesorio }}</td>
-            <td>{{ a.sn }}</td>
-            <td>{{ a.supplier }}</td>
-            <td>{{ a.brand }}</td>
-            <td>{{ a.model }}</td>
-            <td>
-              <span class="status-badge" [ngClass]="{
+              <td>{{ ((accessoriesCurrentPage - 1) * accessoriesPerPage + idx + 1) }}
+              </td>
+              <td>{{ a.idAccesorio }}</td>
+              <td>{{ a.sn }}</td>
+              <td>{{ a.supplier }}</td>
+              <td>{{ a.brand }}</td>
+              <td>{{ a.model }}</td>
+              <td>
+                {{ a.configured === true ? 'Ensamblado' : a.configured === false ? 'No ensamblado' : 'No Aplica' }}
+              </td>
+              <td>
+                <span class="status-badge" [ngClass]="{
               inv:  a.status === 'En inventario',
               cfg:  a.status === 'En configuración',
               inst: a.status === 'Instalado',
               ready: a.status === 'Listo para usar'
             }">
-                {{ a.status }}
-              </span>
-            </td>
-            <td>
-              <ng-container *ngIf="a.purchaseDate; else externoTpl">
-                {{ a.purchaseDate | date:'dd MMM yyyy':'UTC' }}
-              </ng-container>
+                  {{ a.status }}
+                </span>
+              </td>
+              <td>
+                <ng-container *ngIf="a.purchaseDate; else externoTpl">
+                  {{ a.purchaseDate | date:'dd MMM yyyy':'UTC' }}
+                </ng-container>
 
-              <ng-template #externoTpl>
-                <span class="external-text">Externo a Leptón</span>
-              </ng-template>
-            </td>
-            <td>{{ a.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
-            <td>{{ a.client || 'Sin asignar' }}</td>
-          </tr>
+                <ng-template #externoTpl>
+                  <span class="external-text">Externo a Leptón</span>
+                </ng-template>
+              </td>
+              <td>{{ a.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
+              <td>{{ a.client || 'Sin asignar' }}</td>
+            </tr>
 
-          <tr *ngIf="displayedAccessories.length === 0">
-            <td colspan="11" style="text-align:center; padding:1rem;">Sin Accesorios para mostrar.</td>
-          </tr>
-        </tbody>
-
-        <ng-template #accessoriesLoadingTpl>
-          <tbody>
-            <tr>
-              <td colspan="11" style="text-align:center; padding:1rem;">Cargando Accesorios…</td>
+            <tr *ngIf="displayedAccessories.length === 0">
+              <td colspan="11" style="text-align:center; padding:1rem;">Sin Accesorios para mostrar.</td>
             </tr>
           </tbody>
-        </ng-template>
-      </table>
+
+          <ng-template #accessoriesLoadingTpl>
+            <tbody>
+              <tr>
+                <td colspan="11" style="text-align:center; padding:1rem;">Cargando Accesorios…</td>
+              </tr>
+            </tbody>
+          </ng-template>
+        </table>
+      </div>
+      <mat-paginator *ngIf="accessoriesFiltered.length > 0" [length]="accessoriesFiltered.length"
+        [pageIndex]="accessoriesCurrentPage - 1" [pageSize]="accessoriesPerPage" [pageSizeOptions]="[10, 25, 50, 100]"
+        [showFirstLastButtons]="true" (page)="onPageChange($event)">
+      </mat-paginator>
     </div>
-    <mat-paginator *ngIf="accessoriesFiltered.length > 0" [length]="accessoriesFiltered.length" [pageIndex]="accessoriesCurrentPage - 1"
-      [pageSize]="accessoriesPerPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
-      (page)="onPageChange($event)">
-    </mat-paginator>
+    <aside class="gps-side-panel" [class.is-hidden]="accessoryPanelCollapsed">
+
+      <div class="panel-card">
+        <div class="panel-title">Accesorios</div>
+        <div class="panel-big">{{ accessoryTotalCount }}</div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Estatus</div>
+
+        <div class="mini-row status-row" *ngFor="let st of accessoryStatusCounts">
+
+          <span class="status-pill" [ngClass]="statusClass(st.name)">
+            {{ st.name }}
+          </span>
+
+          <b [ngClass]="statusClass(st.name)">
+            {{ st.qty }}
+          </b>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Modelos</div>
+
+        <div class="mini-row" *ngFor="let m of accessoryModelCounts.slice(0,8)">
+          <span>{{ m.name }}</span>
+          <b>{{ m.qty }}</b>
+        </div>
+      </div>
+
+      <div class="panel-card">
+        <div class="panel-title">Ensamblados</div>
+
+        <div class="mini-row" *ngFor="let c of accessoryConfiguredCounts">
+          <span>{{ c.name }}</span>
+
+          <b>{{ c.qty }}</b>
+        </div>
+      </div>
+
+    </aside>
+
   </div>
   <!-- Modales Accesorios -->
   <app-new-accessory-modal *ngIf="isInventoryUser" (accessoryCreated)="onAccessoryCreated($event)"

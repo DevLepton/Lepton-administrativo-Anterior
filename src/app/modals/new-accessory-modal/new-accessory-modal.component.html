@@ -21,7 +21,7 @@
               <input matInput formControlName="id" placeholder="ACC-001 / 12345..." autocomplete="off" maxlength="60" />
               <mat-error *ngIf="form.get('id')?.hasError('required')">ID es requerido</mat-error>
               <mat-error *ngIf="form.get('id')?.hasError('minlength') || form.get('id')?.hasError('maxlength')">
-                2–60 caracteres
+                2-60 caracteres
               </mat-error>
               <mat-error *ngIf="form.get('id')?.hasError('duplicate')">
                 ID ya existe
@@ -32,10 +32,10 @@
             <mat-form-field appearance="outline">
               <mat-label>Serie (SN)</mat-label>
               <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
-              <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
+              <!-- <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>
               <mat-error *ngIf="form.get('sn')?.hasError('duplicate')">
                 Serie ya existe
-              </mat-error>
+              </mat-error> -->
             </mat-form-field>
 
             <!-- Proveedor -->
@@ -74,6 +74,16 @@
                 <mat-option value="Instalado">Instalado</mat-option>
               </mat-select>
               <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
+            </mat-form-field>
+
+            <mat-form-field appearance="outline">
+              <mat-label>Ensamblado</mat-label>
+
+              <mat-select formControlName="configured">
+                <mat-option value="null">No aplica</mat-option>
+                <mat-option value="false">No ensamblado</mat-option>
+                <mat-option value="true">Ensamblado</mat-option>
+              </mat-select>
             </mat-form-field>
 
             <!-- Fecha de compra -->
@@ -178,6 +188,16 @@
                 <mat-error *ngIf="bulkForm.get('status')?.hasError('required')">Requerido</mat-error>
               </mat-form-field>
 
+              <mat-form-field appearance="outline">
+                <mat-label>Ensamblado</mat-label>
+
+                <mat-select formControlName="configured">
+                  <mat-option value="null">No aplica</mat-option>
+                  <mat-option value="false">No ensamblado</mat-option>
+                  <mat-option value="true">Ensamblado</mat-option>
+                </mat-select>
+              </mat-form-field>
+
               <!-- Fecha de compra -->
               <div class="purchase-row">
                 <mat-form-field appearance="outline" class="purchase-field">
@@ -224,7 +244,7 @@
                           maxlength="60" />
                         <mat-error *ngIf="ids.at(i).hasError('required')">Requerido</mat-error>
                         <mat-error *ngIf="ids.at(i).hasError('minlength') || ids.at(i).hasError('maxlength')">
-                          2–60 caracteres
+                          2-60 caracteres
                         </mat-error>
                         <mat-error *ngIf="ids.at(i).hasError('duplicate')">
                           ID duplicado
@@ -235,10 +255,10 @@
                         <mat-label>Serie #{{ i + 1 }}</mat-label>
                         <input matInput [formControl]="sns.at(i)" placeholder="SN..." autocomplete="off"
                           maxlength="50" />
-                        <mat-error *ngIf="sns.at(i).hasError('required')">Requerido</mat-error>
+                        <!-- <mat-error *ngIf="sns.at(i).hasError('required')">Requerido</mat-error>
                         <mat-error *ngIf="sns.at(i).hasError('duplicate')">
                           Serie duplicada
-                        </mat-error>
+                        </mat-error> -->
                       </mat-form-field>
                     </div>
                   </div>

@@ -2,7 +2,12 @@
 
 <div class="modal" *ngIf="show">
   <header class="modal__header">
-    <h3>Editar GPS</h3>
+    <h3>
+  {{ isBulkEdit
+    ? ('Editar ' + bulkIds.length + ' GPS')
+    : 'Editar GPS'
+  }}
+</h3>
     <button mat-icon-button (click)="close()" aria-label="Cerrar">
       <mat-icon>close</mat-icon>
     </button>
@@ -11,19 +16,19 @@
   <form [formGroup]="form" (ngSubmit)="submit()" class="modal__body compact">
     <div class="grid">
       <!-- IMEI -->
-      <mat-form-field appearance="outline">
+      <mat-form-field *ngIf="!isBulkEdit" appearance="outline">
         <mat-label>IMEI</mat-label>
         <input matInput formControlName="imei" placeholder="8670..." inputmode="numeric"
                autocomplete="off" (input)="digitsOnly('imei')" maxlength="20" />
         <mat-error *ngIf="form.get('imei')?.hasError('required')">IMEI es requerido</mat-error>
         <mat-error *ngIf="form.get('imei')?.hasError('pattern')">Solo números (0-9)</mat-error>
         <mat-error *ngIf="form.get('imei')?.hasError('minlength') || form.get('imei')?.hasError('maxlength')">
-          14–20 dígitos
+          14-20 dígitos
         </mat-error>
       </mat-form-field>
 
       <!-- Serie -->
-      <mat-form-field appearance="outline">
+      <mat-form-field *ngIf="!isBulkEdit" appearance="outline">
         <mat-label>Serie (SN)</mat-label>
         <input matInput formControlName="sn" placeholder="SN..." autocomplete="off" maxlength="50" />
         <mat-error *ngIf="form.get('sn')?.hasError('required')">Serie es requerida</mat-error>

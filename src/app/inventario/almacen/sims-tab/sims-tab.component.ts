@@ -422,15 +422,36 @@ export class SimsTabComponent implements OnChanges {
     });
   }
 
-  onSimUpdated(evt: { id: string; payload: any }) {
-    this.apiService.updateSim(evt.id, evt.payload).subscribe({
+  onSimUpdated(evt: {
+    ids: string[];
+    payload: any;
+  }) {
+
+    this.apiService.bulkUpdateSims(
+      evt.ids,
+      evt.payload
+    ).subscribe({
+
       next: () => {
-        this.toast.success({ detail: 'Éxito', summary: 'SIM actualizado con éxito', duration: 4000 });
+
+        this.toast.success({
+          detail: 'Éxito',
+          summary: `${evt.ids.length} SIM(s) actualizado(s)`,
+          duration: 4000
+        });
+
         this.refreshRequested.emit();
       },
+
       error: (err) => {
+
         const msg = err?.error?.error || 'Error al actualizar SIM';
-        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+
+        this.toast.error({
+          detail: 'Error',
+          summary: msg,
+          duration: 6000
+        });
       }
     });
   }
@@ -442,9 +463,11 @@ export class SimsTabComponent implements OnChanges {
   }
 
   editSelected() {
-    if (!this.canViewOrEdit) return;
-    const sim = this.selectedSims[0];
-    this.editarSim(sim);
+    if (this.selectedCount === 0) return;
+
+    this.editSimModal.open(
+      this.selectedSims
+    );
   }
 
   deleteSelected() {
@@ -566,4 +589,68 @@ export class SimsTabComponent implements OnChanges {
       });
     });
   }
+
+  simPanelCollapsed = false;
+
+  toggleSimPanel() {
+    this.simPanelCollapsed = !this.simPanelCollapsed;
+  }
+
+  statusClass(status: string): string {
+    const s = (status || '').toLowerCase();
+
+    if (s.includes('inventario')) return 'inv';
+    if (s.includes('configuración')) return 'cfg';
+    if (s.includes('instalado')) return 'inst';
+    if (s.includes('listo')) return 'ready';
+
+    return 'default';
+  }
+
+  get simStatsSource(): SimItem[] {
+    return this.simsFiltered;
+  }
+
+  get simTotalCount(): number {
+    return this.simStatsSource.length;
+  }
+
+  get simStatusCounts() {
+    const map = new Map<string, number>();
+
+    this.simStatsSource.forEach(x => {
+      map.set(x.status, (map.get(x.status) || 0) + 1);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }
+
+  get simCompanyCounts() {
+    const map = new Map<string, number>();
+
+    this.simStatsSource.forEach(x => {
+      const key = x.company || 'Sin compañía';
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }
+
+  get simModelCounts() {
+    const map = new Map<string, number>();
+
+    this.simStatsSource.forEach(x => {
+      const key = x.model || 'Sin modelo';
+      map.set(key, (map.get(key) || 0) + 1);
+    });
+
+    return Array.from(map.entries())
+      .map(([name, qty]) => ({ name, qty }))
+      .sort((a, b) => b.qty - a.qty);
+  }
+
 }

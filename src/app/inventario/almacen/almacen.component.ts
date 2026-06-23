@@ -94,6 +94,14 @@ export class AlmacenComponent implements OnInit {
     return s === 'en inventario' || s === 'en configuración';
   }
 
+  private isInventoryStatus(status: string): boolean {
+    return (status ?? '').toString().trim().toLowerCase() === 'en inventario';
+  }
+
+  private isConfigurationStatus(status: string): boolean {
+    return (status ?? '').toString().trim().toLowerCase() === 'en configuración';
+  }
+
   private normalizeModel(v: any): string {
     const s = (v ?? '').toString().trim();
     return s.length ? s : '—';
@@ -115,16 +123,76 @@ export class AlmacenComponent implements OnInit {
     return this.gpsInStockCount + this.simsInStockCount + this.accessoriesInStockCount;
   }
 
+  // ===== GPS =====
+  get gpsInventoryCount(): number {
+    return (this.gpsResumen ?? []).filter(x => this.isInventoryStatus(x.estatus)).length;
+  }
+
+  get gpsConfigurationCount(): number {
+    return (this.gpsResumen ?? []).filter(x => this.isConfigurationStatus(x.estatus)).length;
+  }
+
+  // ===== SIM =====
+  get simsInventoryCount(): number {
+    return (this.simsResumen ?? []).filter(x => this.isInventoryStatus(x.estatus)).length;
+  }
+
+  get simsConfigurationCount(): number {
+    return (this.simsResumen ?? []).filter(x => this.isConfigurationStatus(x.estatus)).length;
+  }
+
+  // ===== Accesorios =====
+  get accessoriesInventoryCount(): number {
+    return (this.accessoriesResumen ?? []).filter(x => this.isInventoryStatus(x.estatus)).length;
+  }
+
+  get accessoriesConfigurationCount(): number {
+    return (this.accessoriesResumen ?? []).filter(x => this.isConfigurationStatus(x.estatus)).length;
+  }
+
+  // ===== Totales generales =====
+  get totalInventoryCount(): number {
+    return this.gpsInventoryCount + this.simsInventoryCount + this.accessoriesInventoryCount;
+  }
+
+  get totalConfigurationCount(): number {
+    return this.gpsConfigurationCount + this.simsConfigurationCount + this.accessoriesConfigurationCount;
+  }
+
   private groupCountByModel(list: MiniItem[]) {
-    const map = new Map<string, number>();
+    const map = new Map<string, {
+      modelo: string;
+      inventario: number;
+      configuracion: number;
+      total: number;
+    }>();
+
     for (const item of (list ?? [])) {
-      if (!this.isInStockStatus(item.estatus)) continue;
+      const status = (item.estatus ?? '').toString().trim().toLowerCase();
+
+      if (status !== 'en inventario' && status !== 'en configuración') continue;
+
       const key = this.normalizeModel(item.modelo);
-      map.set(key, (map.get(key) ?? 0) + 1);
+
+      if (!map.has(key)) {
+        map.set(key, {
+          modelo: key,
+          inventario: 0,
+          configuracion: 0,
+          total: 0
+        });
+      }
+
+      const current = map.get(key)!;
+
+      if (status === 'en inventario') current.inventario++;
+      if (status === 'en configuración') current.configuracion++;
+
+      current.total++;
     }
-    return Array.from(map.entries())
-      .map(([modelo, cantidad]) => ({ modelo, cantidad }))
-      .sort((a, b) => b.cantidad - a.cantidad || a.modelo.localeCompare(b.modelo));
+
+    return Array.from(map.values())
+      .sort((a, b) => b.total - a.total || a.modelo.localeCompare(b.modelo));
   }
 
   get gpsByModelInStock() { return this.groupCountByModel(this.gpsResumen); }
