@@ -450,13 +450,45 @@ export class PeticionesComponent implements OnInit {
     });
   }
 
-  deleteSelectedRequests() {
+  async deleteSelectedRequests() {
     if (this.requestsSelectedCount === 0) return;
 
     const selected = this.selectedRequestsItems;
 
-    const htmlList = selected.slice(0, 8).map(r => `<div><b>${r.dispositivoSolicitadoResumen || '—'}</b> — Total: ${r.cantidad ?? '—'} — ${r.estatus || '—'}</div>`).join('');
+    const requestsWithDevices = selected.filter(
+      r => r.estatus === 'Atendida' || r.estatus === 'Aceptada'
+    );
 
+    let statusToApply: string | null = null;
+
+    if (requestsWithDevices.length) {
+      const result = await Swal.fire({
+        title: 'Dispositivos enviados encontrados',
+        html: `
+      Las peticiones seleccionadas contienen dispositivos enviados.
+      <br><br>
+      ¿Qué estatus deseas asignarles antes de eliminar las peticiones?
+    `,
+        icon: 'question',
+        showDenyButton: true,
+        showCancelButton: true,
+
+        confirmButtonText: 'En configuración',
+        denyButtonText: 'En inventario',
+        cancelButtonText: 'No cambiar',
+        confirmButtonColor: 'var(--color-warning)', // naranja
+        denyButtonColor: 'var(--color-success)',    // verde
+        cancelButtonColor: 'var(--color-primary)'   // gris
+      });
+
+      if (result.isConfirmed) {
+        statusToApply = 'En configuración';
+      } else if (result.isDenied) {
+        statusToApply = 'En inventario';
+      }
+    }
+
+    const htmlList = selected.slice(0, 8).map(r => `<div><b>${r.dispositivoSolicitadoResumen || '—'}</b> — Total: ${r.cantidad ?? '—'} — ${r.estatus || '—'}</div>`).join('');
 
     Swal.fire({
       title: `¿Eliminar ${selected.length} petición(es)?`,
@@ -474,8 +506,42 @@ export class PeticionesComponent implements OnInit {
       cancelButtonText: 'Cancelar',
       confirmButtonText: 'Sí, eliminar',
       reverseButtons: true,
-    }).then(result => {
+    }).then(async result => {
       if (!result.isConfirmed) return;
+
+      if (statusToApply) {
+        try {
+
+          const deviceIds = requestsWithDevices
+            .flatMap(r =>
+              r.dispositivosSolicitados.flatMap(d =>
+                (d.response || []).map(x => x.id)
+              )
+            )
+            .filter(Boolean);
+
+          const uniqueIds = [...new Set(deviceIds)];
+
+          if (uniqueIds.length) {
+            await firstValueFrom(
+              this.apiService.bulkUpdateDevices(
+                uniqueIds,
+                { status: statusToApply }
+              )
+            );
+          }
+
+        } catch (err) {
+
+          this.toast.error({
+            detail: 'Error',
+            summary: 'No se pudieron actualizar los dispositivos.',
+            duration: 5000
+          });
+
+          return;
+        }
+      }
 
       const reqs = selected.map(item =>
         this.apiService.deleteRequest(item.id).pipe(catchError(err => of({ __error: err, id: item.id })))
@@ -570,7 +636,6 @@ export class PeticionesComponent implements OnInit {
   }
 
   devolverDispositivo(index: number) {
-
     if (this.modoValidacion) {
       this.dispositivosValidacion[index].id = null;
       this.dispositivosValidacion[index].assignedModel = null;
@@ -609,11 +674,18 @@ export class PeticionesComponent implements OnInit {
     this.listaExpandida[index].assignedModel = device.model;
     this.listaExpandida[index].identifier = this.getDeviceIdentifier(device);
 
+    const siguienteSinAsignar = this.listaExpandida.findIndex(
+      (x, i) => i > index && !x.id
+    );
+
+    if (siguienteSinAsignar !== -1) {
+      this.seleccionIndex = siguienteSinAsignar;
+    }
+
     this.hayCambiosFlag = this.getEstadoActual() !== this.estadoInicialRespuesta;
   }
 
   async verificarReapertura(r: PeticionItem): Promise<boolean> {
-
     if (r.estatus !== 'Aceptada' && r.estatus !== 'Rechazada') {
       return true; // todo normal
     }

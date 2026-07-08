@@ -178,6 +178,9 @@
               <th (click)="sortAccessoryBy('client')" class="th-sort">
                 Cliente <span class="arrow material-icons">{{ arrowForAccessory('client') }}</span>
               </th>
+              <th (click)="sortAccessoryBy('comments')" class="th-sort">
+                Comentarios <span class="arrow material-icons">{{ arrowForAccessory('comments') }}</span>
+              </th>
             </tr>
           </thead>
 
@@ -222,6 +225,9 @@
               </td>
               <td>{{ a.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
               <td>{{ a.client || 'Sin asignar' }}</td>
+              <td class="comments-cell">
+                {{ a.comments || '-' }}
+              </td>
             </tr>
 
             <tr *ngIf="displayedAccessories.length === 0">

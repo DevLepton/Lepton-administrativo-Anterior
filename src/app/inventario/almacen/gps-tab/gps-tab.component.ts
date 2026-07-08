@@ -434,7 +434,6 @@ export class GpsTabComponent implements OnChanges {
     });
   }
 
-  // ✅ NUEVO: selección
   selectedGpsIds = new Set<string>();
 
   private clearGpsSelection() {
@@ -625,6 +624,191 @@ export class GpsTabComponent implements OnChanges {
       .sort((a, b) => b.qty - a.qty);
   }
 
+  // async syncGpsWithApi() {
+  //   const gpsInConfig = this.gps.filter(
+  //     g => g.status === 'En configuración'
+  //   );
+
+  //   if (!gpsInConfig.length) {
+  //     this.toast.warning({
+  //       detail: 'Aviso',
+  //       summary: 'No hay GPS en configuración.',
+  //       duration: 4000
+  //     });
+
+  //     return;
+  //   }
+
+  //   // ===== MOSTRAR GPS EN CONFIGURACIÓN =====
+  //   const gpsConfigHtml = gpsInConfig.map(g => `
+  //   <div style="
+  //     padding:.65rem 0;
+  //     border-bottom:1px solid rgba(255,255,255,.08);
+  //   ">
+  //     <div>
+  //       <b>${g.imei}</b>
+  //     </div>
+
+  //     <div style="
+  //       opacity:.8;
+  //       font-size:.9rem;
+  //     ">
+  //       ${g.brand} ${g.model}
+  //     </div>
+  //   </div>
+  // `).join('');
+  //   const confirmed = await this.confirmModal.open({
+  //     title: `GPS en configuración (${gpsInConfig.length})`,
+  //     message: `
+  //     <div style="
+  //       text-align:left;
+  //       max-height:350px;
+  //       overflow:auto;
+  //       padding-right:.35rem;
+  //     ">
+  //       ${gpsConfigHtml}
+  //     </div>
+  //     <br>
+  //     <div style="
+  //       text-align:center;
+  //       font-weight:500;
+  //     ">
+  //       ¿Deseas sincronizar estos GPS?
+  //     </div>
+  //   `,
+  //     confirmText: 'Sincronizar',
+  //     cancelText: 'Cancelar'
+  //   });
+
+  //   if (!confirmed) {
+  //     return;
+  //   }
+
+  //   // ===== CONSULTAR API =====
+  //   this.gpsLoading = true;
+  //   this.apiService.syncGpsWithNavixy(46207).subscribe({
+  //     next: async (res: any) => {
+  //       const trackers = res?.trackers || [];
+  //       const imeis = new Set(
+  //         trackers
+  //           .map((t: any) => String(t.imei || '').trim())
+  //           .filter(Boolean)
+  //       );
+
+  //       const matches = gpsInConfig.filter(g =>
+  //         imeis.has(String(g.imei || '').trim())
+  //       );
+
+  //       if (!matches.length) {
+  //         this.gpsLoading = false;
+
+  //         await this.confirmModal.open({
+  //           title: 'Sin coincidencias',
+  //           message: `
+  //           <div style="text-align:center;">
+  //             Ningún GPS fue encontrado en la API.
+  //           </div>
+  //         `,
+  //           confirmText: 'Aceptar',
+  //           cancelText: ''
+  //         });
+
+  //         return;
+  //       }
+
+  //       // ===== ACTUALIZAR =====
+  //       const updates = matches.map(g =>
+  //         this.apiService.updateGps(g.id, {
+  //           status: 'Listo para usar'
+  //         })
+  //       );
+
+  //       forkJoin(updates).subscribe({
+  //         next: async () => {
+  //           matches.forEach(g => {
+  //             g.status = 'Listo para usar';
+  //           });
+  //           const syncedHtml = matches.map(g => `
+  //             <div style="
+  //               padding:.65rem 0;
+  //               border-bottom:1px solid rgba(255,255,255,.08);
+  //             ">
+  //               <div>
+  //                 <b>${g.imei}</b>
+  //               </div>
+
+  //               <div style="
+  //                 opacity:.8;
+  //                 font-size:.9rem;
+  //               ">
+  //                 ${g.brand} ${g.model}
+  //               </div>
+  //             </div>
+  //         `).join('');
+
+  //           await this.confirmModal.open({
+  //             title: 'Sincronización completada',
+  //             message: `
+  //               <div style="
+  //                 text-align:left;
+  //                 max-height:350px;
+  //                 overflow:auto;
+  //                 padding-right:.35rem;
+  //               ">
+  //                 ${syncedHtml}
+  //               </div>
+  //               <br>
+  //               <div style="
+  //                 margin-top:1rem;
+  //                 text-align:center;
+  //                 font-weight:500;
+  //               ">
+  //                 ${matches.length} GPS sincronizado(s) correctamente.
+  //               </div>
+  //             `,
+  //             confirmText: 'Aceptar',
+  //             cancelText: ''
+  //           });
+
+  //           this.refreshRequested.emit();
+  //         },
+
+  //         error: async () => {
+  //           await this.confirmModal.open({
+  //             title: 'Error',
+  //             message: `
+  //               <div style="text-align:center;">
+  //                 No se pudieron sincronizar los GPS.
+  //               </div>
+  //             `,
+  //             confirmText: 'Aceptar',
+  //             cancelText: ''
+  //           });
+  //         },
+
+  //         complete: () => {
+  //           this.gpsLoading = false;
+  //         }
+  //       });
+  //     },
+
+  //     error: async () => {
+  //       this.gpsLoading = false;
+
+  //       await this.confirmModal.open({
+  //         title: 'Error',
+  //         message: `
+  //           <div style="text-align:center;">
+  //             No se pudo consultar la API.
+  //           </div>
+  //         `,
+  //         confirmText: 'Aceptar',
+  //         cancelText: ''
+  //       });
+  //     }
+  //   });
+  // }
+
   async syncGpsWithApi() {
 
     const gpsInConfig = this.gps.filter(
@@ -632,7 +816,6 @@ export class GpsTabComponent implements OnChanges {
     );
 
     if (!gpsInConfig.length) {
-
       this.toast.warning({
         detail: 'Aviso',
         summary: 'No hay GPS en configuración.',
@@ -642,30 +825,20 @@ export class GpsTabComponent implements OnChanges {
       return;
     }
 
-    // ===== MOSTRAR GPS EN CONFIGURACIÓN =====
-
     const gpsConfigHtml = gpsInConfig.map(g => `
     <div style="
       padding:.65rem 0;
       border-bottom:1px solid rgba(255,255,255,.08);
     ">
-      <div>
-        <b>${g.imei}</b>
-      </div>
-
-      <div style="
-        opacity:.8;
-        font-size:.9rem;
-      ">
+      <div><b>${g.imei}</b></div>
+      <div style="opacity:.8;font-size:.9rem;">
         ${g.brand} ${g.model}
       </div>
     </div>
   `).join('');
 
     const confirmed = await this.confirmModal.open({
-
       title: `GPS en configuración (${gpsInConfig.length})`,
-
       message: `
       <div style="
         text-align:left;
@@ -683,23 +856,38 @@ export class GpsTabComponent implements OnChanges {
         ¿Deseas sincronizar estos GPS?
       </div>
     `,
-
-      confirmText: 'Sincronizar',
+      confirmText: 'Continuar',
       cancelText: 'Cancelar'
     });
 
-    if (!confirmed) {
-      return;
-    }
+    if (!confirmed) return;
+
+    // ===== SELECCIONAR ALCANCE =====
+
+    const scopeResult = await Swal.fire({
+      title: 'Origen de búsqueda',
+      text: '¿Dónde deseas buscar los GPS?',
+      icon: 'question',
+      showCancelButton: true,
+      showDenyButton: true,
+      confirmButtonText: 'Solo soporte',
+      denyButtonText: 'Todas las cuentas',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: 'var(--color-success)',
+      denyButtonColor: 'var(--color-warning)',
+      cancelButtonColor: 'var(--color-primary)',
+      reverseButtons: true
+    });
+
+    if (scopeResult.isDismissed) return;
+
+    const userId = scopeResult.isConfirmed ? 46207 : 0;
 
     // ===== CONSULTAR API =====
-
     this.gpsLoading = true;
 
-    this.apiService.syncGpsWithNavixy(46207).subscribe({
-
+    this.apiService.syncGpsWithNavixy(userId).subscribe({
       next: async (res: any) => {
-
         const trackers = res?.trackers || [];
 
         const imeis = new Set(
@@ -717,23 +905,18 @@ export class GpsTabComponent implements OnChanges {
           this.gpsLoading = false;
 
           await this.confirmModal.open({
-
             title: 'Sin coincidencias',
-
             message: `
-            <div style="text-align:center;">
-              Ningún GPS fue encontrado en la API.
-            </div>
-          `,
-
+              <div style="text-align:center;">
+                Ningún GPS fue encontrado en la API.
+              </div>
+            `,
             confirmText: 'Aceptar',
             cancelText: ''
           });
 
           return;
         }
-
-        // ===== ACTUALIZAR =====
 
         const updates = matches.map(g =>
           this.apiService.updateGps(g.id, {
@@ -742,35 +925,25 @@ export class GpsTabComponent implements OnChanges {
         );
 
         forkJoin(updates).subscribe({
-
           next: async () => {
-
             matches.forEach(g => {
               g.status = 'Listo para usar';
             });
 
             const syncedHtml = matches.map(g => `
-            <div style="
-              padding:.65rem 0;
-              border-bottom:1px solid rgba(255,255,255,.08);
-            ">
-              <div>
-                <b>${g.imei}</b>
-              </div>
-
               <div style="
-                opacity:.8;
-                font-size:.9rem;
+                padding:.65rem 0;
+                border-bottom:1px solid rgba(255,255,255,.08);
               ">
-                ${g.brand} ${g.model}
+                <div><b>${g.imei}</b></div>
+                <div style="opacity:.8;font-size:.9rem;">
+                  ${g.brand} ${g.model}
+                </div>
               </div>
-            </div>
-          `).join('');
+            `).join('');
 
             await this.confirmModal.open({
-
               title: 'Sincronización completada',
-
               message: `
               <div style="
                 text-align:left;
@@ -780,16 +953,16 @@ export class GpsTabComponent implements OnChanges {
               ">
                 ${syncedHtml}
               </div>
+
               <br>
+
               <div style="
-                margin-top:1rem;
                 text-align:center;
                 font-weight:500;
               ">
                 ${matches.length} GPS sincronizado(s) correctamente.
               </div>
             `,
-
               confirmText: 'Aceptar',
               cancelText: ''
             });
@@ -800,15 +973,12 @@ export class GpsTabComponent implements OnChanges {
           error: async () => {
 
             await this.confirmModal.open({
-
               title: 'Error',
-
               message: `
               <div style="text-align:center;">
                 No se pudieron sincronizar los GPS.
               </div>
             `,
-
               confirmText: 'Aceptar',
               cancelText: ''
             });
@@ -825,15 +995,12 @@ export class GpsTabComponent implements OnChanges {
         this.gpsLoading = false;
 
         await this.confirmModal.open({
-
           title: 'Error',
-
           message: `
           <div style="text-align:center;">
             No se pudo consultar la API.
           </div>
         `,
-
           confirmText: 'Aceptar',
           cancelText: ''
         });

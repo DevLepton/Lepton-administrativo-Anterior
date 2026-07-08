@@ -90,7 +90,8 @@
                         </button>
                     </span>
 
-                    <span class="tooltip-wrap" [matTooltip]="selectedCount === 0 ? '' : 'Selecciona al menos 1 SIM para editar'"
+                    <span class="tooltip-wrap"
+                        [matTooltip]="selectedCount === 0 ? '' : 'Selecciona al menos 1 SIM para editar'"
                         [matTooltipDisabled]="canViewOrEdit" matTooltipPosition="above">
                         <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelected()"
                             [disabled]="selectedCount === 0">
@@ -164,6 +165,8 @@
                             <th (click)="sortBy('client')" class="th-sort">
                                 Cliente <span class="arrow material-icons">{{ arrowFor('client') }}</span>
                             </th>
+                            <th (click)="sortBy('comments')" class="th-sort">Comentarios<span
+                                    class="arrow material-icons">{{ arrowFor('comments') }}</span></th>
 
                         </tr>
                     </thead>
@@ -198,6 +201,9 @@
                             <td>{{ sim.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
                             <td>{{ sim.usage }}</td>
                             <td>{{ sim.client || 'Sin asignar' }}</td>
+                            <td class="comments-cell">
+                                {{ sim.comments || '-' }}
+                            </td>
                         </tr>
 
 

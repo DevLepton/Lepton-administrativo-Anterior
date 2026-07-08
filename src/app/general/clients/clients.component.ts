@@ -894,7 +894,11 @@ export class ClientsComponent implements OnInit {
       const matchSearch = !s ||
         String(c.id).includes(s) ||
         c.nombre.toLowerCase().includes(s) ||
-        c.login.toLowerCase().includes(s);
+        c.login.toLowerCase().includes(s) ||
+        (c.trackers || []).some(t =>
+          String(t.imei || '').toLowerCase().includes(s) ||
+          String(t.sim || '').toLowerCase().includes(s)
+        );
 
       let trackers = c.trackers || [];
 

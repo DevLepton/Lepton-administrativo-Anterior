@@ -236,14 +236,8 @@ export interface RequestsQuery {
   order?: 'asc' | 'desc';
 }
 
-export const apiUrl = 'http://localhost:3103';
-// export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
-
-// Qrs
-// Que se puedan hacer búsquedas por IMEI y sim en la tabla de clientes
-// Al eliminar una petición que pregunte si se quiere cambiar el estatus de los dispositivos de configuración a "En inventario"
-// Agregar a la tabla de dispositivos la columna con los comentarios.
-// Agregar una opción al sincronizar para hacer la búsqueda de IMEI solo en la cuenta de soporte o en todas las cuentas. 
+// export const apiUrl = 'http://localhost:3103';
+export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -335,7 +329,7 @@ export class ApiService {
       status?: string;
       includeIds?: string[];
     },
-    forceRefresh = false 
+    forceRefresh = false
   ): Observable<any> {
 
     if (!this.devicesCache$ || forceRefresh) {
@@ -347,6 +341,13 @@ export class ApiService {
     }
 
     return this.devicesCache$;
+  }
+
+  bulkUpdateDevices(ids: string[], payload: any): Observable<any> {
+    return this.http.put(`${apiUrl}/devices/bulk`, {
+      ids,
+      payload
+    });
   }
 
   /* ====================== SIMs (devices?type=sim) ====================== */

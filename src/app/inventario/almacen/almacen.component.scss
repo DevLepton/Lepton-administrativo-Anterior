@@ -867,3 +867,10 @@ b.ready {
 b.default {
   color: #374151;
 }
+
+.comments-cell {
+  max-width: 250px; /* ajusta el ancho */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

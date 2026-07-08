@@ -85,7 +85,7 @@
 
         <span class="tooltip-wrap" [matTooltip]="canViewOrEditRequest ? '' : 'Selecciona 1 petición para ver'"
           [matTooltipDisabled]="canViewOrEditRequest" matTooltipPosition="above">
-          <button class="icon-button view-button" title="Ver" (click)="viewSelectedRequest()"
+          <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelectedRequest()"
             [disabled]="!canViewOrEditRequest">
             <span class="material-icons">visibility</span>
           </button>
@@ -94,7 +94,7 @@
         <span class="tooltip-wrap" *ngIf="isAdminUser || isSupportUser"
           [matTooltip]="canViewOrEditRequest ? '' : 'Selecciona 1 petición para editar'"
           [matTooltipDisabled]="canViewOrEditRequest" matTooltipPosition="above">
-          <button class="icon-button edit-button" title="Editar" (click)="editSelectedRequest()"
+          <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelectedRequest()"
             [disabled]="!canViewOrEditRequest">
             <span class="material-icons">edit</span>
           </button>
@@ -103,7 +103,7 @@
         <span class="tooltip-wrap" *ngIf="isAdminUser || isSupportUser"
           [matTooltip]="requestsSelectedCount > 0 ? '' : 'Selecciona al menos 1 petición para eliminar'"
           [matTooltipDisabled]="requestsSelectedCount > 0" matTooltipPosition="above">
-          <button class="icon-button delete-button" title="Eliminar" (click)="deleteSelectedRequests()"
+          <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedRequests()"
             [disabled]="requestsSelectedCount === 0 || requestsDeletingId === '__bulk__'">
             <span class="material-icons">
               {{ requestsDeletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}

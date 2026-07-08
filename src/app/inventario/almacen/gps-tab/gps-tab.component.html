@@ -76,7 +76,6 @@
                 </mat-form-field>
             </div>
 
-
         </div>
 
         <div class="filter-bar">
@@ -95,7 +94,8 @@
                         </button>
                     </span>
 
-                    <span class="tooltip-wrap" [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para editar'"
+                    <span class="tooltip-wrap"
+                        [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para editar'"
                         [matTooltipDisabled]="canViewOrEditGps">
                         <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelectedGps()"
                             [disabled]="gpsSelectedCount === 0">
@@ -147,37 +147,27 @@
                                     (change)="toggleSelectAllGpsVisible($any($event.target).checked)"
                                     aria-label="Seleccionar todos" />
                             </th>
-
                             <th>No.</th>
-
                             <th (click)="sortGpsBy('imei')" class="th-sort">IMEI <span class="arrow material-icons">{{
-                                    arrowForGps('imei')
-                                    }}</span></th>
+                                    arrowForGps('imei') }}</span></th>
                             <th (click)="sortGpsBy('sn')" class="th-sort">S/N <span class="arrow material-icons">{{
-                                    arrowForGps('sn')
-                                    }}</span>
-                            </th>
+                                    arrowForGps('sn') }}</span></th>
                             <th (click)="sortGpsBy('brand')" class="th-sort">Marca <span class="arrow material-icons">{{
-                                    arrowForGps('brand')
-                                    }}</span></th>
+                                    arrowForGps('brand') }}</span></th>
                             <th (click)="sortGpsBy('model')" class="th-sort">Modelo <span
-                                    class="arrow material-icons">{{
-                                    arrowForGps('model') }}</span></th>
+                                    class="arrow material-icons">{{ arrowForGps('model') }}</span></th>
                             <th (click)="sortGpsBy('supplier')" class="th-sort">Proveedor <span
-                                    class="arrow material-icons">{{
-                                    arrowForGps('supplier') }}</span></th>
+                                    class="arrow material-icons">{{ arrowForGps('supplier') }}</span></th>
                             <th (click)="sortGpsBy('status')" class="th-sort">Estatus <span
-                                    class="arrow material-icons">{{
-                                    arrowForGps('status') }}</span></th>
+                                    class="arrow material-icons">{{ arrowForGps('status') }}</span></th>
                             <th (click)="sortGpsBy('purchaseDate')" class="th-sort">Fecha de compra <span
-                                    class="arrow material-icons">{{
-                                    arrowForGps('purchaseDate') }}</span></th>
+                                    class="arrow material-icons">{{ arrowForGps('purchaseDate') }}</span></th>
                             <th (click)="sortGpsBy('entryDate')" class="th-sort">Fecha ingreso Leptón <span
                                     class="arrow material-icons">{{ arrowForGps('entryDate') }}</span></th>
-                            <th (click)="sortGpsBy('client')" class="th-sort">Cliente <span
-                                    class="arrow material-icons">{{
-                                    arrowForGps('client') }}</span></th>
-
+                            <th (click)="sortGpsBy('client')" class="th-sort">Cliente<span
+                                    class="arrow material-icons">{{ arrowForGps('client') }}</span></th>
+                            <th (click)="sortGpsBy('comments')" class="th-sort">Comentarios<span
+                                    class="arrow material-icons">{{ arrowForGps('comments') }}</span></th>
                         </tr>
                     </thead>
 
@@ -220,6 +210,9 @@
 
                             <td>{{ g.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
                             <td>{{ g.client || 'Sin asignar' }}</td>
+                            <td class="comments-cell">
+                                {{ g.comments || '-' }}
+                            </td>
                         </tr>
 
                         <tr *ngIf="displayedGps.length === 0">
