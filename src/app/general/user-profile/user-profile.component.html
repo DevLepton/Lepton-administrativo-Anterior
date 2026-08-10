@@ -1,5 +1,4 @@
-<div class="tab-pane">
-
+<div class="section-container">
     <!-- HEADER -->
     <div class="profile-header">
         <div class="title">
@@ -24,7 +23,10 @@
                 </div>
 
                 <div class="user-info">
-                    <h3>{{ user?.userName }}</h3>
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                        <h3>{{ user?.userName }} </h3>
+                        <span>{{ user?.userId || user?._id }}</span>
+                    </div>
                     <span>{{ user?.email }}</span>
 
                     <span class="role-badge">

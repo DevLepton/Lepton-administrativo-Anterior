@@ -85,10 +85,10 @@
                         <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
                         <td>
                             <span class="status-badge" [ngClass]="{
-                    cre: ev.operation === 'Creación',
-                    upd: ev.operation === 'Actualización',
-                    del: ev.operation === 'Eliminación'
-                  }">
+                                cre: ev.operation === 'Creación',
+                                upd: ev.operation === 'Actualización',
+                                del: ev.operation === 'Eliminación'
+                            }">
                                 {{ ev.operation }}
                             </span>
                         </td>
@@ -97,16 +97,24 @@
                         <td>{{ displayUser(ev) }}</td>
                         <td>{{ ev.createdAt | date:'dd MMM yyyy, HH:mm' }}</td>
                         <td class="actions-cell">
-                            <button class="icon-button view-button" title="Ver detalles" (click)="openDetails(ev)">
-                                <span class="material-icons">visibility</span>
-                            </button>
-                            <button class="icon-button history-button" title="Ver historial" (click)="openHistory(ev)">
-                                <span class="material-icons">history</span>
-                            </button>
-                            <button class="icon-button delete-button" title="Eliminar" (click)="deleteEvent(ev)"
+                            <span matTooltip="Ver">
+                                <button class="icon-button view-button" title="Ver detalles" (click)="openDetails(ev)">
+                                    <span class="material-icons">visibility</span>
+                                </button>
+                            </span>
+
+                            <span matTooltip="Ver historial">
+                                <button class="icon-button history-button" (click)="openHistory(ev)">
+                                    <span class="material-icons">history</span>
+                                </button>
+                            </span>
+
+                            <span matTooltip="Eliminar" *ngIf="isAdmin">
+                                <button class="icon-button delete-button" (click)="deleteEvent(ev)"
                                 [disabled]="deletingId === ev._id">
                                 <span class="material-icons">delete</span>
                             </button>
+                        </span>
 
                         </td>
                     </tr>
@@ -118,7 +126,8 @@
                 <ng-template #loadingTpl>
                     <tbody>
                         <tr>
-                            <td colspan="7" style="text-align:center; padding:1rem;">{{errorMsg || 'Cargando eventos…'}}</td>
+                            <td colspan="7" style="text-align:center; padding:1rem;">{{errorMsg || 'Cargando eventos…'}}
+                            </td>
                         </tr>
                     </tbody>
                 </ng-template>

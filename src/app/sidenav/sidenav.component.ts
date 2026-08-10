@@ -68,10 +68,25 @@ export class SidenavComponent implements OnInit {
 
     const role = this.authService.getUserRole();
     this.navData = role
-      ? navbarData.filter(item => item.roles.includes(role))
+      ? navbarData
+        .filter(item => item.roles.includes(role))
+        .map(item => ({
+          ...item,
+          children: item.children?.filter(child => child.roles.includes(role))
+        }))
       : [];
 
   }
+
+  hasActiveChild(item: NavItem): boolean {
+    if (typeof window === 'undefined') return false;
+    return Boolean(item.children?.length && window.location.pathname.includes(item.RouteLink));
+  }
+
+  hasChildren(item: NavItem): boolean {
+    return Boolean(item.children?.length);
+  }
+
   toggleCollapsed(): void {
     this.collapsed = !this.collapsed;
     this.onToggleSidenav.emit({ collapsed: this.collapsed, screenWidth: this.screenWidth });

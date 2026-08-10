@@ -1,0 +1,573 @@
+<div class="section-container">
+  <div class="section-header">
+    <div>
+      <h2>Clientes de cobranza</h2>
+      <button mat-icon-button class="refresh-btn" (click)="refresh()" matTooltip="Recargar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+    <hr class="divider">
+
+    <div class="actions-container">
+      <div class="filter-bar">
+        <div class="filter-container">
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+              placeholder="Nombre, empresa, RFC, contacto..." autocomplete="off" />
+            <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+              <mat-icon>close</mat-icon>
+            </button>
+            <mat-hint *ngIf="search">
+              {{ filteredBillingClients.length }} resultado{{ filteredBillingClients.length === 1 ? '' : 's' }}
+            </mat-hint>
+          </mat-form-field>
+
+          <!-- <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Tipo</mat-label>
+            <mat-select [(value)]="typeFilter" (selectionChange)="onFilterChange()">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option value="client">Cliente</mat-option>
+              <mat-option value="subClient">Subcliente</mat-option>
+            </mat-select>
+          </mat-form-field> -->
+
+          <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Comprobante</mat-label>
+            <mat-select [(value)]="voucherTypeFilter" (selectionChange)="onFilterChange()">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option value="Recibo">Recibo</mat-option>
+              <mat-option value="Factura">Factura</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <!-- <mat-form-field appearance="outline" class="filter user-filter" subscriptSizing="dynamic">
+            <mat-label>Cliente vinculado</mat-label>
+            <mat-select [(value)]="userIdFilter" (selectionChange)="onFilterChange()">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option *ngFor="let client of uniqueLinkedClients; trackBy: trackByUserId" [value]="client.userId">
+                #{{ client.userId }} - {{ client.fullName }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field> -->
+        </div>
+      </div>
+
+      <div class="actions-top">
+        <button class="new-button" matTooltip="Nuevo Sub Cliente" (click)="openCreateModal()">
+          <span class="material-icons">add</span>
+        </button>
+
+        <!-- <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 subcliente para ver'"
+          [matTooltipDisabled]="canViewOrEdit">
+          <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelected()" [disabled]="!canViewOrEdit">
+            <span class="material-icons">visibility</span>
+          </button>
+        </span>
+
+        <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 subcliente para editar'"
+          [matTooltipDisabled]="canViewOrEdit">
+          <button class="icon-button edit-button" matTooltip="Editar" (click)="openEditSelected()"
+            [disabled]="!canViewOrEdit">
+            <span class="material-icons">edit</span>
+          </button>
+        </span> -->
+
+        <span class="tooltip-wrap" [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 subcliente'"
+          [matTooltipDisabled]="selectedCount > 0">
+          <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
+            [disabled]="selectedCount === 0 || deletingId === '__bulk__'">
+            <span class="material-icons">{{ deletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}</span>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="subclients-layout">
+    <div class="subclients-main" [class.with-sidebar]="sidePanelOpen">
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="th-check">
+                  <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                    (change)="toggleSelectAllVisible($any($event.target).checked)" aria-label="Seleccionar todos" />
+                </th>
+                <th>No.</th>
+                <!-- <th>Tipo</th> -->
+                <th>Nombre facturación</th>
+                <th>Relación</th>
+                <th>Comprobante</th>
+                <th>Día de corte</th>
+                <th>RFC</th>
+                <th>Correo</th>
+                <th>Contactos</th>
+                <th>Lista negra</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody *ngIf="!loading; else loadingTpl">
+              <tr *ngFor="let row of displayedBillingClients; let idx = index; trackBy: trackByRow"
+                (click)="toggleRowByClick(row.item)" [class.row-selected]="isSelected(row.item._id)"
+                style="cursor:pointer;" [class.child-row]="!row.isParent">
+                <td class="td-check" (click)="toggleRowByClick(row.item); $event.stopPropagation()">
+                  <input type="checkbox" [checked]="isSelected(row.item._id)"
+                    (change)="toggleRowSelection(row.item, $any($event.target).checked)"
+                    (click)="$event.stopPropagation()" aria-label="Seleccionar cliente de cobranza" />
+                </td>
+                <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
+                <!-- <td>{{ getBillingClientTypeLabel(row.item.type) }}</td> -->
+                <td>
+                  <div class="billing-name">
+                    <b>{{ row.item.billingName }}</b>
+                    <div class="muted">
+                      {{ row.item.companyName }}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <div style="display: flex; gap: 0.5rem; align-items: center; justify-content: space-between;">
+                    <div>
+                      <span class="client-link"
+                        [class.missing]="row.item.type === 'client' ? !row.item.userId : !row.item.billingClientFather">
+                        {{ row.item.type === 'client' ? getClientLabel(row.item.userId ?? null) :
+                        getBillingClientName(row.item.billingClientFather) }}
+                      </span>
+                      <div class="muted" *ngIf="row.item.type === 'client'">
+                        {{ row.item.subBillingClients?.length || 0 }} subcliente{{ (row.item.subBillingClients?.length
+                        ||
+                        0)
+                        === 1 ?
+                        '' : 's' }}
+                      </div>
+                    </div>
+                    <button *ngIf="row.isParent" mat-icon-button
+                      (click)="toggleExpanded(row.item._id); $event.stopPropagation()">
+
+                      <mat-icon>
+                        {{ isExpanded(row.item._id)
+                        ? 'keyboard_arrow_down'
+                        : 'keyboard_arrow_right' }}
+                      </mat-icon>
+
+                    </button>
+                  </div>
+                </td>
+                <td>
+                  <span class="status-badge" [class.invoice]="row.item.voucherType === 'Factura'">
+                    {{ row.item.voucherType }}
+                  </span>
+                </td>
+                <td>{{ row.item.cutoffDay }}</td>
+                <td>{{ row.item.RFC || '-' }}</td>
+                <td>{{ row.item.email || '-' }}</td>
+                <td>{{ row.item.paymentContacts.length }}</td>
+                <td>{{ row.item.blacklist ? 'Sí' : 'No' }}</td>
+                <td>
+                  <div class="row-actions">
+                    <button class="icon-button view-button" matTooltip="Ver"
+                    (click)="openSidebar(row.item); $event.stopPropagation()">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                  <button class="icon-button edit-button" matTooltip="Editar"
+                    (click)="openEditModal(row.item); $event.stopPropagation()">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </div>
+                </td>
+              </tr>
+
+              <tr *ngIf="displayedBillingClients.length === 0">
+                <td colspan="12" style="text-align:center; padding:1rem;">Sin clientes de cobranza que mostrar.</td>
+              </tr>
+            </tbody>
+
+            <ng-template #loadingTpl>
+              <tbody>
+                <tr>
+                  <td colspan="12" style="text-align:center; padding:1rem;">Cargando clientes de cobranza...</td>
+                </tr>
+              </tbody>
+            </ng-template>
+          </table>
+        </div>
+
+        <mat-paginator *ngIf="filteredBillingClients.length > 0" [length]="filteredBillingClients.length"
+          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [showFirstLastButtons]="true" (page)="onPageChange($event)">
+        </mat-paginator>
+      </div>
+    </div>
+
+    <aside class="side-panel" *ngIf="sidePanelOpen && selectedForSidebar as item">
+      <div class="side-panel__head">
+        <div>
+          <div class="side-title">{{ item.billingName }}</div>
+          <div class="side-sub">{{ getBillingClientTypeLabel(item.type) }}</div>
+        </div>
+        <button mat-icon-button (click)="closeSidebar()" aria-label="Cerrar">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="side-panel__body">
+        <div class="side-section">
+          <h4>Relación</h4>
+          <div class="side-info">
+            <div><b>Tipo:</b> {{ getBillingClientTypeLabel(item.type) }}</div>
+            <ng-container *ngIf="item.type === 'client'; else subClientRelationTpl">
+              <div><b>User ID:</b> {{ item.userId ?? 'Sin cliente vinculado' }}</div>
+              <div><b>Nombre:</b> {{ getClientName(item.userId ?? null) }}</div>
+              <div><b>Subclientes:</b> {{ item.subBillingClients?.length || 0 }}</div>
+            </ng-container>
+            <ng-template #subClientRelationTpl>
+              <!-- <div><b>Cliente padre:</b> {{ getBillingClientName(item.billingClientFather) }}</div> -->
+            </ng-template>
+            <div *ngIf="item.userId && clientByUserId.get(item.userId)?.email">
+              <b>Correo cliente:</b> {{ clientByUserId.get(item.userId)?.email }}
+            </div>
+            <div><b>Lista negra:</b> {{ item.blacklist ? 'Sí' : 'No' }}</div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Facturación</h4>
+          <div class="side-info">
+            <div><b>Razón/Nombre:</b> {{ item.billingName }}</div>
+            <div><b>Empresa:</b> {{ item.companyName || '-' }}</div>
+            <div><b>Comprobante:</b> {{ item.voucherType }}</div>
+            <div><b>RFC:</b> {{ item.RFC || '-' }}</div>
+            <div><b>Régimen:</b> {{ taxRegimeMap.get(item.taxRegime) || '-' }}</div>
+            <div><b>Uso de la factura:</b> {{ invoiceUseMap.get(item.useInvoice) || '-' }}</div>
+            <div><b>Correo:</b> {{ item.email || '-' }}</div>
+            <div><b>Día de corte:</b> {{ item.cutoffDay }}</div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Domicilio</h4>
+          <div class="comments-box">
+            {{ item.street || '-' }} {{ item.streetNumber || '' }},
+            {{ item.suburb || '-' }}, {{ item.locality || '-' }},
+            {{ item.state || '-' }}, {{ item.country || '-' }}.
+            CP: {{ item.cp || '-' }}
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Descuentos</h4>
+          <div class="side-table">
+            <div class="side-table__row">
+              <div>Mensualidad</div>
+              <div class="right">{{ item.discounts.monthly }}%</div>
+            </div>
+            <div class="side-table__row">
+              <div>Dispositivos</div>
+              <div class="right">{{ item.discounts.devices }}%</div>
+            </div>
+            <div class="side-table__row">
+              <div>Accesorios</div>
+              <div class="right">{{ item.discounts.accessories }}%</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Contactos de pago</h4>
+          <div class="contact-card" *ngFor="let contact of item.paymentContacts">
+            <b>{{ contact.name }}</b>
+            <span>{{ contact.email || '-' }}</span>
+            <span>{{ contact.cel || '-' }}</span>
+            <small>{{ contact.notes || 'Sin notas' }}</small>
+          </div>
+          <div class="comments-box" *ngIf="item.paymentContacts.length === 0">Sin contactos registrados.</div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
+  <div class="modal-content" (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-button" (click)="closeModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <h2>{{ title }}</h2>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <mat-horizontal-stepper [linear]="false" class="subclient-stepper" #stepper>
+        <mat-step>
+          <ng-template matStepLabel>Facturación</ng-template>
+
+          <div class="step-content">
+            <div class="form-flex">
+              <mat-form-field appearance="outline">
+                <mat-label>Tipo</mat-label>
+                <mat-select formControlName="type" (selectionChange)="onTypeSelect()">
+                  <mat-option value="client">Cliente</mat-option>
+                  <mat-option value="subClient">Subcliente</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Nombre de facturación</mat-label>
+                <input matInput formControlName="billingName" required />
+                <mat-error *ngIf="form.get('billingName')?.hasError('required')">Campo obligatorio</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'client'">
+                <mat-label>Cliente vinculado</mat-label>
+                <mat-select formControlName="userId" [disabled]="clientsLoading">
+                  <mat-option *ngIf="!clientsLoading && linkedClientOptions.length === 0" disabled>
+                    Sin clientes disponibles
+                  </mat-option>
+                  <mat-option *ngFor="let client of linkedClientOptions" [value]="client.userId">
+                    #{{ client.userId }} - {{ client.fullName }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="form.get('userId')?.hasError('required')">Campo obligatorio para clientes</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'subClient'">
+                <mat-label>Cliente padre</mat-label>
+                <mat-select formControlName="billingClientFather">
+                  <mat-option *ngIf="parentBillingClientOptions.length === 0" disabled>
+                    Sin clientes padre disponibles
+                  </mat-option>
+                  <mat-option *ngFor="let client of parentBillingClientOptions" [value]="client._id">
+                    {{ client.billingName }}
+                  </mat-option>
+                </mat-select>
+                <mat-error *ngIf="form.get('billingClientFather')?.hasError('required')">Campo obligatorio para
+                  subclientes</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'client'">
+                <mat-label>Subclientes asociados</mat-label>
+                <mat-select formControlName="subBillingClients" multiple>
+                  <mat-option *ngIf="subBillingClientOptions.length === 0" disabled>
+                    Sin subclientes disponibles
+                  </mat-option>
+                  <mat-option *ngFor="let subClient of subBillingClientOptions" [value]="subClient._id">
+                    {{ subClient.billingName }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Comprobante</mat-label>
+                <mat-select formControlName="voucherType">
+                  <mat-option value="Recibo">Recibo</mat-option>
+                  <mat-option value="Factura">Factura</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Correo facturación</mat-label>
+                <input matInput type="email" formControlName="email" />
+                <mat-error *ngIf="form.get('email')?.hasError('email')">Correo inválido</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Empresa</mat-label>
+                <input matInput formControlName="companyName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>RFC</mat-label>
+                <input matInput formControlName="RFC" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="tiny-field">
+                <mat-label>Día de corte</mat-label>
+                <input matInput type="number" min="1" max="31" formControlName="cutoffDay"
+                  (focus)="selectInput($event)" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="medium-field">
+                <mat-label>Régimen fiscal</mat-label>
+                <mat-select formControlName="taxRegime">
+                  <mat-option *ngFor="let regime of taxRegimes" [value]="regime.codigo">
+                    {{ regime.codigo }} - {{ regime.descripcion }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="medium-field">
+                <mat-label>Uso de la factura</mat-label>
+                <mat-select formControlName="useInvoice">
+                  <mat-option *ngFor="let use of invoceUses" [value]="use.codigo">
+                    {{ use.codigo }} - {{ use.descripcion }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-checkbox formControlName="blacklist" class="checkbox-field">
+                Lista negra
+              </mat-checkbox>
+            </div>
+
+            <div class="stepper-controls final">
+              <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+                (click)="closeModal()">Cancelar</button>
+              <div class="modal-actions">
+                <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
+                  Siguiente
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-step>
+
+        <mat-step>
+          <ng-template matStepLabel>Domicilio</ng-template>
+
+          <div class="step-content">
+            <div class="form-flex">
+              <mat-form-field appearance="outline">
+                <mat-label>Código postal</mat-label>
+                <input matInput type="text" inputmode="numeric" maxlength="5" formControlName="cp"
+                  (input)="onCpInput($event)" autocomplete="postal-code" />
+                <mat-error *ngIf="form.get('cp')?.hasError('pattern')">Ingresa 5 dígitos</mat-error>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Colonia</mat-label>
+                <mat-select formControlName="suburb">
+                  <mat-option *ngIf="loadingColonias" disabled>Cargando colonias...</mat-option>
+                  <mat-option *ngIf="!loadingColonias && colonias.length === 0" disabled>
+                    Ingresa un código postal válido
+                  </mat-option>
+                  <mat-option *ngFor="let colonia of colonias" [value]="colonia">
+                    {{ colonia }}
+                  </mat-option>
+                </mat-select>
+                <mat-hint *ngIf="loadingColonias">Cargando colonias...</mat-hint>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Calle</mat-label>
+                <input matInput formControlName="street" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="tiny-field">
+                <mat-label>Número</mat-label>
+                <input matInput formControlName="streetNumber" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Municipio</mat-label>
+                <input matInput formControlName="locality" readonly />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Estado</mat-label>
+                <input matInput formControlName="state" readonly />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>País</mat-label>
+                <input matInput formControlName="country" />
+              </mat-form-field>
+            </div>
+
+            <div class="stepper-controls">
+              <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
+                <mat-icon>arrow_back</mat-icon>
+                Anterior
+              </button>
+              <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
+                Siguiente
+                <mat-icon>arrow_forward</mat-icon>
+              </button>
+            </div>
+          </div>
+        </mat-step>
+
+        <mat-step>
+          <ng-template matStepLabel>Descuentos y contactos</ng-template>
+          <div class="step-content">
+            <h3>Descuentos</h3>
+            <div class="form-flex" formGroupName="discounts">
+              <mat-form-field appearance="outline">
+                <mat-label>Mensualidad (%)</mat-label>
+                <input matInput type="number" min="0" formControlName="monthly" (focus)="selectInput($event)" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Dispositivos (%)</mat-label>
+                <input matInput type="number" min="0" formControlName="devices" (focus)="selectInput($event)" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
+                <mat-label>Accesorios (%)</mat-label>
+                <input matInput type="number" min="0" formControlName="accessories" (focus)="selectInput($event)" />
+              </mat-form-field>
+            </div>
+
+            <div class="contacts-header">
+              <h3>Contactos de pago</h3>
+              <button type="button" mat-icon-button color="primary" class="add-contact" (click)="addPaymentContact()"
+                matTooltip="Agregar contacto">
+                <mat-icon>add</mat-icon>
+              </button>
+            </div>
+
+            <div formArrayName="paymentContacts" class="contacts-list">
+              <div class="contact-form" *ngFor="let contact of paymentContacts.controls; let i = index"
+                [formGroupName]="i">
+                <mat-form-field appearance="outline">
+                  <mat-label>Nombre</mat-label>
+                  <input matInput formControlName="name" />
+                  <mat-error *ngIf="contact.get('name')?.hasError('required')">Campo obligatorio</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Correo</mat-label>
+                  <input matInput type="email" formControlName="email" />
+                  <mat-error *ngIf="contact.get('email')?.hasError('email')">Correo inválido</mat-error>
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Celular</mat-label>
+                  <input matInput formControlName="cel" />
+                </mat-form-field>
+
+                <mat-form-field appearance="outline">
+                  <mat-label>Notas</mat-label>
+                  <input matInput formControlName="notes" />
+                </mat-form-field>
+
+                <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
+                  (click)="removePaymentContact(i)" [disabled]="paymentContacts.length === 1"
+                  matTooltip="Eliminar contacto">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+            </div>
+
+            <div class="stepper-controls final">
+              <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+                (click)="closeModal()">Cancelar</button>
+              <div class="modal-actions">
+                <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Anterior
+                </button>
+                <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="saving">
+                  <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-step>
+      </mat-horizontal-stepper>
+    </form>
+  </div>
+</div>

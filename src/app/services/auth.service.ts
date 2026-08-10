@@ -31,7 +31,14 @@ export class AuthService {
       localStorage.removeItem('user');
     }
 
+    this.clearUserScopedCaches();
+    this.userRole.next(null);
+    this.roleLoaded.next(false);
     this.authenticated.next(false);
+  }
+
+  clearUserScopedCaches(): void {
+    this.apiService.clearUserScopedCaches();
   }
 
   isLoggedIn(): boolean {
@@ -75,6 +82,7 @@ export class AuthService {
   }
 
   setUser(user: any) {
+    this.clearUserScopedCaches();
     localStorage.setItem('user', JSON.stringify(user));
   }
 

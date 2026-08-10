@@ -1,0 +1,144 @@
+<div class="section-container">
+  <div class="section-header">
+    <div>
+      <h2>Cotizaciones</h2>
+      <button mat-icon-button class="refresh-btn" (click)="refresh()" matTooltip="Recargar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+    <hr class="divider">
+
+    <div class="actions-container">
+      <div class="filter-bar">
+        <div class="filter-container">
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+              placeholder="ID, cliente, empresa o lugar..." autocomplete="off" />
+            <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+              <mat-icon>close</mat-icon>
+            </button>
+            <mat-hint *ngIf="search">
+              {{ filteredQuotes.length }} resultado{{ filteredQuotes.length === 1 ? '' : 's' }}
+            </mat-hint>
+          </mat-form-field>
+
+          <!-- <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Estatus</mat-label>
+            <mat-select [(value)]="statusFilter" (selectionChange)="onFilterChange()">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option value="Borrador">Borrador</mat-option>
+              <mat-option value="Enviada">Enviada</mat-option>
+              <mat-option value="Aceptada">Aceptada</mat-option>
+              <mat-option value="Rechazada">Rechazada</mat-option>
+            </mat-select>
+          </mat-form-field> -->
+        </div>
+      </div>
+
+      <div class="actions-top">
+        <button class="new-button" matTooltip="Nueva cotización" disabled>
+          <span class="material-icons">add</span>
+        </button>
+
+        <!-- <span class="tooltip-wrap" matTooltip="Selecciona 1 cotización para ver">
+          <button class="icon-button view-button" matTooltip="Ver" [disabled]="!canViewOrEdit">
+            <span class="material-icons">visibility</span>
+          </button>
+        </span>
+
+        <span class="tooltip-wrap" matTooltip="Selecciona 1 cotización para editar">
+          <button class="icon-button edit-button" matTooltip="Editar" [disabled]="!canViewOrEdit">
+            <span class="material-icons">edit</span>
+          </button>
+        </span> -->
+
+        <span class="tooltip-wrap" matTooltip="Selecciona al menos 1 cotización">
+          <button class="icon-button delete-button" matTooltip="Eliminar" [disabled]="selectedCount === 0">
+            <span class="material-icons">delete</span>
+          </button>
+        </span>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div class="table-scroll">
+      <table class="table">
+        <thead>
+          <tr>
+            <th class="th-check">
+              <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                (change)="toggleSelectAllVisible($any($event.target).checked)">
+            </th>
+
+            <th>No.</th>
+            <th>Cotización</th>
+            <th>Cliente</th>
+            <th>Empresa</th>
+            <th>Total</th>
+            <th>Vigencia</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody *ngIf="!loading; else loadingTpl">
+          <tr *ngFor="let item of displayedQuotes; let idx =index; trackBy: trackById" (click)="toggleRowByClick(item)"
+            [class.row-selected]="isSelected(item._id)" style="cursor:pointer;">
+
+            <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
+              <input type="checkbox" [checked]="isSelected(item._id)"
+                (change)="toggleRowSelection(item,$any($event.target).checked)" (click)="$event.stopPropagation()">
+            </td>
+
+            <td>{{ ((currentPage-1)*perPage)+idx+1 }}</td>
+            <td>{{ item.quoteNum }}</td>
+            <td>{{ item.clientName }}</td>
+            <td>{{ item.companyName || '-' }}</td>
+            <td>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</td>
+            <td>{{ item.validity | date:'dd/MM/yyyy' }}</td>
+
+            <td class="row-actions">
+              <button class="icon-button view-button" matTooltip="Ver" disabled>
+                <span class="material-icons">visibility</span>
+              </button>
+
+              <button class="icon-button edit-button" matTooltip="Editar" disabled>
+                <span class="material-icons">edit</span>
+              </button>
+            </td>
+          </tr>
+
+          <tr *ngIf="displayedQuotes.length===0">
+            <td colspan="8" style="text-align:center;padding:1rem;">
+              Sin cotizaciones para mostrar.
+            </td>
+          </tr>
+        </tbody>
+
+        <ng-template #loadingTpl>
+          <tbody>
+            <tr>
+              <td colspan="8" style="text-align:center;padding:1rem;">
+                Cargando cotizaciones...
+              </td>
+            </tr>
+          </tbody>
+        </ng-template>
+
+        <ng-template #loadingTpl>
+          <tbody>
+            <tr>
+              <td colspan="8" style="text-align:center; padding:1rem;">Cargando cotizaciones...</td>
+            </tr>
+          </tbody>
+        </ng-template>
+      </table>
+    </div>
+
+    <mat-paginator *ngIf="filteredQuotes.length > 0" [length]="filteredQuotes.length" [pageIndex]="currentPage - 1"
+      [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+      (page)="onPageChange($event)">
+    </mat-paginator>
+  </div>
+</div>

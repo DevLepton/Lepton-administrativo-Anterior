@@ -1,0 +1,336 @@
+<div class="section-container">
+  <div class="section-header">
+    <div>
+      <h2>Sugerencias</h2>
+      <button mat-icon-button class="refresh-btn" (click)="refresh()" matTooltip="Recargar">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+    <hr class="divider">
+
+    <div class="header actions-container">
+      <div class="filter-bar">
+        <div class="filter-container">
+          <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+            <mat-label>Buscar</mat-label>
+            <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+              placeholder="Producto o descripción..." autocomplete="off" />
+            <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+              <mat-icon>close</mat-icon>
+            </button>
+            <mat-hint *ngIf="search">
+              {{ filteredSuggestions.length }} resultado{{ filteredSuggestions.length === 1 ? '' : 's' }}
+            </mat-hint>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Disparador</mat-label>
+
+            <mat-select [(value)]="actionFilter" (selectionChange)="onFilterChange()">
+              <mat-option value="">Todos</mat-option>
+              <mat-option value="add">Al agregar</mat-option>
+              <mat-option value="remove">Al quitar</mat-option>
+            </mat-select>
+          </mat-form-field>
+        </div>
+      </div>
+
+      <div class="filter-bar actions-row">
+        <div class="filter-container actions-container">
+          <div class="actions-top">
+            <button class="new-button" matTooltip="Nueva sugerencia" (click)="openCreateModal()">
+              <span class="material-icons">add</span>
+            </button>
+
+            <!-- <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 producto para ver'"
+                  [matTooltipDisabled]="canViewOrEdit">
+                  <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelected()"
+                    [disabled]="!canViewOrEdit">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </span>
+
+                <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 producto para editar'"
+                  [matTooltipDisabled]="canViewOrEdit">
+                  <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelected()"
+                    [disabled]="!canViewOrEdit">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </span> -->
+
+            <span class="tooltip-wrap" [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 producto'"
+              [matTooltipDisabled]="selectedCount > 0">
+              <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
+                [disabled]="selectedCount === 0 || deletingId === '__bulk__'">
+                <span class="material-icons">{{ deletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}</span>
+              </button>
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="sidebar-layout">
+    <div class="sidebar-main" [class.with-sidebar]="sidePanelOpen">
+      <div class="table-container">
+        <div class="table-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th class="th-check">
+                  <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                    (change)="toggleSelectAllVisible($any($event.target).checked)" aria-label="Seleccionar todos" />
+                </th>
+                <th>No.</th>
+                <th>Descripción</th>
+                <th>Producto</th>
+                <th>Precio</th>
+                <th>Precio IVA</th>
+                <th>Disparador</th>
+                <th>Instrucciones</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody *ngIf="!loading; else loadingTpl">
+              <tr *ngFor="let item of displayedSuggestions; let idx = index; trackBy: trackById"
+                (click)="toggleRowByClick(item)" [class.row-selected]="isSelected(item._id)" style="cursor:pointer;">
+                <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
+                  <input type="checkbox" [checked]="isSelected(item._id)"
+                    (change)="toggleRowSelection(item, $any($event.target).checked)" (click)="$event.stopPropagation()"
+                    aria-label="Seleccionar sugerencia" />
+                </td>
+                <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
+                <td class="comments-cell">{{ item.description || '-' }}</td>
+                <td>{{ getProduct(item.productId)?.name || '-' }}</td>
+                <td>{{ getProduct(item.productId)?.price | currency:'MXN' }}</td>
+                <td>{{ getProduct(item.productId)?.priceIVA | currency:'MXN' }}</td>
+                <td>{{ item.action === 'add' ? 'Al agregar' : item.action === 'remove' ? 'Al quitar' : '-' }}</td>
+                <td>{{ item.response.length || 0 }}</td>
+                <!-- <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td> -->
+                <td class="row-actions">
+                  <button class="icon-button view-button" matTooltip="Ver"
+                    (click)="openSidebar(item); $event.stopPropagation()">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                  <button class="icon-button edit-button" matTooltip="Editar"
+                    (click)="openEditModal(item); $event.stopPropagation()">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </td>
+              </tr>
+
+              <tr *ngIf="displayedSuggestions.length === 0">
+                <td colspan="10" style="text-align:center; padding:1rem;">Sin sugerencias para mostrar.</td>
+              </tr>
+            </tbody>
+
+            <ng-template #loadingTpl>
+              <tbody>
+                <tr>
+                  <td colspan="10" style="text-align:center; padding:1rem;">Cargando sugerencias...</td>
+                </tr>
+              </tbody>
+            </ng-template>
+          </table>
+        </div>
+
+        <mat-paginator *ngIf="filteredSuggestions.length > 0" [length]="filteredSuggestions.length"
+          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [showFirstLastButtons]="true" (page)="onPageChange($event)">
+        </mat-paginator>
+      </div>
+    </div>
+
+    <aside class="side-panel" *ngIf="sidePanelOpen && selectedForSidebar as item">
+      <div class="side-panel__head">
+        <div>
+          <div class="side-title">
+            {{ getProduct(item.productId)?.name || 'Producto no encontrado' }}
+          </div>
+
+          <div class="side-sub">
+            {{ item.action === 'add' ? 'Al agregar' : 'Al quitar' }}
+          </div>
+        </div>
+
+        <button mat-icon-button (click)="closeSidebar()">
+          <mat-icon>close</mat-icon>
+        </button>
+      </div>
+
+      <div class="side-panel__body">
+        <div class="side-section">
+          <h4>Producto</h4>
+
+          <div class="side-info">
+            <div>
+              <b>Tipo:</b>
+              {{ getProduct(item.productId)?.type || '-' }}
+            </div>
+
+            <div>
+              <b>Nombre:</b>
+              {{ getProduct(item.productId)?.name || '-' }}
+            </div>
+
+            <div>
+              <b>Precio:</b>
+              {{ getProduct(item.productId)?.price | currency:'MXN' }}
+            </div>
+
+            <div>
+              <b>Precio IVA:</b>
+              {{ getProduct(item.productId)?.priceIVA | currency:'MXN' }}
+            </div>
+
+            <div>
+              <b>Descuento:</b>
+              {{ getProduct(item.productId)?.discount || 0 }}%
+            </div>
+
+            <div *ngIf="getProduct(item.productId)?.type === 'Plan'">
+              <b>Duración:</b>
+              {{ getProduct(item.productId)?.duration || '-' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Disparador</h4>
+
+          <div class="comments-box">
+            {{ item.action === 'add' ? 'Al agregar el producto' : 'Al quitar el producto' }}
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Instrucciones</h4>
+          <div class="side-info" *ngIf="item.response.length; else noInstructions">
+            <div *ngFor="let response of item.response">
+              <b>{{ response.action === 'add' ? 'Agregar' : 'Quitar' }}:</b>
+
+              {{ getProduct(response.productId)?.name || '-' }}
+            </div>
+          </div>
+
+          <ng-template #noInstructions>
+            <div class="comments-box">
+              Sin instrucciones.
+            </div>
+          </ng-template>
+        </div>
+
+        <div class="side-section">
+          <h4>Descripción</h4>
+
+          <div class="comments-box">
+            {{ item.description || 'Sin descripción.' }}
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Fecha de creación</h4>
+
+          <div class="side-info">
+            {{ item.createdAt | date:'fullDate' }}
+          </div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
+  <div class="modal-content quote-modal" (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-button" (click)="closeModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <h2>{{ title }}</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-flex">
+        <mat-form-field appearance="outline">
+          <mat-label>Producto</mat-label>
+
+          <mat-select formControlName="productId">
+            <mat-option *ngFor="let product of products" [value]="product._id">
+              {{ product.type }} - {{ product.name }}
+            </mat-option>
+          </mat-select>
+
+          <mat-error *ngIf="form.get('productId')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Disparador</mat-label>
+
+          <mat-select formControlName="action">
+            <mat-option value="add">Al agregar</mat-option>
+            <mat-option value="remove">Al quitar</mat-option>
+          </mat-select>
+
+          <mat-error *ngIf="form.get('action')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="big-field">
+          <mat-label>Descripción</mat-label>
+
+          <textarea matInput rows="3" formControlName="description"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="responses-header">
+        <h3>Instrucciones</h3>
+        <button type="button" mat-icon-button color="primary" class="add-response" (click)="addSuggestionResponse()"
+          matTooltip="Agregar Instrucción">
+          <mat-icon>add</mat-icon>
+        </button>
+      </div>
+
+      <div formArrayName="response" class="responses-list">
+        <div class="response-row" *ngFor="let group of suggestionResponse.controls; let i=index" [formGroupName]="i">
+          <mat-form-field appearance="outline" class="small-field">
+            <mat-label>Acción</mat-label>
+
+            <mat-select formControlName="action">
+              <mat-option value="add">Agregar</mat-option>
+              <mat-option value="remove">Quitar</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline">
+            <mat-label>Producto</mat-label>
+
+            <mat-select formControlName="productId">
+              <mat-option *ngFor="let product of products" [value]="product._id">
+                {{ product.type }} - {{ product.name }}
+              </mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;" (click)="removeSuggestionResponse(i)"
+            [disabled]="suggestionResponse.length === 1" matTooltip="Eliminar instrucción">
+            <mat-icon>delete</mat-icon>
+          </button>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" mat-button class="custom-button cancel-btn" (click)="closeModal()">
+          Cancelar
+        </button>
+
+        <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="saving">
+          <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

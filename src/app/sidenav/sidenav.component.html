@@ -11,13 +11,24 @@
         <li class="sidenav-nav-item" *ngFor="let data of navData">
             <a class="sidenav-nav-link" [routerLink]="[data.RouteLink]"
                 routerLinkActive="active"
-                [routerLinkActiveOptions]="{exact: true}">
+                [routerLinkActiveOptions]="{exact: true}"
+                [class.active-parent]="hasActiveChild(data)">
 
                 <i class="sidenav-link-icon" [class]="data.icon"></i>
                 <span class="sidenav-link-text" @fadeInOut *ngIf="collapsed">
                     {{data.label}}
                 </span>
             </a>
+
+            <ul class="sidenav-subnav" *ngIf="collapsed && hasChildren(data) && hasActiveChild(data)" @fadeInOut>
+                <li class="sidenav-subnav-item" *ngFor="let child of data.children">
+                    <a class="sidenav-subnav-link" [routerLink]="[child.RouteLink]" routerLinkActive="active"
+                        [routerLinkActiveOptions]="{exact: true}">
+                        <i class="sidenav-subnav-icon" [class]="child.icon"></i>
+                        <span class="sidenav-subnav-text">{{ child.label }}</span>
+                    </a>
+                </li>
+            </ul>
         </li>
     </ul>
 

@@ -83,12 +83,7 @@
               "buildTarget": "sistema-administrativo-Lepton:build:development"
             }
           },
-          "defaultConfiguration": "development",
-          "options": {
-            "host": "0.0.0.0",
-            "port": 4200,
-            "ssl": false
-          }
+          "defaultConfiguration": "development"
         },
         "extract-i18n": {
           "builder": "@angular-devkit/build-angular:extract-i18n"

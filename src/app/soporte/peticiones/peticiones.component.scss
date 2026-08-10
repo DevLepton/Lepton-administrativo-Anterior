@@ -60,7 +60,7 @@
 .actions-top {
   display: inline-flex;
   align-items: center;
-  flex: 1;
+  flex: 0 1 30%;
   flex-wrap: wrap;
   justify-content: flex-end;
 
@@ -96,37 +96,6 @@
     }
   }
 
-  .new-button {
-    background-color: #0074FF;
-
-    &:hover:not(:disabled) {
-      background-color: #005bb5;
-    }
-  }
-
-  .view-button {
-    background-color: var(--color-success);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-success-hover);
-    }
-  }
-
-  .edit-button {
-    background-color: var(--color-warning);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-warning-hover);
-    }
-  }
-
-  .delete-button {
-    background-color: var(--color-danger);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-danger-hover);
-    }
-  }
 }
 
 /* Badge de estatus */

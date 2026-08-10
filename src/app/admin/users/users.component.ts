@@ -22,12 +22,6 @@ export class UsersComponent implements OnInit {
   }
 
   users: any[] = [];
-  displayedUsers: any[] = [];
-
-  currentPage = 1;
-  pageSize = 6;
-  totalPages = 1;
-  showAll = false;
 
   constructor(private apiService: ApiService, private toast: NgToastService) { }
 
@@ -39,34 +33,11 @@ export class UsersComponent implements OnInit {
     this.apiService.getUsers().subscribe({
       next: (response) => {
         this.users = response.data;
-        this.totalPages = Math.ceil(this.users.length / this.pageSize);
-        this.updateDisplayedUsers();
       },
       error: (error) => {
         console.error('Error al cargar usuarios:', error);
       }
     });
-  }
-  
-  updateDisplayedUsers(): void {
-    if (this.showAll) {
-      this.displayedUsers = this.users;
-    } else {
-      const start = (this.currentPage - 1) * this.pageSize;
-      const end = start + this.pageSize;
-      this.displayedUsers = this.users.slice(start, end);
-    }
-  }
-  
-  setPage(page: number): void {
-    if (page < 1 || page > this.totalPages) return;
-    this.currentPage = page;
-    this.updateDisplayedUsers();
-  }
-  
-  toggleShowAll(): void {
-    this.showAll = !this.showAll;
-    this.updateDisplayedUsers();
   }
 
   editUser(user: any): void {

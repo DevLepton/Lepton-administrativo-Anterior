@@ -6,6 +6,7 @@ import { EventHistoryModalComponent } from '../../modals/event-history-modal/eve
 import Swal from 'sweetalert2';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
+import { AuthService } from '../../services/auth.service';
 
 @Component({
   selector: 'app-events',
@@ -29,11 +30,12 @@ export class EventsComponent implements OnInit {
   /** búsqueda (cliente) */
   search = '';
 
-  constructor(
-    private dialog: MatDialog,
-    private api: ApiService,              // inyecta el ApiService
-    private toast: NgToastService
-  ) { }
+  isAdmin = false;
+
+  constructor(private authService: AuthService, private api: ApiService, private toast: NgToastService) {
+    const role = this.authService.getUserRole();
+    this.isAdmin = role === 'admin';
+  }
 
   ngOnInit(): void {
     this.fetchEvents();
@@ -269,11 +271,10 @@ export class EventsComponent implements OnInit {
           });
         },
         error: (err) => {
-          // console.error(err);
           this.deletingId = null;
           Swal.fire({
             title: 'Error',
-            text: err?.error?.message || 'No se pudo eliminar el evento.',
+            text: err?.error?.message || err?.error?.error || 'No se pudo eliminar el evento.',
             icon: 'error'
           });
         }

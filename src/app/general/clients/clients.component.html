@@ -1,4 +1,4 @@
-<div class="tab-pane" *ngIf="activeTab === 'clients'">
+<div class="section-container" *ngIf="activeTab === 'clients'">
     <div class="section-header">
         <div>
             <h2 style="flex: 1;">Detalles de los clientes</h2>
@@ -566,7 +566,7 @@
         </div>
 
         <!-- DERECHA (SIDEBAR) -->
-        <div class="right" [class.collapsed]="sidebarCollapsed">
+        <div class="sidebar-right" [class.collapsed]="sidebarCollapsed">
 
             <!-- KPIs -->
             <div class="kpis">
@@ -643,8 +643,7 @@
     </div>
 </div>
 
-<div class="tab-pane" *ngIf="activeTab === 'config' && (isAdminUser || isSupportUser )">
-
+<div class="section-container" *ngIf="activeTab === 'config' && (isAdminUser || isSupportUser )">
     <div class="section-header">
         <button class="back-button" (click)="setActiveTab('clients')">
             <span class="material-icons">arrow_back</span>

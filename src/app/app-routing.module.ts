@@ -10,7 +10,7 @@ import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redirecc
 import { navbarData } from './sidenav/nav-data';
 import { UserProfileComponent } from './general/user-profile/user-profile.component';
 
-const dynamicRoutes = navbarData.map(item => ({
+const dynamicRoutes = navbarData.flatMap(item => [item, ...(item.children ?? [])]).map(item => ({
   path: item.RouteLink,
   component: item.component,
   canActivate: [RoleGuard],

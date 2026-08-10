@@ -106,3 +106,47 @@
         color: #FFFFFF; // Texto blanco
     }
 }
+
+.active-parent {
+    background-color: rgba(255, 255, 255, 0.12);
+}
+
+.sidenav-subnav {
+    list-style: none;
+    padding: 0.25rem 0 0.1rem 1.15rem;
+    margin: 0;
+    width: 100%;
+
+    .sidenav-subnav-item {
+        width: 100%;
+        margin-bottom: 0.25rem;
+    }
+
+    .sidenav-subnav-link {
+        display: flex;
+        align-items: center;
+        min-height: 2.25rem;
+        color: rgba(255, 255, 255, 0.88);
+        text-decoration: none;
+        border-radius: 0.5rem;
+        transition: all 0.3s ease;
+        padding: 0 0.5rem;
+
+        &:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+    }
+
+    .sidenav-subnav-icon {
+        font-size: 16px;
+        width: 1.4rem;
+        min-width: 1.4rem;
+        text-align: center;
+    }
+
+    .sidenav-subnav-text {
+        margin-left: 0.8rem;
+        font-size: 0.9rem;
+    }
+}

@@ -110,11 +110,12 @@ export class LoginComponent implements OnInit {
 
           const userRole = response.user.role;
 
+          this.authService.clearUserScopedCaches();
           this.authService.setUserRole(userRole);
 
           localStorage.setItem('token', response.token);
           // localStorage.setItem('user_role', userRole);
-          localStorage.setItem('user', JSON.stringify(response.user));
+          this.authService.setUser(response.user);
 
           this.authService.setAuthenticationState(true);
 

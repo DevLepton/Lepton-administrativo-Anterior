@@ -317,47 +317,13 @@
       pointer-events: none;
     }
   }
-
-  .new-button {
-    background-color: #0074FF;
-
-    &:hover:not(:disabled) {
-      background-color: #005bb5;
-    }
-  }
-
-  .view-button {
-    background-color: var(--color-success);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-success-hover);
-    }
-  }
-
-  .edit-button {
-    background-color: var(--color-warning);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-warning-hover);
-    }
-  }
-
-  .delete-button {
-    background-color: var(--color-danger);
-
-    &:hover:not(:disabled) {
-      background-color: var(--color-danger-hover);
-    }
-  }
 }
 
 .almacen-tabs {
   display: block;
 }
 
-.tab-pane {
-  padding: 1rem 0 0 0;
-}
+
 
 .kpi-grid {
   display: grid;

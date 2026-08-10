@@ -66,6 +66,18 @@ export class HeaderComponent implements OnInit {
     // console.log('canShowSearchAsOverlay:', this.canShowSearchAsOverlay); // Para verificar el cambio
   }
 
+  get currentUser(): any {
+    return this.authService.getUser();
+  }
+
+  get loggedUserName(): string {
+    return this.currentUser?.userName || this.currentUser?.name || 'Usuario';
+  }
+
+  get loggedUserId(): string {
+    return this.currentUser?.userId || this.currentUser?._id || this.currentUser?.id || '';
+  }
+
   handleUserItemClick(label: string): void {
 
     if (label === 'Cerrar Sesión') {
@@ -87,8 +99,7 @@ export class HeaderComponent implements OnInit {
 
   logout(): void {
     console.log('Cerrando sesión...');
-    localStorage.removeItem('token'); // ✅ Elimina el token JWT
-    this.authService.setAuthenticationState(false); // 🔄 Actualiza observable
+    this.authService.logout();
     this.router.navigate(['/login']); // 🔁 Redirige al login
   }
 }

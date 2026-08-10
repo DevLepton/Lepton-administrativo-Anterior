@@ -236,8 +236,195 @@ export interface RequestsQuery {
   order?: 'asc' | 'desc';
 }
 
-// export const apiUrl = 'http://localhost:3103';
-export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
+/* ====================== Tipos billingClients ====================== */
+export interface PaymentContactPayload {
+  name: string;
+  email?: string;
+  cel?: string;
+  notes?: string;
+}
+
+export interface BillingClientDiscounts {
+  monthly: number;
+  devices: number;
+  accessories: number;
+}
+
+export type BillingClientType = 'client' | 'subClient';
+
+export interface BillingClientItem {
+  _id: string;
+  type: BillingClientType;
+  userId?: number | null;
+  billingClientFather?: string | null;
+  subBillingClients?: string[];
+  billingName: string;
+  paymentContacts: PaymentContactPayload[];
+  voucherType: 'Recibo' | 'Factura';
+  cutoffDay: number;
+  companyName: string;
+  RFC: string;
+  useInvoice: string;
+  taxRegime: string;
+  email: string;
+  cp?: number | null;
+  street: string;
+  streetNumber: string;
+  suburb: string;
+  locality: string;
+  state: string;
+  country: string;
+  discounts: BillingClientDiscounts;
+  blacklist: boolean;
+  createdAt?: string | Date;
+}
+
+export type CreateBillingClientPayload = Omit<BillingClientItem, '_id' | 'createdAt'> & {
+  createdAt?: string | Date;
+};
+
+export type UpdateBillingClientPayload = Partial<CreateBillingClientPayload>;
+
+export interface BillingClientsQuery {
+  userId?: number | null;
+  voucherType?: 'Recibo' | 'Factura' | '';
+  q?: string;
+}
+
+/* ====================== Cotizaciones ====================== */
+export interface QuoteProduct {
+  name: string;
+  description?: string;
+  price: number;
+  priceIVA: number;
+  discount: number;
+  discountType: '%' | '$';
+  amount: number;
+  total: number;
+}
+
+export interface QuoteItem {
+  _id: string;
+  quoteNum: string;
+  userId: string;
+
+  clientName: string;
+  companyName?: string;
+  place?: string;
+
+  validity: string | Date;
+
+  products: QuoteProduct[];
+
+  subtotal: number;
+  discounts: number;
+  IVA: number;
+  total: number;
+
+  units?: number;
+  model?: string;
+
+  paymentNextMonthly?: number;
+
+  billable: boolean;
+  bankName?: string;
+  paymentMethodHolder?: string;
+  accountNumber?: string;
+  CLABE?: string;
+
+  comments?: string;
+
+  createdAt?: string | Date;
+}
+
+export type QuoteProductType = 'GPS' | 'Accesorio' | 'Servicio' | 'Plan';
+
+export interface QuoteProductItem {
+  _id: string;
+  type: QuoteProductType;
+  name: string;
+  description?: string;
+  price: number;
+  priceIVA: number;
+  discount?: number;
+  duration?: '1 mes' | '3 meses' | '6 meses' | '1 año';
+  comments?: string;
+  createdAt?: string | Date;
+}
+
+export type ForeignTechnicianType = 'Local' | 'Foráneo';
+
+export interface ForeignTechnicianItem {
+  _id: string;
+  type: ForeignTechnicianType;
+  name: string;
+  cel: string;
+  bill: boolean;
+  city: string;
+  ownLocal: boolean;
+  address: string;
+  installationPrice: number;
+  inspectionFee: number;
+  withdrawalPrice: number;
+  priceFalseReversal: number;
+  travelExpensesPrice: number;
+  transferPrice: number;
+  comments?: string;
+}
+
+export interface TravelExpenseBooth {
+  name: string;
+  cost: number;
+}
+
+export interface TravelExpenseItem {
+  _id: string;
+  place: string;
+  km: number;
+  booths: TravelExpenseBooth[];
+  createdAt?: string | Date;
+}
+
+export interface TravelExpenseExtraItem {
+  _id: string;
+  kmRate: number;
+  lodging: number;
+  breakfast: number;
+  lunch: number;
+  dinner: number;
+  createdAt?: string | Date;
+}
+
+export interface ClientListItem {
+  userId: number;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  email?: string;
+  phone?: string;
+  [key: string]: any;
+}
+
+export type SuggestionAction = 'add' | 'remove';
+
+export type SuggestionResponseAction = 'add' | 'remove' | string;
+
+export interface SuggestionResponseItem {
+  action: SuggestionResponseAction;
+  productId: string;
+}
+
+export interface SuggestionItem {
+  _id: string;
+  description: string;
+  productId: string;
+  action: SuggestionAction;
+  response: SuggestionResponseItem[];
+  createdAt?: string | Date;
+}
+
+export const apiUrl = 'http://localhost:3103';
+// export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -265,7 +452,7 @@ export class ApiService {
 
   /* ====================== Google Geocode ====================== */
   getColoniasByCodigoPostalFromGoogle(codigoPostal: string): Observable<any> {
-    const apiKey = 'AIzaSyBxD3oEeLRpU9kcilSl2dl1aNzbEe9afyg';
+    const apiKey = 'AIzaSyCAy6-DDrhVX6jstGgSN-ev0dxXXXEHtz8';
     const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${codigoPostal},Mexico&key=${apiKey}`;
     return this.http.get(url);
   }
@@ -322,6 +509,15 @@ export class ApiService {
   }
 
   private devicesCache$: Observable<any> | null = null;
+
+  clearUserScopedCaches(): void {
+    this.devicesCache$ = null;
+    this.eventsCache$ = null;
+    this.requestsCache$ = null;
+    this.billingClientsCache$ = null;
+    this.clientConfigCache$ = null;
+    this.clientsCache.clear();
+  }
 
   getDevicesCached(
     query?: {
@@ -474,6 +670,10 @@ export class ApiService {
 
   private eventsCache$: Observable<EventsListResponse> | null = null;
 
+  clearEventsCache(): void {
+    this.clearUserScopedCaches();
+  }
+
   getEventsCached(
     query?: any,
     forceRefresh = false
@@ -604,6 +804,160 @@ export class ApiService {
     return this.http.delete(`${apiUrl}/requests/${id}`);
   }
 
+  /* ====================== CLIENTES DE COBRANZA ====================== */
+
+  getBillingClients(query?: BillingClientsQuery): Observable<any> {
+    const params = this.buildHttpParams(query as any);
+    return this.http.get(`${apiUrl}/billingClients`, { params });
+  }
+
+  private billingClientsCache$: Observable<any> | null = null;
+
+  getBillingClientsCached(forceRefresh = false): Observable<any> {
+    if (!this.billingClientsCache$ || forceRefresh) {
+      this.billingClientsCache$ = this.http.get(`${apiUrl}/billingClients`).pipe(
+        shareReplay(1)
+      );
+    }
+
+    return this.billingClientsCache$;
+  }
+
+  getBillingClientById(id: string): Observable<any> {
+    return this.http.get(`${apiUrl}/billingClients/${id}`);
+  }
+
+  createBillingClient(payload: CreateBillingClientPayload): Observable<any> {
+    const body: any = {
+      ...payload,
+      userId: payload.userId ?? null,
+      cp: payload.cp ?? null,
+      discounts: payload.discounts ?? { monthly: 0, devices: 0, accessories: 0 },
+      paymentContacts: payload.paymentContacts ?? []
+    };
+
+    return this.http.post(`${apiUrl}/billingClients`, body);
+  }
+
+  updateBillingClient(id: string, payload: UpdateBillingClientPayload): Observable<any> {
+    return this.http.put(`${apiUrl}/billingClients/${id}`, payload);
+  }
+
+  deleteBillingClient(id: string, newParentId?: string, deleteChildren = false): Observable<any> {
+    return this.http.request('delete', `${apiUrl}/billingClients/${id}`, { body: { newParentId, deleteChildren } });
+  }
+
+  getClientsList(): Observable<any> {
+    return this.http.get(`${apiUrl}/clients/list`);
+  }
+
+  /* ====================== COTIZACIONES ====================== */
+
+  getQuotes(params?: { q?: string; clientName?: string; quoteNum?: string; userId?: string; }): Observable<any> {
+    return this.http.get(`${apiUrl}/quotes`, { params: params as any });
+  }
+
+  getQuote(id: string): Observable<any> {
+    return this.http.get(`${apiUrl}/quotes/${id}`);
+  }
+
+  createQuote(payload: Omit<QuoteItem, '_id' | 'quoteNum' | 'createdAt'>): Observable<any> {
+    return this.http.post(`${apiUrl}/quotes`, payload);
+  }
+
+  updateQuote(id: string, payload: Partial<Omit<QuoteItem, '_id' | 'quoteNum' | 'createdAt'>>): Observable<any> {
+    return this.http.put(`${apiUrl}/quotes/${id}`, payload);
+  }
+
+  deleteQuote(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/quotes/${id}`);
+  }
+
+  getQuoteProducts(): Observable<any> {
+    return this.http.get(`${apiUrl}/products`);
+  }
+
+  createQuoteProduct(payload: Omit<QuoteProductItem, '_id' | 'createdAt'>): Observable<any> {
+    return this.http.post(`${apiUrl}/products`, payload);
+  }
+
+  updateQuoteProduct(id: string, payload: Partial<Omit<QuoteProductItem, '_id' | 'createdAt'>>): Observable<any> {
+    return this.http.put(`${apiUrl}/products/${id}`, payload);
+  }
+
+  deleteQuoteProduct(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/products/${id}`);
+  }
+
+  getForeignTechnicians(): Observable<any> {
+    return this.http.get(`${apiUrl}/foreignTechnicians`);
+  }
+
+  createForeignTechnician(payload: Omit<ForeignTechnicianItem, '_id'>): Observable<any> {
+    return this.http.post(`${apiUrl}/foreignTechnicians`, payload);
+  }
+
+  updateForeignTechnician(id: string, payload: Partial<Omit<ForeignTechnicianItem, '_id'>>): Observable<any> {
+    return this.http.put(`${apiUrl}/foreignTechnicians/${id}`, payload);
+  }
+
+  deleteForeignTechnician(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/foreignTechnicians/${id}`);
+  }
+
+  getTravelExpenses(): Observable<any> {
+    return this.http.get(`${apiUrl}/travelExpenses`);
+  }
+
+  createTravelExpense(payload: Omit<TravelExpenseItem, '_id' | 'createdAt'>): Observable<any> {
+    return this.http.post(`${apiUrl}/travelExpenses`, payload);
+  }
+
+  updateTravelExpense(id: string, payload: Partial<Omit<TravelExpenseItem, '_id' | 'createdAt'>>): Observable<any> {
+    return this.http.put(`${apiUrl}/travelExpenses/${id}`, payload);
+  }
+
+  deleteTravelExpense(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/travelExpenses/${id}`);
+  }
+
+  getTravelExpenseExtras(): Observable<any> {
+    return this.http.get(`${apiUrl}/travelExpensesExtras`);
+  }
+
+  createTravelExpenseExtra(payload: Omit<TravelExpenseExtraItem, '_id' | 'createdAt'>): Observable<any> {
+    return this.http.post(`${apiUrl}/travelExpensesExtras`, payload);
+  }
+
+  updateTravelExpenseExtra(id: string, payload: Partial<Omit<TravelExpenseExtraItem, '_id' | 'createdAt'>>): Observable<any> {
+    return this.http.put(`${apiUrl}/travelExpensesExtras/${id}`, payload);
+  }
+
+  deleteTravelExpenseExtra(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/travelExpensesExtras/${id}`);
+  }
+
+  /* ====================== SUGERENCIAS ====================== */
+
+  getSuggestions(): Observable<any> {
+    return this.http.get(`${apiUrl}/suggestions`);
+  }
+
+  createSuggestion(payload: Omit<SuggestionItem, '_id' | 'createdAt'>): Observable<any> {
+    return this.http.post(`${apiUrl}/suggestions`, payload);
+  }
+
+  updateSuggestion(
+    id: string,
+    payload: Partial<Omit<SuggestionItem, '_id' | 'createdAt'>>
+  ): Observable<any> {
+    return this.http.put(`${apiUrl}/suggestions/${id}`, payload);
+  }
+
+  deleteSuggestion(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/suggestions/${id}`);
+  }
+
   // ====================== CLIENT CONFIG ======================
 
   private clientConfigCache$: Observable<any> | null = null;
@@ -620,6 +974,14 @@ export class ApiService {
     }
 
     return this.clientConfigCache$;
+  }
+
+  getActiveClientsConfig(): Observable<any> {
+    return this.http.get(`${apiUrl}/clients/config/active`);
+  }
+
+  getExcludedAccountsConfig(): Observable<any> {
+    return this.http.get(`${apiUrl}/clients/config/excluded`);
   }
 
   updateActiveClients(activeClients: any): Observable<any> {

@@ -45,7 +45,7 @@
 
 
 /* ================= SIDEBAR ================= */
-.right {
+.sidebar-right {
     width: 320px;
     flex-shrink: 0;
     display: flex;
@@ -170,7 +170,7 @@
 /* ================= BUCKETS ================= */
 .offline-grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 
     @media (max-width: 768px) {
@@ -686,7 +686,7 @@
     align-items: center;
     justify-content: flex-start;
     gap: 16px;
-    margin-left: 10px;
+    margin-left: 18px;
     padding-right: 65px;
 }
 

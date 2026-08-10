@@ -89,6 +89,12 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserProfileComponent } from './general/user-profile/user-profile.component';
 import { A11yModule } from "@angular/cdk/a11y";
 import { AuthService } from './services/auth.service';
+import { SubClientesComponent } from './sub-clientes/sub-clientes.component';
+import { CotizacionesComponent } from './cotizaciones/cotizaciones.component';
+import { CotizacionesProductosComponent } from './cotizaciones/cotizaciones-productos.component';
+import { CotizacionesForaneosComponent } from './cotizaciones/cotizaciones-foraneos.component';
+import { CotizacionesSugerenciasComponent } from './cotizaciones/cotizaciones-sugerencias.component';
+import { NgxCurrencyDirective } from "ngx-currency";
 
 registerLocaleData(es);
 
@@ -154,6 +160,11 @@ export function initAuth(authService: AuthService) {
     ClientsComponent,
     ConfirmModalComponent,
     UserProfileComponent,
+    SubClientesComponent,
+    CotizacionesComponent,
+    CotizacionesProductosComponent,
+    CotizacionesForaneosComponent,
+    CotizacionesSugerenciasComponent,
   ],
   imports: [
     BrowserModule,
@@ -186,6 +197,7 @@ export function initAuth(authService: AuthService) {
     MatCheckboxModule,
     MatProgressSpinnerModule,
     A11yModule,
+    NgxCurrencyDirective
   ],
   providers: [
     provideClientHydration(),

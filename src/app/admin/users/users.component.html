@@ -1,56 +1,42 @@
-<div class="section-header">
-    <h2>Listado de Usuarios del Sistema</h2>
-    <hr class="divider" />
+<div class="section-container">
+    <div class="section-header">
+        <h2>Listado de usuarios del sistema</h2>
+        <hr class="divider" />
 
-    <div class="filters">
-        <button class="new-btn" (click)="openRegisterModal()">
-            <span class="material-icons">add</span>Nuevo
-        </button>
-
-        <div class="pagination-container">
-            <button class="filter-btn" (click)="toggleShowAll()">
-                {{ showAll ? 'Paginado' : 'Mostrar todos' }}
+        <div class="filters">
+            <button class="new-btn" (click)="openRegisterModal()">
+                <span class="material-icons">add</span>Nuevo
             </button>
-
-            <div class="pagination" *ngIf="!showAll">
-                <button class="pagination-btn" (click)="setPage(currentPage - 1)"
-                    [disabled]="currentPage === 1">«</button>
-                <button *ngFor="let page of [].constructor(totalPages); let i = index" class="pagination-btn"
-                    [class.active]="currentPage === (i + 1)" (click)="setPage(i + 1)">
-                    {{ i + 1 }}
-                </button>
-                <button class="pagination-btn" (click)="setPage(currentPage + 1)"
-                    [disabled]="currentPage === totalPages">»</button>
-            </div>
         </div>
     </div>
-</div>
-
-<div class="card-list">
-    <div class="card" *ngFor="let user of displayedUsers">
-        <!-- Icono -->
-        <div class="icon-wrapper">
-            <div class="icon" style="background: #3f51b5">
-                <span class="material-icons">person</span>
+    
+    <div class="card-list">
+        <div class="card" *ngFor="let user of users">
+            <!-- Icono -->
+            <div class="icon-wrapper">
+                <div class="icon" style="background: #3f51b5">
+                    <span class="material-icons">person</span>
+                </div>
             </div>
-        </div>
 
-        <!-- Contenido -->
-        <div class="card-content">
-            <h3>{{ user.userName }}</h3>
-            <!-- <p><strong>Nombre:</strong> {{ user.userName }}</p> -->
-            <p><strong>Correo:</strong> {{ user.email }}</p>
-            <p><strong>Rol:</strong> {{ user.role === 'cx' ? 'CUSTOMER EXPERIENCE' : user.role.toUpperCase() }}</p>
-        </div>
+            <!-- Contenido -->
+            <div class="card-content">
+                <h3>{{ user.userName }}</h3>
+                <!-- <p><strong>Nombre:</strong> {{ user.userName }}</p> -->
+                <p><strong>Correo:</strong> {{ user.email }}</p>
+                <p><strong>ID:</strong> {{ user.userId }}</p>
+                <p><strong>Rol:</strong> {{ user.role === 'cx' ? 'CUSTOMER EXPERIENCE' : user.role.toUpperCase() }}</p>
+            </div>
 
-        <!-- Acciones -->
-        <div class="card-footer">
-            <button class="action-btn edit-btn" (click)="editUser(user)">
-                <span class="material-icons">edit</span> Editar
-            </button>
-            <button class="action-btn delete-btn" (click)="deleteUser(user)">
-                <span class="material-icons">delete</span> Eliminar
-            </button>
+            <!-- Acciones -->
+            <div class="card-footer">
+                <button class="action-btn edit-btn" (click)="editUser(user)">
+                    <span class="material-icons">edit</span> Editar
+                </button>
+                <button class="action-btn delete-btn" (click)="deleteUser(user)">
+                    <span class="material-icons">delete</span> Eliminar
+                </button>
+            </div>
         </div>
     </div>
 </div>

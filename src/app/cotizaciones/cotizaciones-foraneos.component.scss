@@ -1,0 +1,123 @@
+@use './cotizaciones-productos.component.scss';
+
+.extras-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.extras-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.extras-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.extra-box {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 18px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.06);
+}
+
+.extra-box--wide {
+  grid-column: 1 / -1;
+}
+
+.extra-box__icon {
+  width: 42px;
+  height: 42px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 42px;
+  border-radius: 8px;
+  background: #eef2ff;
+  color: var(--color-primary);
+}
+
+.extra-box__content {
+  min-width: 0;
+  flex: 1;
+
+  h3 {
+    margin: 0 0 12px;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #1f2937;
+  }
+
+  mat-form-field {
+    width: 100%;
+  }
+}
+
+.meal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.extra-total {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 10px;
+  color: #374151;
+}
+
+.booths-editor {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+  background: #fafafa;
+}
+
+.booths-editor__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+
+  h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 800;
+  }
+}
+
+.booth-row {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(150px, 220px) 44px;
+  gap: 10px;
+  align-items: start;
+}
+
+.remove-booth {
+  margin-top: 6px;
+  color: var(--color-danger);
+}
+
+@media (max-width: 760px) {
+  .extras-grid,
+  .meal-grid,
+  .booth-row {
+    grid-template-columns: 1fr;
+  }
+
+  .extra-box {
+    flex-direction: column;
+  }
+
+  .remove-booth {
+    margin-top: 0;
+  }
+}

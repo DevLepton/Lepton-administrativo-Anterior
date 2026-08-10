@@ -1,0 +1,614 @@
+<div class="tabs-header quote-tabs-header">
+  <mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
+    <mat-tab label="Técnicos foráneos">
+      <div class="tab-pane">
+        <div class="header actions-container">
+          <div class="filter-bar">
+            <div class="filter-container">
+              <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+                <mat-label>Buscar</mat-label>
+                <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+                  placeholder="Nombre, ciudad, teléfono o dirección..." autocomplete="off" />
+                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                  <mat-icon>close</mat-icon>
+                </button>
+                <mat-hint *ngIf="search">
+                  {{ filteredTechnicians.length }} resultado{{ filteredTechnicians.length === 1 ? '' : 's' }}
+                </mat-hint>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="filter-bar actions-row">
+            <div class="filter-container actions-container">
+              <div class="actions-top">
+                <button class="new-button" matTooltip="Nuevo técnico" (click)="openCreateModal()">
+                  <span class="material-icons">add</span>
+                </button>
+
+                <span class="tooltip-wrap" [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 técnico'"
+                  [matTooltipDisabled]="selectedCount > 0">
+                  <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
+                    [disabled]="selectedCount === 0 || deletingId === '__bulk__'">
+                    <span class="material-icons">{{ deletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}</span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-layout">
+          <div class="sidebar-main" [class.with-sidebar]="sidePanelOpen">
+            <div class="table-container">
+              <div class="table-scroll">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th class="th-check">
+                        <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                          (change)="toggleSelectAllVisible($any($event.target).checked)"
+                          aria-label="Seleccionar todos" />
+                      </th>
+                      <th>No.</th>
+                      <th>Nombre</th>
+                      <th>Celular</th>
+                      <th>Ciudad</th>
+                      <th>Factura</th>
+                      <th>Local propio</th>
+                      <th>Precio de instalación</th>
+                      <th>Precio de revisión</th>
+                      <th>Precio de retiro</th>
+                      <th>Precio de vuelta en falso</th>
+                      <th>Precio de viáticos</th>
+                      <th>Precio de traslado</th>
+                      <th>Comentarios</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+
+                  <tbody *ngIf="!loading; else loadingTechTpl">
+                    <tr *ngFor="let item of displayedTechnicians; let idx = index; trackBy: trackById"
+                      (click)="toggleRowByClick(item)" [class.row-selected]="isSelected(item._id)"
+                      style="cursor:pointer;">
+                      <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
+                        <input type="checkbox" [checked]="isSelected(item._id)"
+                          (change)="toggleRowSelection(item, $any($event.target).checked)"
+                          (click)="$event.stopPropagation()" aria-label="Seleccionar técnico" />
+                      </td>
+                      <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
+                      <td><b>{{ item.name || '-' }}</b></td>
+                      <td>{{ item.cel || '-' }}</td>
+                      <td>{{ item.city || '-' }}</td>
+                      <td>{{ item.bill ? 'Sí' : 'No' }}</td>
+                      <td>{{ item.ownLocal ? 'Sí' : 'No' }}</td>
+                      <td>{{ item.installationPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.inspectionFee | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.withdrawalPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.priceFalseReversal | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.travelExpensesPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.transferPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td class="comments-cell">{{ item.comments || '-' }}</td>
+                      <td class="row-actions">
+                        <button class="icon-button view-button" matTooltip="Ver"
+                          (click)="openSidebar(item); $event.stopPropagation()">
+                          <span class="material-icons">visibility</span>
+                        </button>
+                        <button class="icon-button edit-button" matTooltip="Editar"
+                          (click)="openEditModal(item); $event.stopPropagation()">
+                          <span class="material-icons">edit</span>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="displayedTechnicians.length === 0">
+                      <td colspan="15" style="text-align:center; padding:1rem;">Sin técnicos foráneos para mostrar.</td>
+                    </tr>
+                  </tbody>
+
+                  <ng-template #loadingTechTpl>
+                    <tbody>
+                      <tr>
+                        <td colspan="15" style="text-align:center; padding:1rem;">Cargando técnicos foráneos...</td>
+                      </tr>
+                    </tbody>
+                  </ng-template>
+                </table>
+              </div>
+
+              <mat-paginator *ngIf="filteredTechnicians.length > 0" [length]="filteredTechnicians.length"
+                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [showFirstLastButtons]="true" (page)="onPageChange($event)">
+              </mat-paginator>
+            </div>
+          </div>
+
+          <aside class="side-panel" *ngIf="sidePanelOpen && selectedForSidebar as item">
+            <div class="side-panel__head">
+              <div>
+                <div class="side-title">{{ item.name }}</div>
+                <div class="side-sub">{{ item.type }} · {{ item.city || 'Sin ciudad' }}</div>
+              </div>
+
+              <button mat-icon-button (click)="closeSidebar()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <div class="side-panel__body">
+              <div class="side-section">
+                <h4>Información general</h4>
+                <div class="side-info">
+                  <div><b>Tipo:</b> {{ item.type }}</div>
+                  <div><b>Ciudad:</b> {{ item.city || '-' }}</div>
+                  <div><b>Celular:</b> {{ item.cel || '-' }}</div>
+                  <div><b>Dirección:</b> {{ item.address || '-' }}</div>
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Servicios</h4>
+                <div class="side-table">
+                  <div class="side-table__row">
+                    <div>Instalación</div>
+                    <div class="right">{{ item.installationPrice | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Revisión</div>
+                    <div class="right">{{ item.inspectionFee | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Retiro</div>
+                    <div class="right">{{ item.withdrawalPrice | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Vuelta en falso</div>
+                    <div class="right">{{ item.priceFalseReversal | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Viáticos</div>
+                    <div class="right">{{ item.travelExpensesPrice | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Traslado</div>
+                    <div class="right">{{ item.transferPrice | currency:'MXN' }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Características</h4>
+                <div class="side-info">
+                  <div>
+                    <b>Factura:</b>
+                    <span class="status-badge" [class.success]="item.bill" [class.danger]="!item.bill">
+                      {{ item.bill ? 'Sí' : 'No' }}
+                    </span>
+                  </div>
+                  <div>
+                    <b>Local propio:</b>
+                    <span class="status-badge" [class.success]="item.ownLocal" [class.danger]="!item.ownLocal">
+                      {{ item.ownLocal ? 'Sí' : 'No' }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Comentarios</h4>
+                <div class="comments-box">{{ item.comments || 'Sin comentarios.' }}</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Viáticos">
+      <div class="tab-pane">
+        <div class="header actions-container">
+          <div class="filter-bar">
+            <div class="filter-container">
+              <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+                <mat-label>Buscar</mat-label>
+                <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+                  placeholder="Lugar, km o caseta..." autocomplete="off" />
+                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                  <mat-icon>close</mat-icon>
+                </button>
+                <mat-hint *ngIf="search">
+                  {{ filteredTravelExpenses.length }} resultado{{ filteredTravelExpenses.length === 1 ? '' : 's' }}
+                </mat-hint>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="filter-bar actions-row">
+            <div class="filter-container actions-container">
+              <div class="actions-top">
+                <button class="new-button" matTooltip="Nuevo viático" (click)="openTravelExpenseCreateModal()">
+                  <span class="material-icons">add</span>
+                </button>
+
+                <span class="tooltip-wrap" [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 viático'"
+                  [matTooltipDisabled]="selectedCount > 0">
+                  <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
+                    [disabled]="selectedCount === 0 || deletingId === '__bulk__'">
+                    <span class="material-icons">{{ deletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}</span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-layout">
+          <div class="sidebar-main" [class.with-sidebar]="sidePanelOpen">
+            <div class="table-container">
+              <div class="table-scroll">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th class="th-check">
+                        <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                          (change)="toggleSelectAllVisible($any($event.target).checked)"
+                          aria-label="Seleccionar todos" />
+                      </th>
+                      <th>No.</th>
+                      <th>Lugar</th>
+                      <th>Kilómetros</th>
+                      <th>Casetas</th>
+                      <th>Total casetas</th>
+                      <th>Estimado con tarifa/km</th>
+                      <th>Creado</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+
+                  <tbody *ngIf="!loading; else loadingTravelTpl">
+                    <tr *ngFor="let item of displayedTravelExpenses; let idx = index; trackBy: trackTravelExpenseById"
+                      (click)="toggleRowByClick(item)" [class.row-selected]="isSelected(item._id)"
+                      style="cursor:pointer;">
+                      <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
+                        <input type="checkbox" [checked]="isSelected(item._id)"
+                          (change)="toggleRowSelection(item, $any($event.target).checked)"
+                          (click)="$event.stopPropagation()" aria-label="Seleccionar viático" />
+                      </td>
+                      <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
+                      <td><b>{{ item.place || '-' }}</b></td>
+                      <td>{{ item.km | number:'1.0-2' }} km</td>
+                      <td>{{ item.booths.length }}</td>
+                      <td>{{ boothTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ travelExpenseTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td>
+                      <td class="row-actions">
+                        <button class="icon-button view-button" matTooltip="Ver"
+                          (click)="openTravelExpenseSidebar(item); $event.stopPropagation()">
+                          <span class="material-icons">visibility</span>
+                        </button>
+                        <button class="icon-button edit-button" matTooltip="Editar"
+                          (click)="openTravelExpenseEditModal(item); $event.stopPropagation()">
+                          <span class="material-icons">edit</span>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="displayedTravelExpenses.length === 0">
+                      <td colspan="9" style="text-align:center; padding:1rem;">Sin viáticos para mostrar.</td>
+                    </tr>
+                  </tbody>
+
+                  <ng-template #loadingTravelTpl>
+                    <tbody>
+                      <tr>
+                        <td colspan="9" style="text-align:center; padding:1rem;">Cargando viáticos...</td>
+                      </tr>
+                    </tbody>
+                  </ng-template>
+                </table>
+              </div>
+
+              <mat-paginator *ngIf="filteredTravelExpenses.length > 0" [length]="filteredTravelExpenses.length"
+                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [showFirstLastButtons]="true" (page)="onPageChange($event)">
+              </mat-paginator>
+            </div>
+          </div>
+
+          <aside class="side-panel" *ngIf="sidePanelOpen && selectedTravelExpenseForSidebar as item">
+            <div class="side-panel__head">
+              <div>
+                <div class="side-title">{{ item.place }}</div>
+                <div class="side-sub">{{ item.km | number:'1.0-2' }} km · {{ item.booths.length }} caseta{{
+                  item.booths.length === 1 ? '' : 's' }}</div>
+              </div>
+
+              <button mat-icon-button (click)="closeSidebar()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <div class="side-panel__body">
+              <div class="side-section">
+                <h4>Resumen</h4>
+                <div class="side-table">
+                  <div class="side-table__row">
+                    <div>Kilómetros</div>
+                    <div class="right">{{ item.km | number:'1.0-2' }} km</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Tarifa por km</div>
+                    <div class="right">{{ (currentExtra?.kmRate || 0) | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Total casetas</div>
+                    <div class="right">{{ boothTotal(item) | currency:'MXN' }}</div>
+                  </div>
+                  <div class="side-table__row">
+                    <div>Total estimado</div>
+                    <div class="right">{{ travelExpenseTotal(item) | currency:'MXN' }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Casetas</h4>
+                <div class="side-table" *ngIf="item.booths.length; else noBoothsTpl">
+                  <div class="side-table__row" *ngFor="let booth of item.booths">
+                    <div>{{ booth.name }}</div>
+                    <div class="right">{{ booth.cost | currency:'MXN' }}</div>
+                  </div>
+                </div>
+                <ng-template #noBoothsTpl>
+                  <div class="comments-box">Sin casetas registradas.</div>
+                </ng-template>
+              </div>
+
+              <div class="side-section">
+                <h4>Fecha de creación</h4>
+                <div class="side-info">{{ item.createdAt ? (item.createdAt | date:'fullDate') : '-' }}</div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </mat-tab>
+
+    <mat-tab label="Extras">
+      <div class="tab-pane">
+        <form [formGroup]="extraForm" class="extras-panel" (ngSubmit)="saveExtras()">
+          <div class="extras-actions">
+            <button type="submit" mat-flat-button class="custom-button save-btn"
+              [disabled]="extraSaving || extraForm.pristine || extraForm.invalid">
+              <mat-icon>{{ extraSaving ? 'hourglass_top' : 'save' }}</mat-icon>
+              Guardar cambios
+            </button>
+          </div>
+
+          <div class="extras-grid">
+            <section class="extra-box">
+              <div class="extra-box__icon"><mat-icon>route</mat-icon></div>
+              <div class="extra-box__content">
+                <h3>Tarifa por kilómetro</h3>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Tarifa por km</mat-label>
+                  <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="kmRate"
+                    (focus)="selectInput($event)" />
+                </mat-form-field>
+              </div>
+            </section>
+
+            <section class="extra-box">
+              <div class="extra-box__icon"><mat-icon>hotel</mat-icon></div>
+              <div class="extra-box__content">
+                <h3>Hospedaje por noche</h3>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Precio por noche</mat-label>
+                  <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lodging"
+                    (focus)="selectInput($event)" />
+                </mat-form-field>
+              </div>
+            </section>
+
+            <section class="extra-box extra-box--wide">
+              <div class="extra-box__icon"><mat-icon>restaurant</mat-icon></div>
+              <div class="extra-box__content">
+                <h3>Comidas por día</h3>
+                <div class="meal-grid">
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Desayuno</mat-label>
+                    <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="breakfast"
+                      (focus)="selectInput($event)" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Comida</mat-label>
+                    <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lunch"
+                      (focus)="selectInput($event)" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                    <mat-label>Cena</mat-label>
+                    <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="dinner"
+                      (focus)="selectInput($event)" />
+                  </mat-form-field>
+                </div>
+
+                <div class="extra-total">
+                  Total diario: <b>{{ mealsTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+                </div>
+              </div>
+            </section>
+          </div>
+        </form>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <button mat-icon-button class="tabs-refresh-btn" (click)="refresh()" matTooltip="Recargar">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
+
+<div class="modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
+  <div class="modal-content quote-modal" (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-button" (click)="closeModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <h2>{{ title }}</h2>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-flex">
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="type">
+            <mat-option value="Foráneo">Foráneo</mat-option>
+            <mat-option value="Local">Local</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="name" required />
+          <mat-error *ngIf="form.get('name')?.hasError('required')">Campo obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Celular</mat-label>
+          <input matInput type="tel" inputmode="numeric" formControlName="cel" required />
+          <mat-error *ngIf="form.get('cel')?.hasError('required')">Campo obligatorio</mat-error>
+          <mat-error *ngIf="form.get('cel')?.hasError('minlength')">Debe contener al menos 10 dígitos</mat-error>
+          <mat-error *ngIf="form.get('cel')?.hasError('pattern')">Solo se permiten números</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Ciudad</mat-label>
+          <input matInput formControlName="city" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="span-2">
+          <mat-label>Dirección</mat-label>
+          <input matInput formControlName="address" />
+        </mat-form-field>
+
+        <mat-slide-toggle formControlName="bill">Factura</mat-slide-toggle>
+        <mat-slide-toggle formControlName="ownLocal">Local propio</mat-slide-toggle>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de instalación</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="installationPrice" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de revisión</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="inspectionFee" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de retiro</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="withdrawalPrice" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de vuelta en falso</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="priceFalseReversal" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de viáticos</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="travelExpensesPrice" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio de traslado</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="transferPrice" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="big-field">
+          <mat-label>Comentarios</mat-label>
+          <textarea matInput rows="3" formControlName="comments"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" mat-button color="warn" class="custom-button cancel-btn" (click)="closeModal()">
+          Cancelar
+        </button>
+        <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="saving">
+          <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="travelExpenseModalOpen" (click)="closeTravelExpenseModal()">
+  <div class="modal-content quote-modal" (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-button" (click)="closeTravelExpenseModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <h2>{{ travelExpenseTitle }}</h2>
+
+    <form [formGroup]="travelExpenseForm" (ngSubmit)="submitTravelExpense()">
+      <div class="form-flex">
+        <mat-form-field appearance="outline">
+          <mat-label>Lugar</mat-label>
+          <input matInput formControlName="place" required />
+          <mat-error *ngIf="travelExpenseForm.get('place')?.hasError('required')">Campo obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Kilómetros</mat-label>
+          <input matInput type="number" min="0" formControlName="km" (focus)="selectInput($event)" required />
+          <mat-error *ngIf="travelExpenseForm.get('km')?.hasError('required')">Campo obligatorio</mat-error>
+        </mat-form-field>
+
+        <div class="booths-editor big-field" formArrayName="booths">
+          <div class="booths-editor__head">
+            <h3>Casetas</h3>
+            <button type="button" mat-button class="custom-button" (click)="addBooth()">
+              <mat-icon>add</mat-icon>
+              Agregar caseta
+            </button>
+          </div>
+
+          <div class="booth-row" *ngFor="let booth of boothsFormArray.controls; let i = index" [formGroupName]="i">
+            <mat-form-field appearance="outline">
+              <mat-label>Nombre</mat-label>
+              <input matInput formControlName="name" />
+            </mat-form-field>
+
+            <mat-form-field appearance="outline" class="small-field">
+              <mat-label>Costo</mat-label>
+              <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="cost"
+                (focus)="selectInput($event)" />
+            </mat-form-field>
+
+            <button type="button" mat-icon-button class="remove-booth" matTooltip="Eliminar caseta"
+              (click)="removeBooth(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <div class="comments-box" *ngIf="boothsFormArray.length === 0">
+            Sin casetas registradas.
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+          (click)="closeTravelExpenseModal()">
+          Cancelar
+        </button>
+        <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="travelExpenseSaving">
+          <mat-icon>{{ travelExpenseSaving ? 'hourglass_top' : 'save' }}</mat-icon>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

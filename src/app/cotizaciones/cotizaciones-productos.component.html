@@ -1,0 +1,302 @@
+<div class="tabs-header quote-tabs-header">
+  <mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
+    <mat-tab *ngFor="let tab of tabs" [label]="tab.label">
+      <div class="tab-pane">
+        <div class="header actions-container">
+          <div class="filter-bar">
+            <div class="filter-container">
+              <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
+                <mat-label>Buscar</mat-label>
+                <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
+                  placeholder="Nombre, descripción o comentarios..." autocomplete="off" />
+                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                  <mat-icon>close</mat-icon>
+                </button>
+                <mat-hint *ngIf="search">
+                  {{ filteredProducts.length }} resultado{{ filteredProducts.length === 1 ? '' : 's' }}
+                </mat-hint>
+              </mat-form-field>
+            </div>
+          </div>
+
+          <div class="filter-bar actions-row">
+            <div class="filter-container actions-container">
+              <div class="actions-top">
+                <button class="new-button" matTooltip="Nuevo producto" (click)="openCreateModal()">
+                  <span class="material-icons">add</span>
+                </button>
+
+                <!-- <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 producto para ver'"
+                  [matTooltipDisabled]="canViewOrEdit">
+                  <button class="icon-button view-button" matTooltip="Ver" (click)="viewSelected()"
+                    [disabled]="!canViewOrEdit">
+                    <span class="material-icons">visibility</span>
+                  </button>
+                </span>
+
+                <span class="tooltip-wrap" [matTooltip]="canViewOrEdit ? '' : 'Selecciona 1 producto para editar'"
+                  [matTooltipDisabled]="canViewOrEdit">
+                  <button class="icon-button edit-button" matTooltip="Editar" (click)="editSelected()"
+                    [disabled]="!canViewOrEdit">
+                    <span class="material-icons">edit</span>
+                  </button>
+                </span> -->
+
+                <span class="tooltip-wrap" [matTooltip]="selectedCount > 0 ? '' : 'Selecciona al menos 1 producto'"
+                  [matTooltipDisabled]="selectedCount > 0">
+                  <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelected()"
+                    [disabled]="selectedCount === 0 || deletingId === '__bulk__'">
+                    <span class="material-icons">{{ deletingId === '__bulk__' ? 'hourglass_top' : 'delete' }}</span>
+                  </button>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-layout">
+          <div class="sidebar-main" [class.with-sidebar]="sidePanelOpen">
+            <div class="table-container">
+              <div class="table-scroll">
+                <table class="table">
+                  <thead>
+                    <tr>
+                      <th class="th-check">
+                        <input type="checkbox" [checked]="allVisibleSelected" [indeterminate]="someVisibleSelected"
+                          (change)="toggleSelectAllVisible($any($event.target).checked)"
+                          aria-label="Seleccionar todos" />
+                      </th>
+                      <th>No.</th>
+                      <th>Nombre</th>
+                      <th>Descripción</th>
+                      <th>Precio</th>
+                      <th>Precio IVA</th>
+                      <th>Descuento</th>
+                      <th *ngIf="tab.type === 'Plan'">Duración</th>
+                      <th>Comentarios</th>
+                      <th>Creado</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+
+                  <tbody *ngIf="!loading; else loadingTpl">
+                    <tr *ngFor="let item of displayedProducts; let idx = index; trackBy: trackById"
+                      (click)="toggleRowByClick(item)" [class.row-selected]="isSelected(item._id)"
+                      style="cursor:pointer;">
+                      <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
+                        <input type="checkbox" [checked]="isSelected(item._id)"
+                          (change)="toggleRowSelection(item, $any($event.target).checked)"
+                          (click)="$event.stopPropagation()" aria-label="Seleccionar producto" />
+                      </td>
+                      <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
+                      <td><b>{{ item.name || '-' }}</b></td>
+                      <td class="comments-cell">{{ item.description || '-' }}</td>
+                      <td>{{ item.price | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.discount || 0 }}%</td>
+                      <td *ngIf="tab.type === 'Plan'">{{ item.duration || '-' }}</td>
+                      <td class="comments-cell">{{ item.comments || '-' }}</td>
+                      <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td>
+                      <td class="row-actions">
+                        <button class="icon-button view-button" matTooltip="Ver"
+                          (click)="openSidebar(item); $event.stopPropagation()">
+                          <span class="material-icons">visibility</span>
+                        </button>
+                        <button class="icon-button edit-button" matTooltip="Editar"
+                          (click)="openEditModal(item); $event.stopPropagation()">
+                          <span class="material-icons">edit</span>
+                        </button>
+                      </td>
+                    </tr>
+
+                    <tr *ngIf="displayedProducts.length === 0">
+                      <td colspan="10" style="text-align:center; padding:1rem;">Sin {{ tab.label }} para mostrar.</td>
+                    </tr>
+                  </tbody>
+
+                  <ng-template #loadingTpl>
+                    <tbody>
+                      <tr>
+                        <td colspan="10" style="text-align:center; padding:1rem;">Cargando {{ tab.label }}...</td>
+                      </tr>
+                    </tbody>
+                  </ng-template>
+                </table>
+              </div>
+
+              <mat-paginator *ngIf="filteredProducts.length > 0" [length]="filteredProducts.length"
+                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [showFirstLastButtons]="true" (page)="onPageChange($event)">
+              </mat-paginator>
+            </div>
+          </div>
+
+          <aside class="side-panel" *ngIf="sidePanelOpen && selectedForSidebar as item">
+            <div class="side-panel__head">
+              <div>
+                <div class="side-title">
+                  {{ item.name }}
+                </div>
+
+                <div class="side-sub">
+                  {{ item.type }}
+                </div>
+              </div>
+
+              <button mat-icon-button (click)="closeSidebar()">
+                <mat-icon>close</mat-icon>
+              </button>
+            </div>
+
+            <div class="side-panel__body">
+              <div class="side-section">
+                <h4>Información</h4>
+
+                <div class="side-info">
+                  <div>
+                    <b>Tipo:</b>
+                    {{ item.type }}
+                  </div>
+
+                  <div>
+                    <b>Nombre:</b>
+                    {{ item.name }}
+                  </div>
+
+                  <div>
+                    <b>Precio:</b>
+                    {{ item.price | currency:'MXN' }}
+                  </div>
+
+                  <div>
+                    <b>Precio IVA:</b>
+                    {{ item.priceIVA | currency:'MXN' }}
+                  </div>
+
+                  <div>
+                    <b>Descuento:</b>
+                    {{ item.discount }}%
+                  </div>
+
+                  <div *ngIf="item.type === 'Plan'">
+                    <b>Duración:</b>
+                    {{ item.duration }}
+                  </div>
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Descripción</h4>
+
+                <div class="comments-box">
+                  {{ item.description || 'Sin descripción.' }}
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Comentarios</h4>
+
+                <div class="comments-box">
+                  {{ item.comments || 'Sin comentarios.' }}
+                </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Fecha de creación</h4>
+
+                <div class="side-info">
+                  {{ item.createdAt | date:'fullDate' }}
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+
+  <button mat-icon-button class="tabs-refresh-btn" (click)="refresh()" matTooltip="Recargar">
+    <mat-icon>refresh</mat-icon>
+  </button>
+</div>
+
+<div class="modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
+  <div class="modal-content quote-modal" (click)="$event.stopPropagation()">
+    <button mat-icon-button class="close-button" (click)="closeModal()">
+      <mat-icon>close</mat-icon>
+    </button>
+
+    <h2>{{ title }}</h2>
+
+    <form [formGroup]="form" (ngSubmit)="submit()">
+      <div class="form-flex">
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Tipo</mat-label>
+          <mat-select formControlName="type">
+            <mat-option value="GPS">GPS</mat-option>
+            <mat-option value="Accesorio">Accesorio</mat-option>
+            <mat-option value="Servicio">Servicio</mat-option>
+            <mat-option value="Plan">Plan</mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Nombre</mat-label>
+          <input matInput formControlName="name" required />
+          <mat-error *ngIf="form.get('name')?.hasError('required')">Campo obligatorio</mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field" *ngIf="form.get('type')?.value === 'Plan'">
+          <mat-label>Duración</mat-label>
+
+          <mat-select formControlName="duration">
+            <mat-option value="1 mes">1 mes</mat-option>
+            <mat-option value="3 meses">3 meses</mat-option>
+            <mat-option value="6 meses">6 meses</mat-option>
+            <mat-option value="1 año">1 año</mat-option>
+          </mat-select>
+
+          <mat-error *ngIf="form.get('duration')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="price" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Precio IVA (16%)</mat-label>
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="priceIVA" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="small-field">
+          <mat-label>Descuento</mat-label>
+          <span matTextPrefix>%&nbsp;</span>
+          <input matInput type="number" min="0" formControlName="discount" (focus)="selectInput($event)" />
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="big-field">
+          <mat-label>Descripción</mat-label>
+          <textarea matInput rows="3" formControlName="description"></textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="big-field">
+          <mat-label>Comentarios</mat-label>
+          <textarea matInput rows="3" formControlName="comments"></textarea>
+        </mat-form-field>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" mat-button color="warn" class="custom-button cancel-btn" (click)="closeModal()">
+          Cancelar
+        </button>
+        <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="saving">
+          <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+          Guardar
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
