@@ -5,7 +5,7 @@ import { ApiService, QuoteProductItem, SuggestionItem, SuggestionResponseItem } 
 import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 
 type ModalMode = 'create' | 'edit';
 
@@ -53,7 +53,11 @@ export class CotizacionesSugerenciasComponent {
   loadSuggestions(forceRefresh = false): void {
     this.loading = true;
 
-    this.quoteData.getCatalogData(forceRefresh).subscribe({
+    const request$ = forceRefresh
+      ? this.quoteData.getSuggestions(true).pipe(map(suggestions => ({ suggestions, products: this.products })))
+      : this.quoteData.getCatalogData().pipe(map(data => ({ suggestions: data.suggestions, products: data.products })));
+
+    request$.subscribe({
       next: data => {
         this.suggestions = [...data.suggestions].sort((a, b) => this.createdTime(b) - this.createdTime(a));
 
@@ -171,7 +175,6 @@ export class CotizacionesSugerenciasComponent {
 
         if (success) {
           this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${success} sugerencia(s)`, duration: 4000 });
-          this.quoteData.clearCache();
           this.refresh();
         }
 
@@ -288,7 +291,6 @@ export class CotizacionesSugerenciasComponent {
           duration: 3500
         });
 
-        this.quoteData.clearCache();
         this.closeModal();
         this.sidePanelOpen = false;
         this.refresh();

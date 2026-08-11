@@ -516,6 +516,9 @@ export class ApiService {
     this.requestsCache$ = null;
     this.billingClientsCache$ = null;
     this.clientConfigCache$ = null;
+    this.activeClientsConfigCache$ = null;
+    this.excludedAccountsConfigCache$ = null;
+    this.clientsListCache$ = null;
     this.clientsCache.clear();
   }
 
@@ -847,8 +850,15 @@ export class ApiService {
     return this.http.request('delete', `${apiUrl}/billingClients/${id}`, { body: { newParentId, deleteChildren } });
   }
 
-  getClientsList(): Observable<any> {
-    return this.http.get(`${apiUrl}/clients/list`);
+  private clientsListCache$: Observable<any> | null = null;
+
+  getClientsListCached(forceRefresh = false): Observable<any> {
+    if (!this.clientsListCache$ || forceRefresh) {
+      this.clientsListCache$ = this.http.get(`${apiUrl}/clients/list`).pipe(
+        shareReplay(1)
+      );
+    }
+    return this.clientsListCache$;
   }
 
   /* ====================== COTIZACIONES ====================== */
@@ -861,11 +871,11 @@ export class ApiService {
     return this.http.get(`${apiUrl}/quotes/${id}`);
   }
 
-  createQuote(payload: Omit<QuoteItem, '_id' | 'quoteNum' | 'createdAt'>): Observable<any> {
+  createQuote(payload: Omit<QuoteItem, 'userId' | '_id' | 'quoteNum' | 'createdAt'>): Observable<any> {
     return this.http.post(`${apiUrl}/quotes`, payload);
   }
 
-  updateQuote(id: string, payload: Partial<Omit<QuoteItem, '_id' | 'quoteNum' | 'createdAt'>>): Observable<any> {
+  updateQuote(id: string, payload: Partial<Omit<QuoteItem, 'userId' | '_id' | 'quoteNum' | 'createdAt'>>): Observable<any> {
     return this.http.put(`${apiUrl}/quotes/${id}`, payload);
   }
 
@@ -961,6 +971,8 @@ export class ApiService {
   // ====================== CLIENT CONFIG ======================
 
   private clientConfigCache$: Observable<any> | null = null;
+  private activeClientsConfigCache$: Observable<any> | null = null;
+  private excludedAccountsConfigCache$: Observable<any> | null = null;
 
   getClientConfigCached(forceRefresh = false): Observable<any> {
 
@@ -976,12 +988,22 @@ export class ApiService {
     return this.clientConfigCache$;
   }
 
-  getActiveClientsConfig(): Observable<any> {
-    return this.http.get(`${apiUrl}/clients/config/active`);
+  getActiveClientsConfigCached(forceRefresh = false): Observable<any> {
+    if (!this.activeClientsConfigCache$ || forceRefresh) {
+      this.activeClientsConfigCache$ = this.http.get(`${apiUrl}/clients/config/active`).pipe(
+        shareReplay(1)
+      );
+    }
+    return this.activeClientsConfigCache$;
   }
 
-  getExcludedAccountsConfig(): Observable<any> {
-    return this.http.get(`${apiUrl}/clients/config/excluded`);
+  getExcludedAccountsConfigCached(forceRefresh = false): Observable<any> {
+    if (!this.excludedAccountsConfigCache$ || forceRefresh) {
+      this.excludedAccountsConfigCache$ = this.http.get(`${apiUrl}/clients/config/excluded`).pipe(
+        shareReplay(1)
+      );
+    }
+    return this.excludedAccountsConfigCache$;
   }
 
   updateActiveClients(activeClients: any): Observable<any> {

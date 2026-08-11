@@ -21,37 +21,123 @@ export interface QuoteCatalogData {
 
 @Injectable({ providedIn: 'root' })
 export class CotizacionesDataService {
-  private catalogCache$: Observable<QuoteCatalogData> | null = null;
+  private quotesCache$: Observable<QuoteItem[]> | null = null;
+  private productsCache$: Observable<QuoteProductItem[]> | null = null;
+  private foreignTechniciansCache$: Observable<ForeignTechnicianItem[]> | null = null;
+  private travelExpensesCache$: Observable<TravelExpenseItem[]> | null = null;
+  private travelExpenseExtrasCache$: Observable<TravelExpenseExtraItem[]> | null = null;
+  private suggestionsCache$: Observable<SuggestionItem[]> | null = null;
 
   constructor(private api: ApiService) { }
 
   getCatalogData(forceRefresh = false): Observable<QuoteCatalogData> {
-    if (!this.catalogCache$ || forceRefresh) {
-      this.catalogCache$ = forkJoin({
-        quotes: this.api.getQuotes(),
-        products: this.api.getQuoteProducts(),
-        foreignTechnicians: this.api.getForeignTechnicians(),
-        travelExpenses: this.api.getTravelExpenses(),
-        travelExpenseExtras: this.api.getTravelExpenseExtras(),
-        suggestions: this.api.getSuggestions()
-      }).pipe(
-        map(({ quotes, products, foreignTechnicians, travelExpenses, travelExpenseExtras, suggestions }) => ({
-          quotes: this.extractList(quotes).map(item => this.mapQuote(item)),
-          products: this.extractList(products).map(item => this.mapProduct(item)),
-          foreignTechnicians: this.extractList(foreignTechnicians).map(item => this.mapTechnician(item)),
-          travelExpenses: this.extractList(travelExpenses).map(item => this.mapTravelExpense(item)),
-          travelExpenseExtras: this.extractList(travelExpenseExtras).map(item => this.mapTravelExpenseExtra(item)),
-          suggestions: this.extractList(suggestions).map(item => this.mapSuggestion(item))
-        })),
+    return forkJoin({
+      quotes: this.getQuotes(forceRefresh),
+      products: this.getProducts(forceRefresh),
+      foreignTechnicians: this.getForeignTechnicians(forceRefresh),
+      travelExpenses: this.getTravelExpenses(forceRefresh),
+      travelExpenseExtras: this.getTravelExpenseExtras(forceRefresh),
+      suggestions: this.getSuggestions(forceRefresh)
+    });
+  }
+
+  getQuotes(forceRefresh = false): Observable<QuoteItem[]> {
+    if (!this.quotesCache$ || forceRefresh) {
+      this.quotesCache$ = this.api.getQuotes().pipe(
+        map(response => this.extractList(response).map(item => this.mapQuote(item))),
         shareReplay(1)
       );
     }
 
-    return this.catalogCache$;
+    return this.quotesCache$;
+  }
+
+  getProducts(forceRefresh = false): Observable<QuoteProductItem[]> {
+    if (!this.productsCache$ || forceRefresh) {
+      this.productsCache$ = this.api.getQuoteProducts().pipe(
+        map(response => this.extractList(response).map(item => this.mapProduct(item))),
+        shareReplay(1)
+      );
+    }
+
+    return this.productsCache$;
+  }
+
+  getForeignTechnicians(forceRefresh = false): Observable<ForeignTechnicianItem[]> {
+    if (!this.foreignTechniciansCache$ || forceRefresh) {
+      this.foreignTechniciansCache$ = this.api.getForeignTechnicians().pipe(
+        map(response => this.extractList(response).map(item => this.mapTechnician(item))),
+        shareReplay(1)
+      );
+    }
+
+    return this.foreignTechniciansCache$;
+  }
+
+  getTravelExpenses(forceRefresh = false): Observable<TravelExpenseItem[]> {
+    if (!this.travelExpensesCache$ || forceRefresh) {
+      this.travelExpensesCache$ = this.api.getTravelExpenses().pipe(
+        map(response => this.extractList(response).map(item => this.mapTravelExpense(item))),
+        shareReplay(1)
+      );
+    }
+
+    return this.travelExpensesCache$;
+  }
+
+  getTravelExpenseExtras(forceRefresh = false): Observable<TravelExpenseExtraItem[]> {
+    if (!this.travelExpenseExtrasCache$ || forceRefresh) {
+      this.travelExpenseExtrasCache$ = this.api.getTravelExpenseExtras().pipe(
+        map(response => this.extractList(response).map(item => this.mapTravelExpenseExtra(item))),
+        shareReplay(1)
+      );
+    }
+
+    return this.travelExpenseExtrasCache$;
+  }
+
+  getSuggestions(forceRefresh = false): Observable<SuggestionItem[]> {
+    if (!this.suggestionsCache$ || forceRefresh) {
+      this.suggestionsCache$ = this.api.getSuggestions().pipe(
+        map(response => this.extractList(response).map(item => this.mapSuggestion(item))),
+        shareReplay(1)
+      );
+    }
+
+    return this.suggestionsCache$;
   }
 
   clearCache(): void {
-    this.catalogCache$ = null;
+    this.quotesCache$ = null;
+    this.productsCache$ = null;
+    this.foreignTechniciansCache$ = null;
+    this.travelExpensesCache$ = null;
+    this.travelExpenseExtrasCache$ = null;
+    this.suggestionsCache$ = null;
+  }
+
+  clearQuotesCache(): void {
+    this.quotesCache$ = null;
+  }
+
+  clearProductsCache(): void {
+    this.productsCache$ = null;
+  }
+
+  clearForeignTechniciansCache(): void {
+    this.foreignTechniciansCache$ = null;
+  }
+
+  clearTravelExpensesCache(): void {
+    this.travelExpensesCache$ = null;
+  }
+
+  clearTravelExpenseExtrasCache(): void {
+    this.travelExpenseExtrasCache$ = null;
+  }
+
+  clearSuggestionsCache(): void {
+    this.suggestionsCache$ = null;
   }
 
   private extractList(response: any): any[] {

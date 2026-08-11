@@ -3,7 +3,7 @@ import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import {
   ApiService,
   ForeignTechnicianItem,
@@ -206,7 +206,9 @@ export class CotizacionesForaneosComponent implements OnInit {
   loadCatalog(forceRefresh = false): void {
     this.loading = true;
 
-    this.quoteData.getCatalogData(forceRefresh).subscribe({
+    const request$ = this.getCatalogRequest(forceRefresh);
+
+    request$.subscribe({
       next: data => {
         const travelExpenses = data.travelExpenses ?? [];
         const travelExpenseExtras = data.travelExpenseExtras ?? [];
@@ -233,6 +235,92 @@ export class CotizacionesForaneosComponent implements OnInit {
     this.loadCatalog(true);
     this.currentPage = 1;
     this.selectedIds.clear();
+  }
+
+  private getCatalogRequest(forceRefresh = false) {
+    if (!forceRefresh) return this.quoteData.getCatalogData();
+
+    if (this.activeTabIndex === 1) {
+      return this.quoteData.getTravelExpenses(true).pipe(map(travelExpenses => ({
+        foreignTechnicians: this.technicians,
+        travelExpenses,
+        travelExpenseExtras: this.travelExpenseExtras
+      })));
+    }
+
+    if (this.activeTabIndex === 2) {
+      return this.quoteData.getTravelExpenseExtras(true).pipe(map(travelExpenseExtras => ({
+        foreignTechnicians: this.technicians,
+        travelExpenses: this.travelExpenses,
+        travelExpenseExtras
+      })));
+    }
+
+    return this.quoteData.getForeignTechnicians(true).pipe(map(foreignTechnicians => ({
+      foreignTechnicians,
+      travelExpenses: this.travelExpenses,
+      travelExpenseExtras: this.travelExpenseExtras
+    })));
+  }
+
+  private loadTechnicians(forceRefresh = false): void {
+    this.loading = true;
+
+    this.quoteData.getForeignTechnicians(forceRefresh).subscribe({
+      next: technicians => {
+        this.technicians = technicians;
+        this.currentPage = 1;
+        this.clearSelection();
+        this.closeSidebar();
+      },
+      error: error => {
+        console.error('Error al cargar tecnicos foraneos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los tecnicos', duration: 5000 });
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
+  }
+
+  private loadTravelExpenses(forceRefresh = false): void {
+    this.loading = true;
+
+    this.quoteData.getTravelExpenses(forceRefresh).subscribe({
+      next: travelExpenses => {
+        this.travelExpenses = [...travelExpenses].sort((a, b) => this.createdTime(b) - this.createdTime(a));
+        this.currentPage = 1;
+        this.clearSelection();
+        this.closeSidebar();
+      },
+      error: error => {
+        console.error('Error al cargar viaticos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los viaticos', duration: 5000 });
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
+  }
+
+  private loadTravelExpenseExtras(forceRefresh = false): void {
+    this.loading = true;
+
+    this.quoteData.getTravelExpenseExtras(forceRefresh).subscribe({
+      next: travelExpenseExtras => {
+        this.travelExpenseExtras = [...travelExpenseExtras];
+        this.resetExtraForm(this.currentExtra ?? undefined);
+        this.currentPage = 1;
+        this.clearSelection();
+      },
+      error: error => {
+        console.error('Error al cargar extras de viaticos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los extras', duration: 5000 });
+      },
+      complete: () => {
+        this.loading = false;
+      }
+    });
   }
 
   onTabChange(index: number): void {
@@ -409,9 +497,8 @@ export class CotizacionesForaneosComponent implements OnInit {
           summary: this.modalMode === 'create' ? 'Tecnico creado' : 'Tecnico actualizado',
           duration: 3500
         });
-        this.quoteData.clearCache();
         this.closeModal();
-        this.refresh();
+        this.loadTechnicians(true);
       },
       error: err => {
         console.error(err);
@@ -443,9 +530,8 @@ export class CotizacionesForaneosComponent implements OnInit {
           summary: this.travelExpenseModalMode === 'create' ? 'Viatico creado' : 'Viatico actualizado',
           duration: 3500
         });
-        this.quoteData.clearCache();
         this.closeTravelExpenseModal();
-        this.refresh();
+        this.loadTravelExpenses(true);
       },
       error: err => {
         console.error(err);
@@ -472,7 +558,7 @@ export class CotizacionesForaneosComponent implements OnInit {
         summary: 'No se encontró el registro de extras para actualizar',
         duration: 6000
       });
-      this.loadCatalog(true);
+      this.loadTravelExpenseExtras(true);
       return;
     }
 
@@ -481,8 +567,7 @@ export class CotizacionesForaneosComponent implements OnInit {
     this.api.updateTravelExpenseExtra(current._id, payload).subscribe({
       next: () => {
         this.toast.success({ detail: 'Exito', summary: 'Extras actualizados', duration: 3500 });
-        this.quoteData.clearCache();
-        this.loadCatalog(true);
+        this.loadTravelExpenseExtras(true);
       },
       error: err => {
         console.error(err);
@@ -541,9 +626,8 @@ export class CotizacionesForaneosComponent implements OnInit {
 
         if (success) {
           this.toast.success({ detail: 'Exito', summary: `Se eliminaron ${success} tecnico(s)`, duration: 4000 });
-          this.quoteData.clearCache();
           this.closeSidebar();
-          this.refresh();
+          this.loadTechnicians(true);
         }
 
         if (failures) {
@@ -708,9 +792,8 @@ export class CotizacionesForaneosComponent implements OnInit {
 
         if (success) {
           this.toast.success({ detail: 'Exito', summary: `Se eliminaron ${success} viatico(s)`, duration: 4000 });
-          this.quoteData.clearCache();
           this.closeSidebar();
-          this.refresh();
+          this.loadTravelExpenses(true);
         }
 
         if (failures) {

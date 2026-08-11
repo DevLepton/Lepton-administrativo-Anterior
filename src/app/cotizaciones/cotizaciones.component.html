@@ -1,4 +1,4 @@
-<div class="section-container">
+<div class="section-container" *ngIf="activeView === 'list'">
   <div class="section-header">
     <div>
       <h2>Cotizaciones</h2>
@@ -22,38 +22,21 @@
               {{ filteredQuotes.length }} resultado{{ filteredQuotes.length === 1 ? '' : 's' }}
             </mat-hint>
           </mat-form-field>
-
-          <!-- <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
-            <mat-label>Estatus</mat-label>
-            <mat-select [(value)]="statusFilter" (selectionChange)="onFilterChange()">
-              <mat-option [value]="''">Todos</mat-option>
-              <mat-option value="Borrador">Borrador</mat-option>
-              <mat-option value="Enviada">Enviada</mat-option>
-              <mat-option value="Aceptada">Aceptada</mat-option>
-              <mat-option value="Rechazada">Rechazada</mat-option>
-            </mat-select>
-          </mat-form-field> -->
         </div>
       </div>
 
       <div class="actions-top">
-        <button class="new-button" matTooltip="Nueva cotización" disabled>
-          <span class="material-icons">add</span>
+        <button class="new-button quote-builder-button" matTooltip="Cotizador" (click)="openBuilder()">
+          <span class="material-icons">request_quote</span>
+          Cotizador
         </button>
 
-        <!-- <span class="tooltip-wrap" matTooltip="Selecciona 1 cotización para ver">
-          <button class="icon-button view-button" matTooltip="Ver" [disabled]="!canViewOrEdit">
-            <span class="material-icons">visibility</span>
-          </button>
-        </span>
+        <button class="download-button" matTooltip="Descargar cotizacion" (click)="downloadSelectedQuotes()"
+          [disabled]="selectedCount === 0">
+          <span class="material-icons">download</span>
+        </button>
 
-        <span class="tooltip-wrap" matTooltip="Selecciona 1 cotización para editar">
-          <button class="icon-button edit-button" matTooltip="Editar" [disabled]="!canViewOrEdit">
-            <span class="material-icons">edit</span>
-          </button>
-        </span> -->
-
-        <span class="tooltip-wrap" matTooltip="Selecciona al menos 1 cotización">
+        <span class="tooltip-wrap" matTooltip="Selecciona al menos 1 cotizacion">
           <button class="icon-button delete-button" matTooltip="Eliminar" [disabled]="selectedCount === 0">
             <span class="material-icons">delete</span>
           </button>
@@ -73,7 +56,7 @@
             </th>
 
             <th>No.</th>
-            <th>Cotización</th>
+            <th>Cotizacion</th>
             <th>Cliente</th>
             <th>Empresa</th>
             <th>Total</th>
@@ -83,15 +66,14 @@
         </thead>
 
         <tbody *ngIf="!loading; else loadingTpl">
-          <tr *ngFor="let item of displayedQuotes; let idx =index; trackBy: trackById" (click)="toggleRowByClick(item)"
+          <tr *ngFor="let item of displayedQuotes; let idx = index; trackBy: trackById" (click)="toggleRowByClick(item)"
             [class.row-selected]="isSelected(item._id)" style="cursor:pointer;">
-
             <td class="td-check" (click)="toggleRowByClick(item); $event.stopPropagation()">
               <input type="checkbox" [checked]="isSelected(item._id)"
                 (change)="toggleRowSelection(item,$any($event.target).checked)" (click)="$event.stopPropagation()">
             </td>
 
-            <td>{{ ((currentPage-1)*perPage)+idx+1 }}</td>
+            <td>{{ ((currentPage - 1) * perPage) + idx + 1 }}</td>
             <td>{{ item.quoteNum }}</td>
             <td>{{ item.clientName }}</td>
             <td>{{ item.companyName || '-' }}</td>
@@ -109,7 +91,7 @@
             </td>
           </tr>
 
-          <tr *ngIf="displayedQuotes.length===0">
+          <tr *ngIf="displayedQuotes.length === 0">
             <td colspan="8" style="text-align:center;padding:1rem;">
               Sin cotizaciones para mostrar.
             </td>
@@ -125,14 +107,6 @@
             </tr>
           </tbody>
         </ng-template>
-
-        <ng-template #loadingTpl>
-          <tbody>
-            <tr>
-              <td colspan="8" style="text-align:center; padding:1rem;">Cargando cotizaciones...</td>
-            </tr>
-          </tbody>
-        </ng-template>
       </table>
     </div>
 
@@ -140,5 +114,465 @@
       [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
       (page)="onPageChange($event)">
     </mat-paginator>
+  </div>
+</div>
+
+<div class="section-container quote-builder" *ngIf="activeView === 'builder'">
+  <div class="section-header">
+    <button class="back-button" (click)="backToList()">
+      <span class="material-icons">arrow_back</span>
+      Regresar
+    </button>
+
+    <div class="header-bar">
+      <h2>Cotizador</h2>
+      <button mat-icon-button class="refresh-btn" (click)="loadBuilderCatalogs()" matTooltip="Recargar catalogos">
+        <mat-icon>refresh</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <div class="builder-actions">
+    <button mat-stroked-button color="warn" class="custom-button" (click)="clearBuilder()">
+      <mat-icon>delete_sweep</mat-icon>
+      Limpiar
+    </button>
+
+    <button mat-flat-button color="primary" class="custom-button" (click)="submitQuote()"
+      [disabled]="!quoteComplete || savingQuote || builderLoading">
+      <mat-icon>save</mat-icon>
+      {{ savingQuote ? 'Guardando...' : 'Crear cotizacion' }}
+    </button>
+  </div>
+
+  <div class="accordion">
+    <section class="accordion-item" [class.open]="activeSection === 'client'">
+      <button type="button" class="accordion-header" (click)="setSection('client')">
+        <span>Datos del cliente</span>
+        <span class="section-status" [class.complete]="clientComplete">
+          <mat-icon>{{ clientComplete ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          {{ clientComplete ? 'Completo' : 'Pendiente' }}
+        </span>
+      </button>
+
+      <div class="accordion-body" *ngIf="activeSection === 'client'">
+        <form [formGroup]="clientForm" class="form-grid">
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Nombre del cliente</mat-label>
+            <input matInput formControlName="clientName" [matAutocomplete]="autoClient" autocomplete="off">
+            <mat-autocomplete #autoClient="matAutocomplete" [displayWith]="displayBillingClient"
+              (optionSelected)="onBillingClientSelected($event.option.value)">
+              <mat-option *ngFor="let client of filteredBillingClients" [value]="client">
+                <div class="option">
+                  <span class="name">{{ client.billingName }}</span>
+                  <small>{{ client.companyName || 'Sin razon social' }}</small>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+            <mat-error *ngIf="clientForm.get('clientName')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Razon social</mat-label>
+            <input matInput formControlName="companyName">
+            <mat-error *ngIf="clientForm.get('companyName')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Lugar</mat-label>
+            <input matInput formControlName="place">
+            <mat-error *ngIf="clientForm.get('place')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Vigencia</mat-label>
+            <input matInput [matDatepicker]="validityPicker" formControlName="validity">
+            <mat-datepicker-toggle matIconSuffix [for]="validityPicker"></mat-datepicker-toggle>
+            <mat-datepicker #validityPicker></mat-datepicker>
+            <mat-error *ngIf="clientForm.get('validity')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+        </form>
+
+        <div class="section-footer">
+          <button mat-flat-button color="primary" class="custom-button" (click)="completeClientSection()">
+            Siguiente
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="accordion-item" [class.open]="activeSection === 'products'">
+      <button type="button" class="accordion-header" (click)="setSection('products')">
+        <span>Productos</span>
+        <span class="section-status" [class.complete]="productsComplete">
+          <mat-icon>{{ productsComplete ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          {{ productsComplete ? 'Completo' : 'Pendiente' }}
+        </span>
+      </button>
+
+      <div class="accordion-body" *ngIf="activeSection === 'products'">
+        <form [formGroup]="productsForm" class="form-grid compact">
+          <mat-form-field appearance="outline" class="field small">
+            <mat-label>Unidades</mat-label>
+            <input matInput type="number" min="1" formControlName="units">
+            <mat-error *ngIf="productsForm.get('units')?.invalid">Minimo 1</mat-error>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Tipo/modelo de unidades</mat-label>
+            <input matInput formControlName="model" placeholder="Particular, carro, camioneta, motocicleta, modelo, etc.">
+            <mat-error *ngIf="productsForm.get('model')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+        </form>
+
+        <div class="product-picker">
+          <mat-form-field appearance="outline" class="type-filter" subscriptSizing="dynamic">
+            <mat-label>Tipo</mat-label>
+            <mat-select [(ngModel)]="productTypeFilter">
+              <mat-option [value]="''">Todos</mat-option>
+              <mat-option value="GPS">GPS</mat-option>
+              <mat-option value="Accesorio">Accesorio</mat-option>
+              <mat-option value="Servicio">Servicio</mat-option>
+              <mat-option value="Plan">Plan</mat-option>
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="product-search" subscriptSizing="dynamic">
+            <mat-label>Buscar producto</mat-label>
+            <input matInput [(ngModel)]="productSearch" [matAutocomplete]="autoProduct" autocomplete="off">
+            <mat-autocomplete #autoProduct="matAutocomplete" [displayWith]="displayProduct"
+              (optionSelected)="onProductSelected($event.option.value)">
+              <mat-option *ngFor="let product of filteredProducts" [value]="product">
+                <div class="option product-option">
+                  <span class="name">{{ product.name }}</span>
+                  <small>{{ product.type }} - {{ product.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</small>
+                </div>
+              </mat-option>
+            </mat-autocomplete>
+          </mat-form-field>
+
+          <button mat-mini-fab color="primary" class="add-product" (click)="addSelectedProduct()"
+            [disabled]="!selectedProductId" matTooltip="Agregar producto">
+            <mat-icon>add</mat-icon>
+          </button>
+
+          <button mat-stroked-button color="primary" class="foreign-service-btn" (click)="openForeignServiceModal()">
+            <mat-icon>engineering</mat-icon>
+            Servicio foraneo
+          </button>
+        </div>
+
+        <div class="products-list" *ngIf="quoteProducts.length; else emptyProductsTpl">
+          <div class="product-row" *ngFor="let item of quoteProducts; trackBy: trackByProductId">
+            <div class="product-main">
+              <div class="product-title">
+                <b>{{ item.name }}</b>
+                <button *ngIf="hasIgnoredSuggestion(item.productId)" mat-icon-button class="suggestion-icon"
+                  matTooltip="Ver sugerencia" (click)="openIgnoredSuggestion(item.productId); $event.stopPropagation()">
+                  <mat-icon>tips_and_updates</mat-icon>
+                </button>
+              </div>
+              <small>{{ item.type }} · {{ item.description || 'Sin descripcion' }}</small>
+            </div>
+
+            <div class="money">
+              <small>Precio</small>
+              <b>{{ item.price | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </div>
+
+            <div class="money">
+              <small>Con IVA</small>
+              <b>{{ item.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </div>
+
+            <mat-form-field appearance="outline" class="qty" subscriptSizing="dynamic">
+              <mat-label>Cantidad</mat-label>
+              <input matInput type="number" min="1" [ngModel]="item.amount"
+                (ngModelChange)="updateProductAmount(item, $event)" [disabled]="!!item.lockedAmount">
+            </mat-form-field>
+
+            <div class="discount-controls">
+              <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
+                <mat-label>Descuento</mat-label>
+                <input matInput type="number" min="0" [ngModel]="item.discount"
+                  (ngModelChange)="updateProductDiscount(item, $event)">
+              </mat-form-field>
+
+              <mat-button-toggle-group [value]="item.discountType"
+                (change)="updateProductDiscountType(item, $event.value)">
+                <mat-button-toggle value="%">%</mat-button-toggle>
+                <mat-button-toggle value="$">$</mat-button-toggle>
+              </mat-button-toggle-group>
+            </div>
+
+            <div class="money total">
+              <small>Total</small>
+              <b>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</b>
+            </div>
+
+            <button mat-icon-button color="warn" (click)="removeProduct(item.productId)" matTooltip="Quitar">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+        </div>
+
+        <ng-template #emptyProductsTpl>
+          <div class="empty-products">Agrega productos para continuar.</div>
+        </ng-template>
+
+        <div class="totals">
+          <div><span>Subtotal</span><b>{{ subtotal | currency:'MXN':'symbol':'1.2-2' }}</b></div>
+          <div><span>IVA</span><b>{{ IVA | currency:'MXN':'symbol':'1.2-2' }}</b></div>
+          <div><span>Descuentos</span><b>{{ discounts | currency:'MXN':'symbol':'1.2-2' }}</b></div>
+          <div class="grand-total"><span>Total final</span><b>{{ total | currency:'MXN':'symbol':'1.2-2' }}</b></div>
+          <div *ngIf="hasPlan" class="monthly">
+            <span>Proxima mensualidad</span>
+            <b>{{ paymentNextMonthly | currency:'MXN':'symbol':'1.2-2' }}</b>
+          </div>
+        </div>
+
+        <div class="section-footer">
+          <button mat-flat-button color="primary" class="custom-button" (click)="completeProductsSection()">
+            Siguiente
+            <mat-icon>arrow_forward</mat-icon>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <section class="accordion-item" [class.open]="activeSection === 'payment'">
+      <button type="button" class="accordion-header" (click)="setSection('payment')">
+        <span>Metodos de pago</span>
+        <span class="section-status" [class.complete]="paymentComplete">
+          <mat-icon>{{ paymentComplete ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
+          {{ paymentComplete ? 'Completo' : 'Pendiente' }}
+        </span>
+      </button>
+
+      <div class="accordion-body" *ngIf="activeSection === 'payment'">
+        <form [formGroup]="paymentForm" class="payment-layout">
+          <mat-checkbox formControlName="billable">Cotizacion facturable</mat-checkbox>
+
+          <mat-form-field appearance="outline" class="field">
+            <mat-label>Titular</mat-label>
+            <mat-select formControlName="paymentMethodHolder" (selectionChange)="onPaymentHolderChange($event.value)">
+              <mat-option *ngFor="let account of bankAccounts" [value]="account.holder">
+                {{ account.holder }}
+              </mat-option>
+            </mat-select>
+            <mat-error *ngIf="paymentForm.get('paymentMethodHolder')?.hasError('required')">Campo obligatorio</mat-error>
+          </mat-form-field>
+
+          <div class="bank-details">
+            <div><span>Banco</span><b>{{ paymentForm.get('bankName')?.value || '-' }}</b></div>
+            <div><span>Titular</span><b>{{ paymentForm.get('paymentMethodHolder')?.value || '-' }}</b></div>
+            <div><span>Cuenta</span><b>{{ paymentForm.get('accountNumber')?.value || '-' }}</b></div>
+            <div><span>CLABE</span><b>{{ paymentForm.get('CLABE')?.value || '-' }}</b></div>
+          </div>
+
+          <mat-form-field appearance="outline" class="comments">
+            <mat-label>Comentarios</mat-label>
+            <textarea matInput rows="4" formControlName="comments"></textarea>
+          </mat-form-field>
+        </form>
+      </div>
+    </section>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="suggestionModalOpen" (click)="ignoreActiveSuggestion()">
+  <div class="modal-content suggestion-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Sugerencia del cotizador</h3>
+        <small>{{ getSuggestionTitle(activeSuggestion) }}</small>
+      </div>
+    </div>
+
+    <ng-container *ngIf="getSuggestion(activeSuggestion) as suggestion">
+      <div class="suggestion-copy">
+        {{ suggestion.description || 'Hay una sugerencia relacionada con esta accion.' }}
+      </div>
+
+      <div class="suggestion-response">
+        <h4>Acciones sugeridas</h4>
+        <div class="suggestion-response-row" *ngFor="let response of suggestion.response">
+          <mat-icon>{{ response.action === 'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
+          <span>{{ response.action === 'add' ? 'Agregar' : 'Quitar' }}</span>
+          <b>{{ getProductName(response.productId) }}</b>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="modal-actions">
+      <button mat-button (click)="ignoreActiveSuggestion()">Ignorar</button>
+      <button mat-flat-button color="primary" (click)="applyActiveSuggestion()">
+        <mat-icon>check</mat-icon>
+        Aplicar sugerencia
+      </button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="foreignServiceModalOpen" (click)="closeForeignServiceModal()">
+  <div class="modal-content foreign-service-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Servicio foraneo</h3>
+        <small>Agrega viaticos, hospedaje y servicios tecnicos como concepto de cotizacion.</small>
+      </div>
+      <button mat-icon-button (click)="closeForeignServiceModal()" matTooltip="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <mat-button-toggle-group class="mode-toggle" [value]="foreignServiceMode"
+      (change)="setForeignServiceMode($event.value)">
+      <mat-button-toggle value="lepton">Tecnico de Lepton</mat-button-toggle>
+      <mat-button-toggle value="foreign">Tecnico foraneo</mat-button-toggle>
+    </mat-button-toggle-group>
+
+    <ng-container *ngIf="foreignServiceMode === 'lepton'; else foreignTechnicianTpl">
+      <form [formGroup]="leptonForeignForm" class="foreign-grid">
+        <mat-form-field appearance="outline">
+          <mat-label>Dias</mat-label>
+          <input matInput type="number" min="1" formControlName="days">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Personas</mat-label>
+          <input matInput type="number" min="1" formControlName="people">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Desayunos</mat-label>
+          <input matInput type="number" min="0" [max]="maxMealCount" formControlName="breakfasts">
+          <mat-hint>Max {{ maxMealCount }} por persona</mat-hint>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Comidas</mat-label>
+          <input matInput type="number" min="0" [max]="maxMealCount" formControlName="lunches">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Cenas</mat-label>
+          <input matInput type="number" min="0" [max]="maxMealCount" formControlName="dinners">
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Lugar</mat-label>
+          <mat-select formControlName="placeId" (selectionChange)="onTravelExpenseChange()">
+            <mat-option *ngFor="let place of travelExpenses" [value]="place._id">
+              {{ place.place }} - {{ place.km }} km
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Noches de hospedaje</mat-label>
+          <input matInput type="number" min="0" formControlName="nights">
+        </mat-form-field>
+      </form>
+
+      <div class="calculation-panel">
+        <div class="calc-card">
+          <span>Comidas</span>
+          <b>{{ leptonMealsTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <small *ngIf="currentTravelExpenseExtra">
+            Desayuno {{ currentTravelExpenseExtra.breakfast | currency:'MXN':'symbol':'1.2-2' }},
+            comida {{ currentTravelExpenseExtra.lunch | currency:'MXN':'symbol':'1.2-2' }},
+            cena {{ currentTravelExpenseExtra.dinner | currency:'MXN':'symbol':'1.2-2' }}
+          </small>
+        </div>
+
+        <div class="calc-card">
+          <span>Gasolina ida</span>
+          <b>{{ leptonGasSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <small>Total ida y vuelta: {{ leptonGasRoundTripTotal | currency:'MXN':'symbol':'1.2-2' }}</small>
+        </div>
+
+        <div class="calc-card">
+          <span>Hospedaje</span>
+          <b>{{ leptonLodgingTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <small *ngIf="currentTravelExpenseExtra">Por noche: {{ currentTravelExpenseExtra.lodging |
+            currency:'MXN':'symbol':'1.2-2' }}</small>
+        </div>
+
+        <div class="calc-card total-card">
+          <span>Total con IVA</span>
+          <b>{{ leptonForeignTotalIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <small>Subtotal: {{ leptonForeignSubtotal | currency:'MXN':'symbol':'1.2-2' }}</small>
+        </div>
+      </div>
+
+      <div class="booths-panel" *ngIf="selectedTravelExpense">
+        <h4>Casetas</h4>
+        <div class="booth-row" *ngFor="let booth of selectedTravelExpense.booths; let i = index">
+          <mat-checkbox [checked]="isBoothSelected(i)" (change)="toggleBooth(i, $event.checked)">
+            {{ booth.name }}
+          </mat-checkbox>
+          <b>{{ booth.cost | currency:'MXN':'symbol':'1.2-2' }}</b>
+        </div>
+
+        <div class="booth-total">
+          <span>Subtotal casetas ida</span>
+          <b>{{ leptonBoothsSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <span>Total ida y vuelta</span>
+          <b>{{ leptonBoothsRoundTripTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-template #foreignTechnicianTpl>
+      <form [formGroup]="externalTechnicianForm" class="foreign-grid one">
+        <mat-form-field appearance="outline">
+          <mat-label>Tecnico</mat-label>
+          <mat-select formControlName="technicianId">
+            <mat-option *ngFor="let technician of foreignTechnicians" [value]="technician._id">
+              {{ technician.name }} - {{ technician.city }}
+            </mat-option>
+          </mat-select>
+        </mat-form-field>
+      </form>
+
+      <div class="service-lines" *ngIf="selectedForeignTechnician">
+        <div class="service-line" *ngFor="let line of foreignServiceLines">
+          <div>
+            <b>{{ line.label }}</b>
+            <small>{{ selectedForeignTechnician[line.key] | currency:'MXN':'symbol':'1.2-2' }} c/u</small>
+          </div>
+
+          <mat-form-field appearance="outline" subscriptSizing="dynamic">
+            <mat-label>Cantidad</mat-label>
+            <input matInput type="number" min="0" [ngModel]="line.quantity"
+              (ngModelChange)="updateForeignServiceLine(line, $event)">
+          </mat-form-field>
+
+          <b>{{ (selectedForeignTechnician[line.key] * line.quantity) | currency:'MXN':'symbol':'1.2-2' }}</b>
+        </div>
+      </div>
+
+      <div class="calculation-panel two">
+        <div class="calc-card">
+          <span>Subtotal</span>
+          <b>{{ externalTechnicianSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+        </div>
+
+        <div class="calc-card total-card">
+          <span>Total con IVA</span>
+          <b>{{ externalTechnicianTotalIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
+        </div>
+      </div>
+    </ng-template>
+
+    <div class="modal-actions">
+      <button mat-button (click)="closeForeignServiceModal()">Cancelar</button>
+      <button mat-flat-button color="primary" (click)="addForeignServiceProduct()" [disabled]="!canAddForeignService">
+        <mat-icon>add</mat-icon>
+        Agregar a la cotizacion
+      </button>
+    </div>
   </div>
 </div>

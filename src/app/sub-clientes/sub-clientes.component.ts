@@ -348,9 +348,9 @@ export class SubClientesComponent implements OnInit {
 
     // Las demás peticiones pueden seguir juntas
     forkJoin({
-      clients: this.api.getClientsList().pipe(catchError(error => of({ __error: error }))),
-      activeConfig: this.api.getActiveClientsConfig().pipe(catchError(error => of({ __error: error }))),
-      excludedConfig: this.api.getExcludedAccountsConfig().pipe(catchError(error => of({ __error: error })))
+      clients: this.api.getClientsListCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
+      activeConfig: this.api.getActiveClientsConfigCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
+      excludedConfig: this.api.getExcludedAccountsConfigCached(forceRefresh).pipe(catchError(error => of({ __error: error })))
     }).subscribe({
       next: ({ clients, activeConfig, excludedConfig }) => {
         if (clients?.__error) {
@@ -389,29 +389,29 @@ export class SubClientesComponent implements OnInit {
     });
   }
 
-  loadSubClients(forceRefresh = false): void {
-    this.loading = true;
+  // loadSubClients(forceRefresh = false): void {
+  //   this.loading = true;
 
-    this.api.getBillingClientsCached(forceRefresh).subscribe({
-      next: (response) => {
-        const list = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+  //   this.api.getBillingClientsCached(forceRefresh).subscribe({
+  //     next: (response) => {
+  //       const list = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
 
-        this.billingClients = list
-          .map((item: any) => this.mapBillingClient(item))
-          .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
+  //       this.billingClients = list
+  //         .map((item: any) => this.mapBillingClient(item))
+  //         .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
 
-        // this.updateUniqueLinkedClients();
+  //       // this.updateUniqueLinkedClients();
 
-        this.currentPage = 1;
-        this.clearSelection();
-      },
-      complete: () => this.loading = false
-    });
-  }
+  //       this.currentPage = 1;
+  //       this.clearSelection();
+  //     },
+  //     complete: () => this.loading = false
+  //   });
+  // }
 
   refresh(): void {
     this.closeSidebar();
-    this.loadSubClients(true);
+    this.loadInitialData(true);
   }
 
   //   trackByUserId(_index: number, item: ClientOption): number {

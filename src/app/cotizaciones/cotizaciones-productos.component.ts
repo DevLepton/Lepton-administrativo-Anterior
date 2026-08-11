@@ -3,7 +3,7 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-import { catchError, forkJoin, of } from 'rxjs';
+import { catchError, forkJoin, map, of } from 'rxjs';
 import { ApiService, QuoteProductItem, QuoteProductType } from '../services/api.service';
 import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgxCurrencyConfig } from 'ngx-currency';
@@ -149,9 +149,13 @@ export class CotizacionesProductosComponent implements OnInit {
   loadProducts(forceRefresh = false): void {
     this.loading = true;
 
-    this.quoteData.getCatalogData(forceRefresh).subscribe({
-      next: data => {
-        this.products = [...data.products].sort((a, b) => this.createdTime(b) - this.createdTime(a));
+    const request$ = forceRefresh
+      ? this.quoteData.getProducts(true)
+      : this.quoteData.getCatalogData().pipe(map(data => data.products));
+
+    request$.subscribe({
+      next: products => {
+        this.products = [...products].sort((a, b) => this.createdTime(b) - this.createdTime(a));
         this.currentPage = 1;
         this.clearSelection();
       },
@@ -278,7 +282,6 @@ export class CotizacionesProductosComponent implements OnInit {
           summary: this.modalMode === 'create' ? 'Producto creado' : 'Producto actualizado',
           duration: 3500
         });
-        this.quoteData.clearCache();
         this.closeModal();
         this.refresh();
       },
@@ -332,7 +335,6 @@ export class CotizacionesProductosComponent implements OnInit {
 
         if (success) {
           this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${success} producto(s)`, duration: 4000 });
-          this.quoteData.clearCache();
           this.refresh();
         }
 
