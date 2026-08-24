@@ -495,17 +495,20 @@
             <h3>Descuentos</h3>
             <div class="form-flex" formGroupName="discounts">
               <mat-form-field appearance="outline">
-                <mat-label>Mensualidad (%)</mat-label>
+                <mat-label>Mensualidad</mat-label>
+                <span matTextSuffix>%&nbsp;</span>
                 <input matInput type="number" min="0" formControlName="monthly" (focus)="selectInput($event)" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Dispositivos (%)</mat-label>
+                <mat-label>Dispositivos</mat-label>
+                <span matTextSuffix>%&nbsp;</span>
                 <input matInput type="number" min="0" formControlName="devices" (focus)="selectInput($event)" />
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Accesorios (%)</mat-label>
+                <mat-label>Accesorios</mat-label>
+                <span matTextSuffix>%&nbsp;</span>
                 <input matInput type="number" min="0" formControlName="accessories" (focus)="selectInput($event)" />
               </mat-form-field>
             </div>

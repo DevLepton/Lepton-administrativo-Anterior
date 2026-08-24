@@ -36,8 +36,10 @@
           <span class="material-icons">download</span>
         </button>
 
-        <span class="tooltip-wrap" matTooltip="Selecciona al menos 1 cotizacion">
-          <button class="icon-button delete-button" matTooltip="Eliminar" [disabled]="selectedCount === 0">
+        <span *ngIf="isAdminUser" class="tooltip-wrap"
+          [matTooltip]="selectedCount === 0 ? 'Selecciona al menos 1 cotizacion' : 'Eliminar cotizaciones seleccionadas'">
+          <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedQuotes()"
+            [disabled]="selectedCount === 0">
             <span class="material-icons">delete</span>
           </button>
         </span>
@@ -57,10 +59,12 @@
 
             <th>No.</th>
             <th>Cotizacion</th>
+            <th>Usuario</th>
             <th>Cliente</th>
             <th>Empresa</th>
             <th>Total</th>
-            <th>Vigencia</th>
+            <th>Fecha</th>
+            <th>Facturable</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -75,19 +79,26 @@
 
             <td>{{ ((currentPage - 1) * perPage) + idx + 1 }}</td>
             <td>{{ item.quoteNum }}</td>
+            <td>{{ item.userName }}</td>
             <td>{{ item.clientName }}</td>
             <td>{{ item.companyName || '-' }}</td>
-            <td>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</td>
-            <td>{{ item.validity | date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.total | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+            <td>{{ item.createdAt| date:'dd/MM/yyyy' }}</td>
+            <td>{{ item.billable ? 'Sí' : 'No' }}</td>
 
             <td class="row-actions">
-              <button class="icon-button view-button" matTooltip="Ver" disabled>
-                <span class="material-icons">visibility</span>
+              <button class="icon-button view-button" matTooltip="Ver"
+                (click)="previewQuotePdf(item); $event.stopPropagation()"> <span
+                  class="material-icons">visibility</span> </button>
+
+              <button class="icon-button new-button" matTooltip="Replicar en el cotizador"
+                (click)="replicateQuote(item); $event.stopPropagation()">
+                <span class="material-icons">content_copy</span>
               </button>
 
-              <button class="icon-button edit-button" matTooltip="Editar" disabled>
+              <!-- <button class="icon-button edit-button" matTooltip="Editar" disabled>
                 <span class="material-icons">edit</span>
-              </button>
+              </button> -->
             </td>
           </tr>
 
@@ -126,16 +137,67 @@
 
     <div class="header-bar">
       <h2>Cotizador</h2>
-      <button mat-icon-button class="refresh-btn" (click)="loadBuilderCatalogs()" matTooltip="Recargar catalogos">
+      <button mat-icon-button class="refresh-btn" (click)="loadBuilderCatalogs()" matTooltip="Recargar catálogos">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
   </div>
 
   <div class="builder-actions">
-    <button mat-stroked-button color="warn" class="custom-button" (click)="clearBuilder()">
+    <div class="disclaimer-container">
+      <button type="button" class="disclaimer-icon" mat-icon-button>
+        <mat-icon>info_outline</mat-icon>
+      </button>
+
+      <div class="disclaimer-popover" (click)="$event.stopPropagation()">
+
+        <div class="disclaimer-title">
+          <mat-icon>info_outline</mat-icon>
+          <strong>Deslinde de responsabilidad</strong>
+        </div>
+
+        <p>
+          El programador y/o desarrollador de este cotizador no se hace responsable
+          por el uso, interpretación o aplicación que se dé a la información,
+          cálculos, precios, descuentos, promociones, impuestos, conceptos,
+          productos, servicios, métodos de pago o cualquier otro dato mostrado
+          o generado mediante este sistema.
+        </p>
+
+        <p>
+          Las cotizaciones generadas son únicamente una herramienta de apoyo y
+          están sujetas a revisión y validación por parte de la persona o empresa
+          responsable de emitirlas. El programador y/o desarrollador no asume
+          responsabilidad alguna por errores, omisiones, información desactualizada,
+          precios incorrectos, descuentos aplicados, cantidades, impuestos,
+          condiciones comerciales o cualquier otro dato contenido en las
+          cotizaciones creadas.
+        </p>
+
+        <p>
+          La responsabilidad sobre la revisión, autorización, aceptación,
+          modificación, entrega y uso de las cotizaciones corresponde exclusivamente
+          al usuario y/o a la empresa que las emite. El uso de este cotizador implica
+          la aceptación de este deslinde.
+        </p>
+
+      </div>
+    </div>
+
+    <button *ngIf="replicationNotices.length" mat-icon-button class="replication-warning"
+      [matTooltip]="getReplicationNoticeTooltip()" (click)="openReplicationNotices()">
+      <mat-icon>report_problem</mat-icon>
+    </button>
+
+    <button mat-button color="warn" class="custom-button" (click)="clearBuilder()">
       <mat-icon>delete_sweep</mat-icon>
       Limpiar
+    </button>
+
+    <button mat-button class="custom-button" (click)="previewBuilderQuote()"
+      [disabled]="!quoteComplete || savingQuote || builderLoading">
+      <mat-icon>visibility</mat-icon>
+      Previsualizar
     </button>
 
     <button mat-flat-button color="primary" class="custom-button" (click)="submitQuote()"
@@ -215,15 +277,18 @@
         <form [formGroup]="productsForm" class="form-grid compact">
           <mat-form-field appearance="outline" class="field small">
             <mat-label>Unidades</mat-label>
-            <input matInput type="number" min="1" formControlName="units">
+            <input matInput type="number" min="1" formControlName="units" (focus)="selectInput($event)">
             <mat-error *ngIf="productsForm.get('units')?.invalid">Minimo 1</mat-error>
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="field">
             <mat-label>Tipo/modelo de unidades</mat-label>
-            <input matInput formControlName="model" placeholder="Particular, carro, camioneta, motocicleta, modelo, etc.">
+            <input matInput formControlName="model"
+              placeholder="Particular, carro, camioneta, motocicleta, modelo, etc.">
             <mat-error *ngIf="productsForm.get('model')?.hasError('required')">Campo obligatorio</mat-error>
           </mat-form-field>
+
+          <mat-checkbox formControlName="billable" class="field">Cotización facturable</mat-checkbox>
         </form>
 
         <div class="product-picker">
@@ -246,20 +311,21 @@
               <mat-option *ngFor="let product of filteredProducts" [value]="product">
                 <div class="option product-option">
                   <span class="name">{{ product.name }}</span>
-                  <small>{{ product.type }} - {{ product.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</small>
+                  <small>{{ product.type }} - {{ product.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+                    MXN</small>
                 </div>
               </mat-option>
             </mat-autocomplete>
           </mat-form-field>
 
-          <button mat-mini-fab color="primary" class="add-product" (click)="addSelectedProduct()"
+          <button mat-mini-fab color="primary" class="ang-btn btn-add add-product" (click)="addSelectedProduct()"
             [disabled]="!selectedProductId" matTooltip="Agregar producto">
             <mat-icon>add</mat-icon>
           </button>
 
-          <button mat-stroked-button color="primary" class="foreign-service-btn" (click)="openForeignServiceModal()">
+          <button mat-button color="primary" class="custom-button" (click)="openForeignServiceModal()">
             <mat-icon>engineering</mat-icon>
-            Servicio foraneo
+            Servicio foráneo
           </button>
         </div>
 
@@ -273,30 +339,37 @@
                   <mat-icon>tips_and_updates</mat-icon>
                 </button>
               </div>
-              <small>{{ item.type }} · {{ item.description || 'Sin descripcion' }}</small>
+              <small>{{ item.type }} · {{ item.description || 'Sin descripción' }}</small>
             </div>
 
             <div class="money">
               <small>Precio</small>
-              <b>{{ item.price | currency:'MXN':'symbol':'1.2-2' }}</b>
+              <b>{{ item.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
             </div>
 
             <div class="money">
               <small>Con IVA</small>
-              <b>{{ item.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
+              <b>{{ item.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
             </div>
 
             <mat-form-field appearance="outline" class="qty" subscriptSizing="dynamic">
               <mat-label>Cantidad</mat-label>
               <input matInput type="number" min="1" [ngModel]="item.amount"
-                (ngModelChange)="updateProductAmount(item, $event)" [disabled]="!!item.lockedAmount">
+                (ngModelChange)="updateProductAmount(item, $event)" (focus)="selectInput($event)"
+                [disabled]="!!item.lockedAmount">
+              <mat-error *ngIf="item.amount == null || item.amount < 1">
+                Mínimo 1
+              </mat-error>
             </mat-form-field>
 
-            <div class="discount-controls">
+            <!-- <div class="discount-controls">
               <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
                 <mat-label>Descuento</mat-label>
                 <input matInput type="number" min="0" [ngModel]="item.discount"
-                  (ngModelChange)="updateProductDiscount(item, $event)">
+                  (ngModelChange)="updateProductDiscount(item, $event)" (focus)="selectInput($event)">
+                <mat-error *ngIf="item.discount == null || item.discount < 0">
+                  Mínimo 0
+                </mat-error>
               </mat-form-field>
 
               <mat-button-toggle-group [value]="item.discountType"
@@ -304,11 +377,27 @@
                 <mat-button-toggle value="%">%</mat-button-toggle>
                 <mat-button-toggle value="$">$</mat-button-toggle>
               </mat-button-toggle-group>
+            </div> -->
+
+            <div class="discount-controls">
+              <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
+                <mat-label>Descuento</mat-label>
+                <span matTextSuffix>%&nbsp;</span>
+                <input matInput type="number" min="0" max="100" [ngModel]="item.discount"
+                  (ngModelChange)="updateProductDiscountPercent(item, $event)" (focus)="selectInput($event)">
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
+                <mat-label>Descuento</mat-label>
+                <span matTextPrefix>$&nbsp;</span>
+                <input matInput type="number" min="0" [ngModel]="getProductDiscountAmount(item)"
+                  (ngModelChange)="updateProductDiscountAmount(item, $event)" (focus)="selectInput($event)">
+              </mat-form-field>
             </div>
 
             <div class="money total">
-              <small>Total</small>
-              <b>{{ item.total | currency:'MXN':'symbol':'1.2-2' }}</b>
+              <small>Importe</small>
+              <b>{{ item.total | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
             </div>
 
             <button mat-icon-button color="warn" (click)="removeProduct(item.productId)" matTooltip="Quitar">
@@ -322,13 +411,20 @@
         </ng-template>
 
         <div class="totals">
-          <div><span>Subtotal</span><b>{{ subtotal | currency:'MXN':'symbol':'1.2-2' }}</b></div>
-          <div><span>IVA</span><b>{{ IVA | currency:'MXN':'symbol':'1.2-2' }}</b></div>
-          <div><span>Descuentos</span><b>{{ discounts | currency:'MXN':'symbol':'1.2-2' }}</b></div>
-          <div class="grand-total"><span>Total final</span><b>{{ total | currency:'MXN':'symbol':'1.2-2' }}</b></div>
+          <div><span>Subtotal ($ con IVA)</span><b>{{ subtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+              MXN</b></div>
+          <div><span>IVA</span><b>{{ IVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b></div>
+          <div style="position: relative;">
+            <mat-icon matTooltip="Los descuentos aplicados a los productos son unitarios"
+              class="info-icon">info</mat-icon>
+            <span>Descuentos</span>
+            <b>{{ discounts | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          </div>
+          <div class="grand-total"><span>Total final</span><b>{{ total | currency:'MXN':'symbol-narrow':'1.2-2':'en-US'
+              }} MXN</b></div>
           <div *ngIf="hasPlan" class="monthly">
             <span>Proxima mensualidad</span>
-            <b>{{ paymentNextMonthly | currency:'MXN':'symbol':'1.2-2' }}</b>
+            <b>{{ paymentNextMonthly | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
           </div>
         </div>
 
@@ -343,7 +439,7 @@
 
     <section class="accordion-item" [class.open]="activeSection === 'payment'">
       <button type="button" class="accordion-header" (click)="setSection('payment')">
-        <span>Metodos de pago</span>
+        <span>Métodos de pago</span>
         <span class="section-status" [class.complete]="paymentComplete">
           <mat-icon>{{ paymentComplete ? 'check_circle' : 'radio_button_unchecked' }}</mat-icon>
           {{ paymentComplete ? 'Completo' : 'Pendiente' }}
@@ -352,18 +448,50 @@
 
       <div class="accordion-body" *ngIf="activeSection === 'payment'">
         <form [formGroup]="paymentForm" class="payment-layout">
-          <mat-checkbox formControlName="billable">Cotizacion facturable</mat-checkbox>
+          <div style="display:flex; gap:1rem; justify-content:space-between; align-items:center; flex-wrap:wrap;">
+            <mat-form-field appearance="outline" class="field" subscriptSizing="dynamic">
+              <mat-label>Titular</mat-label>
 
-          <mat-form-field appearance="outline" class="field">
-            <mat-label>Titular</mat-label>
-            <mat-select formControlName="paymentMethodHolder" (selectionChange)="onPaymentHolderChange($event.value)">
-              <mat-option *ngFor="let account of bankAccounts" [value]="account.holder">
-                {{ account.holder }}
-              </mat-option>
-            </mat-select>
-            <mat-error *ngIf="paymentForm.get('paymentMethodHolder')?.hasError('required')">Campo obligatorio</mat-error>
-          </mat-form-field>
+              <mat-select formControlName="bankAccountId" (selectionChange)="onBankAccountSelected($event.value)"
+                [disabled]="bankAccountsLoading">
 
+                <mat-option *ngFor="let account of bankAccounts" [value]="account._id">
+                  {{ account.holder }}
+                </mat-option>
+
+                <mat-option *ngIf="!bankAccounts.length && !bankAccountsLoading" disabled>
+                  No hay métodos de pago registrados
+                </mat-option>
+              </mat-select>
+
+              <mat-hint *ngIf="bankAccountsLoading">
+                Cargando métodos de pago...
+              </mat-hint>
+
+              <mat-error *ngIf="paymentForm.get('bankAccountId')?.hasError('required')">
+                Selecciona un método de pago
+              </mat-error>
+            </mat-form-field>
+
+            <div class="payment-method-actions">
+              <button mat-mini-fab type="button" class="ang-btn btn-add" (click)="openBankAccountCreateModal()"
+                matTooltip="Agregar método de pago">
+                <mat-icon>add</mat-icon>
+              </button>
+
+              <button mat-mini-fab type="button" class="ang-btn btn-edit" (click)="openBankAccountEditModal()"
+                matTooltip="Editar método de pago"
+                [disabled]="!selectedBankAccount || savingBankAccount || deletingBankAccount">
+                <mat-icon>edit</mat-icon>
+              </button>
+
+              <button mat-mini-fab type="button" class="ang-btn btn-delete" (click)="deleteSelectedBankAccount()"
+                matTooltip="Eliminar método de pago"
+                [disabled]="!selectedBankAccount || savingBankAccount || deletingBankAccount">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </div>
           <div class="bank-details">
             <div><span>Banco</span><b>{{ paymentForm.get('bankName')?.value || '-' }}</b></div>
             <div><span>Titular</span><b>{{ paymentForm.get('paymentMethodHolder')?.value || '-' }}</b></div>
@@ -378,6 +506,35 @@
         </form>
       </div>
     </section>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="replicationNoticeModalOpen" (click)="closeReplicationNotices()">
+  <div class="modal-content suggestion-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Avisos de replicación</h3>
+        <small>Se intentó reconstruir la cotización con valores actuales.</small>
+      </div>
+      <button mat-icon-button (click)="closeReplicationNotices()" matTooltip="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <div class="replication-notices">
+      <div class="replication-notice" *ngFor="let notice of replicationNotices">
+        <mat-icon>report_problem</mat-icon>
+        <div>
+          <b>{{ notice.productName }}</b>
+          <small>{{ notice.type }} - {{ notice.message }}</small>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-actions">
+      <button mat-flat-button color="primary" class="custom-button"
+        (click)="closeReplicationNotices()">Entendido</button>
+    </div>
   </div>
 </div>
 
@@ -415,12 +572,53 @@
   </div>
 </div>
 
+<div class="modal-backdrop" *ngIf="clientDiscountModalOpen" (click)="ignoreActiveClientDiscount()">
+  <div class="modal-content suggestion-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Descuento de cliente</h3>
+        <small>{{ activeClientDiscount?.clientName || 'Cliente de cobranza' }}</small>
+      </div>
+    </div>
+
+    <ng-container *ngIf="activeClientDiscount as discount">
+      <div class="suggestion-copy">
+        El cliente de cobranza tiene un descuento de {{ discount.clientDiscount }}% para
+        {{ discount.categoryLabel }}.
+      </div>
+
+      <div class="client-discount-summary">
+        <div>
+          <span>Producto</span>
+          <b>{{ getClientDiscountProductName(discount) }}</b>
+        </div>
+        <div>
+          <span>Descuento actual</span>
+          <b>{{ discount.productDiscount }}%</b>
+        </div>
+        <div>
+          <span>Descuento del cliente</span>
+          <b>{{ discount.clientDiscount }}%</b>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="modal-actions">
+      <button mat-button (click)="ignoreActiveClientDiscount()">Descartar</button>
+      <button mat-flat-button color="primary" (click)="applyActiveClientDiscount()">
+        <mat-icon>check</mat-icon>
+        Aplicar descuento
+      </button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-backdrop" *ngIf="foreignServiceModalOpen" (click)="closeForeignServiceModal()">
   <div class="modal-content foreign-service-modal" (click)="$event.stopPropagation()">
     <div class="modal-header">
       <div>
-        <h3>Servicio foraneo</h3>
-        <small>Agrega viaticos, hospedaje y servicios tecnicos como concepto de cotizacion.</small>
+        <h3>Servicio foráneo</h3>
+        <small>Agrega viáticos, hospedaje y servicios técnicos como concepto de cotizacion.</small>
       </div>
       <button mat-icon-button (click)="closeForeignServiceModal()" matTooltip="Cerrar">
         <mat-icon>close</mat-icon>
@@ -429,8 +627,8 @@
 
     <mat-button-toggle-group class="mode-toggle" [value]="foreignServiceMode"
       (change)="setForeignServiceMode($event.value)">
-      <mat-button-toggle value="lepton">Tecnico de Lepton</mat-button-toggle>
-      <mat-button-toggle value="foreign">Tecnico foraneo</mat-button-toggle>
+      <mat-button-toggle value="lepton">Técnico de Leptón</mat-button-toggle>
+      <mat-button-toggle value="foreign">Técnico foráneo</mat-button-toggle>
     </mat-button-toggle-group>
 
     <ng-container *ngIf="foreignServiceMode === 'lepton'; else foreignTechnicianTpl">
@@ -479,31 +677,32 @@
       <div class="calculation-panel">
         <div class="calc-card">
           <span>Comidas</span>
-          <b>{{ leptonMealsTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ leptonMealsTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
           <small *ngIf="currentTravelExpenseExtra">
-            Desayuno {{ currentTravelExpenseExtra.breakfast | currency:'MXN':'symbol':'1.2-2' }},
-            comida {{ currentTravelExpenseExtra.lunch | currency:'MXN':'symbol':'1.2-2' }},
-            cena {{ currentTravelExpenseExtra.dinner | currency:'MXN':'symbol':'1.2-2' }}
+            Desayuno {{ currentTravelExpenseExtra.breakfast | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN,
+            comida {{ currentTravelExpenseExtra.lunch | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN,
+            cena {{ currentTravelExpenseExtra.dinner | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN
           </small>
         </div>
 
         <div class="calc-card">
-          <span>Gasolina ida</span>
-          <b>{{ leptonGasSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
-          <small>Total ida y vuelta: {{ leptonGasRoundTripTotal | currency:'MXN':'symbol':'1.2-2' }}</small>
+          <span>Gasolina ída</span>
+          <b>{{ leptonGasSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          <small>Total ída y vuelta: {{ leptonGasRoundTripTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+            MXN</small>
         </div>
 
         <div class="calc-card">
           <span>Hospedaje</span>
-          <b>{{ leptonLodgingTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ leptonLodgingTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
           <small *ngIf="currentTravelExpenseExtra">Por noche: {{ currentTravelExpenseExtra.lodging |
-            currency:'MXN':'symbol':'1.2-2' }}</small>
+            currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</small>
         </div>
 
         <div class="calc-card total-card">
           <span>Total con IVA</span>
-          <b>{{ leptonForeignTotalIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
-          <small>Subtotal: {{ leptonForeignSubtotal | currency:'MXN':'symbol':'1.2-2' }}</small>
+          <b>{{ leptonForeignTotalIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          <small>Subtotal: {{ leptonForeignSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</small>
         </div>
       </div>
 
@@ -513,14 +712,14 @@
           <mat-checkbox [checked]="isBoothSelected(i)" (change)="toggleBooth(i, $event.checked)">
             {{ booth.name }}
           </mat-checkbox>
-          <b>{{ booth.cost | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ booth.cost | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
         </div>
 
         <div class="booth-total">
-          <span>Subtotal casetas ida</span>
-          <b>{{ leptonBoothsSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
-          <span>Total ida y vuelta</span>
-          <b>{{ leptonBoothsRoundTripTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <span>Subtotal casetas ída</span>
+          <b>{{ leptonBoothsSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          <span>Total ída y vuelta</span>
+          <b>{{ leptonBoothsRoundTripTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
         </div>
       </div>
     </ng-container>
@@ -528,7 +727,7 @@
     <ng-template #foreignTechnicianTpl>
       <form [formGroup]="externalTechnicianForm" class="foreign-grid one">
         <mat-form-field appearance="outline">
-          <mat-label>Tecnico</mat-label>
+          <mat-label>Técnico</mat-label>
           <mat-select formControlName="technicianId">
             <mat-option *ngFor="let technician of foreignTechnicians" [value]="technician._id">
               {{ technician.name }} - {{ technician.city }}
@@ -541,7 +740,8 @@
         <div class="service-line" *ngFor="let line of foreignServiceLines">
           <div>
             <b>{{ line.label }}</b>
-            <small>{{ selectedForeignTechnician[line.key] | currency:'MXN':'symbol':'1.2-2' }} c/u</small>
+            <small>{{ selectedForeignTechnician[line.key] | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN
+              c/u</small>
           </div>
 
           <mat-form-field appearance="outline" subscriptSizing="dynamic">
@@ -550,29 +750,129 @@
               (ngModelChange)="updateForeignServiceLine(line, $event)">
           </mat-form-field>
 
-          <b>{{ (selectedForeignTechnician[line.key] * line.quantity) | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ (selectedForeignTechnician[line.key] * line.quantity) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US'
+            }} MXN</b>
         </div>
       </div>
 
       <div class="calculation-panel two">
         <div class="calc-card">
           <span>Subtotal</span>
-          <b>{{ externalTechnicianSubtotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ externalTechnicianSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
         </div>
 
         <div class="calc-card total-card">
           <span>Total con IVA</span>
-          <b>{{ externalTechnicianTotalIVA | currency:'MXN':'symbol':'1.2-2' }}</b>
+          <b>{{ externalTechnicianTotalIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
         </div>
       </div>
     </ng-template>
 
     <div class="modal-actions">
-      <button mat-button (click)="closeForeignServiceModal()">Cancelar</button>
-      <button mat-flat-button color="primary" (click)="addForeignServiceProduct()" [disabled]="!canAddForeignService">
+      <button mat-button class="custom-button" color="warn" (click)="closeForeignServiceModal()">Cancelar</button>
+      <button mat-flat-button color="primary" class="custom-button" (click)="addForeignServiceProduct()"
+        [disabled]="!canAddForeignService">
         <mat-icon>add</mat-icon>
         Agregar a la cotizacion
       </button>
     </div>
+  </div>
+</div>
+
+<div class="modal-backdrop quote-preview-backdrop" *ngIf="previewPdfUrl" (click)="closeQuotePreview()">
+  <div class="modal-content quote-preview-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>Previsualización de cotización</h3> <small>{{ previewQuote?.quoteNum || 'Cotización' }}</small>
+      </div> <button mat-icon-button (click)="closeQuotePreview()" matTooltip="Cerrar"> <mat-icon>close</mat-icon>
+      </button>
+    </div>
+    <div class="quote-preview-body"> <iframe [src]="previewPdfUrl" title="Previsualización de cotización"> </iframe>
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" *ngIf="bankAccountModalOpen" (click)="closeBankAccountModal()">
+
+  <div class="modal-content bank-account-modal" (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <div>
+        <h3>
+          {{ bankAccountModalMode === 'create'
+          ? 'Agregar método de pago'
+          : 'Editar método de pago' }}
+        </h3>
+
+        <small>
+          {{ bankAccountModalMode === 'create'
+          ? 'Registra una nueva cuenta bancaria.'
+          : 'Actualiza los datos de la cuenta bancaria.' }}
+        </small>
+      </div>
+
+      <button mat-icon-button type="button" (click)="closeBankAccountModal()" matTooltip="Cerrar">
+        <mat-icon>close</mat-icon>
+      </button>
+    </div>
+
+    <form [formGroup]="bankAccountForm" (ngSubmit)="submitBankAccount()">
+      <div class="bank-account-form">
+        <mat-form-field appearance="outline">
+          <mat-label>Titular</mat-label>
+
+          <input matInput formControlName="holder" autocomplete="off">
+
+          <mat-error *ngIf="bankAccountForm.get('holder')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Banco</mat-label>
+
+          <input matInput formControlName="bankName" autocomplete="off">
+
+          <mat-error *ngIf="bankAccountForm.get('bankName')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>Número de cuenta</mat-label>
+
+          <input matInput formControlName="accountNumber" autocomplete="off" inputmode="numeric">
+
+          <mat-error *ngIf="bankAccountForm.get('accountNumber')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>CLABE</mat-label>
+
+          <input matInput formControlName="CLABE" autocomplete="off" inputmode="numeric" maxlength="18">
+
+          <mat-error *ngIf="bankAccountForm.get('CLABE')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+      </div>
+
+      <div class="modal-actions">
+        <button mat-button color="warn" class="custom-button" type="button" (click)="closeBankAccountModal()"
+          [disabled]="savingBankAccount">
+          Cancelar
+        </button>
+
+        <button mat-flat-button color="primary" class="custom-button" type="submit" [disabled]="savingBankAccount">
+          <mat-icon>
+            {{ savingBankAccount ? 'hourglass_empty' : 'save' }}
+          </mat-icon>
+
+          {{ savingBankAccount ? 'Guardando...' : bankAccountModalMode === 'create' ? 'Agregar' : 'Guardar cambios' }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>

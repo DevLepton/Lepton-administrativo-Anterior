@@ -82,12 +82,12 @@
                       <td>{{ item.city || '-' }}</td>
                       <td>{{ item.bill ? 'Sí' : 'No' }}</td>
                       <td>{{ item.ownLocal ? 'Sí' : 'No' }}</td>
-                      <td>{{ item.installationPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.inspectionFee | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.withdrawalPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.priceFalseReversal | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.travelExpensesPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.transferPrice | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.installationPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.inspectionFee | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.withdrawalPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.priceFalseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.travelExpensesPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.transferPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td class="comments-cell">{{ item.comments || '-' }}</td>
                       <td class="row-actions">
                         <button class="icon-button view-button" matTooltip="Ver"
@@ -151,27 +151,27 @@
                 <div class="side-table">
                   <div class="side-table__row">
                     <div>Instalación</div>
-                    <div class="right">{{ item.installationPrice | currency:'MXN' }}</div>
+                    <div class="right">{{ item.installationPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Revisión</div>
-                    <div class="right">{{ item.inspectionFee | currency:'MXN' }}</div>
+                    <div class="right">{{ item.inspectionFee | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Retiro</div>
-                    <div class="right">{{ item.withdrawalPrice | currency:'MXN' }}</div>
+                    <div class="right">{{ item.withdrawalPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Vuelta en falso</div>
-                    <div class="right">{{ item.priceFalseReversal | currency:'MXN' }}</div>
+                    <div class="right">{{ item.priceFalseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Viáticos</div>
-                    <div class="right">{{ item.travelExpensesPrice | currency:'MXN' }}</div>
+                    <div class="right">{{ item.travelExpensesPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Traslado</div>
-                    <div class="right">{{ item.transferPrice | currency:'MXN' }}</div>
+                    <div class="right">{{ item.transferPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                 </div>
               </div>
@@ -278,8 +278,8 @@
                       <td><b>{{ item.place || '-' }}</b></td>
                       <td>{{ item.km | number:'1.0-2' }} km</td>
                       <td>{{ item.booths.length }}</td>
-                      <td>{{ boothTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ travelExpenseTotal(item) | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ boothTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ travelExpenseTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td>
                       <td class="row-actions">
                         <button class="icon-button view-button" matTooltip="Ver"
@@ -338,15 +338,15 @@
                   </div>
                   <div class="side-table__row">
                     <div>Tarifa por km</div>
-                    <div class="right">{{ (currentExtra?.kmRate || 0) | currency:'MXN' }}</div>
+                    <div class="right">{{ (currentExtra?.kmRate || 0) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Total casetas</div>
-                    <div class="right">{{ boothTotal(item) | currency:'MXN' }}</div>
+                    <div class="right">{{ boothTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Total estimado</div>
-                    <div class="right">{{ travelExpenseTotal(item) | currency:'MXN' }}</div>
+                    <div class="right">{{ travelExpenseTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                 </div>
               </div>
@@ -356,7 +356,7 @@
                 <div class="side-table" *ngIf="item.booths.length; else noBoothsTpl">
                   <div class="side-table__row" *ngFor="let booth of item.booths">
                     <div>{{ booth.name }}</div>
-                    <div class="right">{{ booth.cost | currency:'MXN' }}</div>
+                    <div class="right">{{ booth.cost | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
                   </div>
                 </div>
                 <ng-template #noBoothsTpl>
@@ -435,7 +435,7 @@
                 </div>
 
                 <div class="extra-total">
-                  Total diario: <b>{{ mealsTotal | currency:'MXN':'symbol':'1.2-2' }}</b>
+                  Total diario: <b>{{ mealsTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
                 </div>
               </div>
             </section>

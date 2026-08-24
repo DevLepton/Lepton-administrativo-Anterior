@@ -158,7 +158,7 @@ export class CotizacionesDataService {
     return {
       _id: String(item?._id ?? ''),
       quoteNum: String(item?.quoteNum ?? ''),
-      userId: String(item?.userId ?? ''),
+      userName: String(item?.userName ?? ''),
       clientName: String(item?.clientName ?? ''),
       companyName: String(item?.companyName ?? ''),
       place: String(item?.place ?? ''),
@@ -167,6 +167,7 @@ export class CotizacionesDataService {
         ? item.products.map((p: any) => ({
           name: String(p?.name ?? ''),
           description: String(p?.description ?? ''),
+          type: (p?.type ?? '') as any,
           price: Number(p?.price ?? 0),
           priceIVA: Number(p?.priceIVA ?? 0),
           discount: Number(p?.discount ?? 0),

@@ -291,10 +291,23 @@ export interface BillingClientsQuery {
   q?: string;
 }
 
+/* ====================== Cuentas bancarias ====================== */
+export interface BankAccountItem {
+  _id: string;
+  holder: string;
+  bankName: string;
+  accountNumber: string;
+  CLABE: string;
+}
+
+export type CreateBankAccountPayload = Omit<BankAccountItem, '_id'>;
+export type UpdateBankAccountPayload = Partial<CreateBankAccountPayload>;
+
 /* ====================== Cotizaciones ====================== */
 export interface QuoteProduct {
   name: string;
   description?: string;
+  type: QuoteProductType;
   price: number;
   priceIVA: number;
   discount: number;
@@ -306,7 +319,7 @@ export interface QuoteProduct {
 export interface QuoteItem {
   _id: string;
   quoteNum: string;
-  userId: string;
+  userName: string;
 
   clientName: string;
   companyName?: string;
@@ -861,6 +874,28 @@ export class ApiService {
     return this.clientsListCache$;
   }
 
+  /* ====================== CUENTAS BANCARIAS ====================== */
+
+  getBankAccounts(): Observable<any> {
+    return this.http.get(`${apiUrl}/bankAccounts`);
+  }
+
+  getBankAccountById(id: string): Observable<any> {
+    return this.http.get(`${apiUrl}/bankAccounts/${id}`);
+  }
+
+  createBankAccount(payload: CreateBankAccountPayload): Observable<any> {
+    return this.http.post(`${apiUrl}/bankAccounts`, payload);
+  }
+
+  updateBankAccount(id: string, payload: UpdateBankAccountPayload): Observable<any> {
+    return this.http.put(`${apiUrl}/bankAccounts/${id}`, payload);
+  }
+
+  deleteBankAccount(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/bankAccounts/${id}`);
+  }
+
   /* ====================== COTIZACIONES ====================== */
 
   getQuotes(params?: { q?: string; clientName?: string; quoteNum?: string; userId?: string; }): Observable<any> {
@@ -871,16 +906,20 @@ export class ApiService {
     return this.http.get(`${apiUrl}/quotes/${id}`);
   }
 
-  createQuote(payload: Omit<QuoteItem, 'userId' | '_id' | 'quoteNum' | 'createdAt'>): Observable<any> {
+  createQuote(payload: Omit<QuoteItem, 'userName' | '_id' | 'quoteNum' | 'createdAt'>): Observable<any> {
     return this.http.post(`${apiUrl}/quotes`, payload);
   }
 
-  updateQuote(id: string, payload: Partial<Omit<QuoteItem, 'userId' | '_id' | 'quoteNum' | 'createdAt'>>): Observable<any> {
+  updateQuote(id: string, payload: Partial<Omit<QuoteItem, 'userName' | '_id' | 'quoteNum' | 'createdAt'>>): Observable<any> {
     return this.http.put(`${apiUrl}/quotes/${id}`, payload);
   }
 
   deleteQuote(id: string): Observable<any> {
     return this.http.delete(`${apiUrl}/quotes/${id}`);
+  }
+
+  deleteQuotes(ids: string[]): Observable<any> {
+    return this.http.delete(`${apiUrl}/quotes`, { body: { ids } });
   }
 
   getQuoteProducts(): Observable<any> {
@@ -897,6 +936,10 @@ export class ApiService {
 
   deleteQuoteProduct(id: string): Observable<any> {
     return this.http.delete(`${apiUrl}/products/${id}`);
+  }
+
+  deleteQuoteProducts(ids: string[]): Observable<any> {
+    return this.http.delete(`${apiUrl}/products`, { body: { ids } });
   }
 
   getForeignTechnicians(): Observable<any> {

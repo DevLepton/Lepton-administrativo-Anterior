@@ -222,8 +222,8 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.closeSidebar();
       },
       error: error => {
-        console.error('Error al cargar catalogos de foraneos:', error);
-        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los datos de foraneos', duration: 5000 });
+        console.error('Error al cargar catalogos de foráneos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los datos de foráneos', duration: 5000 });
       },
       complete: () => {
         this.loading = false;
@@ -274,8 +274,8 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.closeSidebar();
       },
       error: error => {
-        console.error('Error al cargar tecnicos foraneos:', error);
-        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los tecnicos', duration: 5000 });
+        console.error('Error al cargar técnicos foráneos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los técnicos', duration: 5000 });
       },
       complete: () => {
         this.loading = false;
@@ -294,8 +294,8 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.closeSidebar();
       },
       error: error => {
-        console.error('Error al cargar viaticos:', error);
-        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los viaticos', duration: 5000 });
+        console.error('Error al cargar viáticos:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar los viáticos', duration: 5000 });
       },
       complete: () => {
         this.loading = false;

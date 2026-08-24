@@ -201,7 +201,7 @@ export class EventsComponent implements OnInit {
     const listParams: any = {
       sort: 'createdAt',
       order: 'desc',
-      limit: 1000,
+      limit: 10000,
       collectionName: (ev as any).collectionName
     };
 

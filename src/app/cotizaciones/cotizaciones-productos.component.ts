@@ -298,6 +298,7 @@ export class CotizacionesProductosComponent implements OnInit {
     if (this.selectedCount === 0) return;
 
     const selected = this.selectedItems;
+
     const html = selected
       .slice(0, 8)
       .map(item => `<div><b>${item.name || '-'}</b> - ${item.type}</div>`)
@@ -306,12 +307,12 @@ export class CotizacionesProductosComponent implements OnInit {
     const result = await Swal.fire({
       title: `¿Eliminar ${selected.length} producto(s)?`,
       html: `
-        <div style="text-align:center">
-          ${html}
-          ${selected.length > 8 ? `<div style="margin-top:.5rem; opacity:.8">...y ${selected.length - 8} más</div>` : ''}
-        </div>
-        <br>Esta acción no se puede deshacer.
-      `,
+      <div style="text-align:center">
+        ${html}
+        ${selected.length > 8 ? `<div style="margin-top:.5rem; opacity:.8">...y ${selected.length - 8} más</div>` : ''}
+      </div>
+      <br>Esta acción no se puede deshacer.
+    `,
       icon: 'warning',
       showCancelButton: true,
       cancelButtonColor: 'var(--color-primary)',
@@ -324,26 +325,27 @@ export class CotizacionesProductosComponent implements OnInit {
     if (!result.isConfirmed) return;
 
     this.deletingId = '__bulk__';
-    const requests = selected.map(item =>
-      this.api.deleteQuoteProduct(item._id).pipe(catchError(error => of({ __error: error, id: item._id })))
-    );
 
-    forkJoin(requests).subscribe({
-      next: (res: any[]) => {
-        const failures = res.filter(item => item?.__error).length;
-        const success = res.length - failures;
+    this.api.deleteQuoteProducts(selected.map(item => item._id)).subscribe({
+      next: response => {
+        this.toast.success({
+          detail: 'Éxito',
+          summary: response?.message || `Se eliminaron ${selected.length} producto(s)`,
+          duration: 4000
+        });
 
-        if (success) {
-          this.toast.success({ detail: 'Éxito', summary: `Se eliminaron ${success} producto(s)`, duration: 4000 });
-          this.refresh();
-        }
-
-        if (failures) {
-          this.toast.error({ detail: 'Error', summary: `No se pudieron eliminar ${failures} producto(s)`, duration: 6000 });
-        }
+        this.refresh();
       },
-      error: () => {
-        this.toast.error({ detail: 'Error', summary: 'Falló la eliminación de productos', duration: 6000 });
+      error: error => {
+        console.error('Error al eliminar productos:', error);
+
+        this.toast.error({
+          detail: 'Error',
+          summary: error?.error?.error || 'No se pudieron eliminar los productos seleccionados',
+          duration: 6000
+        });
+
+        this.deletingId = null;
       },
       complete: () => {
         this.deletingId = null;

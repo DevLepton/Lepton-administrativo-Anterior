@@ -91,8 +91,8 @@
                       <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
                       <td><b>{{ item.name || '-' }}</b></td>
                       <td class="comments-cell">{{ item.description || '-' }}</td>
-                      <td>{{ item.price | currency:'MXN':'symbol':'1.2-2' }}</td>
-                      <td>{{ item.priceIVA | currency:'MXN':'symbol':'1.2-2' }}</td>
+                      <td>{{ item.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
+                      <td>{{ item.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ item.discount || 0 }}%</td>
                       <td *ngIf="tab.type === 'Plan'">{{ item.duration || '-' }}</td>
                       <td class="comments-cell">{{ item.comments || '-' }}</td>
@@ -165,12 +165,12 @@
 
                   <div>
                     <b>Precio:</b>
-                    {{ item.price | currency:'MXN' }}
+                    {{ item.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
                   </div>
 
                   <div>
                     <b>Precio IVA:</b>
-                    {{ item.priceIVA | currency:'MXN' }}
+                    {{ item.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
                   </div>
 
                   <div>

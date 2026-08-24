@@ -104,8 +104,8 @@
                 <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
                 <td class="comments-cell">{{ item.description || '-' }}</td>
                 <td>{{ getProduct(item.productId)?.name || '-' }}</td>
-                <td>{{ getProduct(item.productId)?.price | currency:'MXN' }}</td>
-                <td>{{ getProduct(item.productId)?.priceIVA | currency:'MXN' }}</td>
+                <td>{{ getProduct(item.productId)?.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</td>
+                <td>{{ getProduct(item.productId)?.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</td>
                 <td>{{ item.action === 'add' ? 'Al agregar' : item.action === 'remove' ? 'Al quitar' : '-' }}</td>
                 <td>{{ item.response.length || 0 }}</td>
                 <!-- <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td> -->
@@ -177,12 +177,12 @@
 
             <div>
               <b>Precio:</b>
-              {{ getProduct(item.productId)?.price | currency:'MXN' }}
+              {{ getProduct(item.productId)?.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
             </div>
 
             <div>
               <b>Precio IVA:</b>
-              {{ getProduct(item.productId)?.priceIVA | currency:'MXN' }}
+              {{ getProduct(item.productId)?.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
             </div>
 
             <div>

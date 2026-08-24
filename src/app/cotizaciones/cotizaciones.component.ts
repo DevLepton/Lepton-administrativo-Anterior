@@ -3,7 +3,9 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import {
   ApiService,
+  BankAccountItem,
   BillingClientItem,
+  CreateBankAccountPayload,
   ForeignTechnicianItem,
   QuoteItem,
   QuoteProduct,
@@ -17,8 +19,10 @@ import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgToastService } from 'ng-angular-popup';
 import { AuthService } from '../services/auth.service';
 import { map } from 'rxjs';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import Swal from 'sweetalert2';
+import { CotizacionesPdfService } from '../services/cotizaciones-pdf.service';
 
 type QuoteView = 'list' | 'builder';
 type QuoteSection = 'client' | 'products' | 'payment';
@@ -30,22 +34,17 @@ interface QuoteBuilderProduct extends QuoteProduct {
   lockedAmount?: boolean;
 }
 
-interface BankAccountOption {
-  holder: string;
-  bankName: string;
-  accountNumber: string;
-  CLABE: string;
-}
-
 interface QuoteDraft {
   activeView?: QuoteView;
   client: any;
+  selectedBillingClientId?: string;
   productsForm: any;
   products: QuoteBuilderProduct[];
   payment: any;
   productSearch?: string;
   activeSection?: QuoteSection;
   ignoredSuggestions?: PendingQuoteSuggestion[];
+  replicationNotices?: QuoteReplicationNotice[];
 }
 
 type ForeignServiceMode = 'lepton' | 'foreign';
@@ -63,21 +62,20 @@ interface PendingQuoteSuggestion {
   iconProductIds: string[];
 }
 
-interface QuotePdfLine {
-  amount: number;
-  name: string;
-  description: string;
-  unitPrice: number;
-  discount: number;
-  import: number;
+interface PendingClientDiscount {
+  productId: string;
+  clientId: string;
+  clientName: string;
+  categoryLabel: string;
+  discountKey: keyof BillingClientItem['discounts'];
+  clientDiscount: number;
+  productDiscount: number;
 }
 
-interface QuotePdfTotals {
-  subtotal?: number;
-  discounts: number;
-  IVA?: number;
-  total: number;
-  paymentNextMonthly?: number;
+interface QuoteReplicationNotice {
+  productName: string;
+  type: QuoteProductType;
+  message: string;
 }
 
 @Component({
@@ -99,17 +97,25 @@ export class CotizacionesComponent implements OnInit {
   travelExpenses: TravelExpenseItem[] = [];
   travelExpenseExtras: TravelExpenseExtraItem[] = [];
 
+  isAdminUser = false;
+
   loading = false;
   builderLoading = false;
   savingQuote = false;
+  bankAccountsLoading = false;
+  savingBankAccount = false;
+  deletingBankAccount = false;
   search = '';
   currentPage = 1;
   perPage = 10;
   selectedIds = new Set<string>();
+  previewPdfUrl: SafeResourceUrl | null = null;
+  previewQuote: QuoteItem | null = null;
 
   clientForm: FormGroup;
   productsForm: FormGroup;
   paymentForm: FormGroup;
+  bankAccountForm: FormGroup;
   leptonForeignForm: FormGroup;
   externalTechnicianForm: FormGroup;
 
@@ -118,10 +124,19 @@ export class CotizacionesComponent implements OnInit {
   productTypeFilter: QuoteProductType | '' = '';
   selectedProductId = '';
   foreignServiceModalOpen = false;
+  bankAccountModalOpen = false;
+  bankAccountModalMode: 'create' | 'edit' = 'create';
+  bankAccountEditingId = '';
   suggestionModalOpen = false;
+  clientDiscountModalOpen = false;
+  replicationNoticeModalOpen = false;
   activeSuggestion: PendingQuoteSuggestion | null = null;
+  activeClientDiscount: PendingClientDiscount | null = null;
   private suggestionQueue: PendingQuoteSuggestion[] = [];
+  private clientDiscountQueue: PendingClientDiscount[] = [];
   ignoredSuggestions: PendingQuoteSuggestion[] = [];
+  replicationNotices: QuoteReplicationNotice[] = [];
+  selectedBillingClientId = '';
   foreignServiceMode: ForeignServiceMode = 'lepton';
   selectedBoothIndexes = new Set<number>();
   foreignServiceLines: ForeignServiceLine[] = [
@@ -133,28 +148,11 @@ export class CotizacionesComponent implements OnInit {
     { key: 'transferPrice', label: 'Traslado', quantity: 0 }
   ];
 
-  bankAccounts: BankAccountOption[] = [
-    {
-      holder: 'Lepton Seguridad',
-      bankName: 'BBVA Mexico',
-      accountNumber: '0123456789',
-      CLABE: '012180001234567890'
-    },
-    {
-      holder: 'Lepton Administrativo',
-      bankName: 'Santander',
-      accountNumber: '9876543210',
-      CLABE: '014180009876543210'
-    }
-  ];
+  bankAccounts: BankAccountItem[] = [];
 
-  constructor(
-    private api: ApiService,
-    private quoteData: CotizacionesDataService,
-    private toast: NgToastService,
-    private fb: FormBuilder,
-    private auth: AuthService
-  ) {
+  private discountAmounts: Record<string, number> = {};
+
+  constructor(private api: ApiService, private authService: AuthService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder, private auth: AuthService, private sanitizer: DomSanitizer, private pdfService: CotizacionesPdfService) {
     this.clientForm = this.fb.group({
       clientName: ['', Validators.required],
       companyName: ['', Validators.required],
@@ -164,16 +162,24 @@ export class CotizacionesComponent implements OnInit {
 
     this.productsForm = this.fb.group({
       units: [1, [Validators.required, Validators.min(1)]],
-      model: ['', Validators.required]
+      model: ['', Validators.required],
+      billable: [false]
     });
 
     this.paymentForm = this.fb.group({
+      bankAccountId: ['', Validators.required],
       paymentMethodHolder: ['', Validators.required],
       bankName: ['', Validators.required],
       accountNumber: ['', Validators.required],
       CLABE: ['', Validators.required],
-      billable: [false],
       comments: ['']
+    });
+
+    this.bankAccountForm = this.fb.group({
+      holder: ['', Validators.required],
+      bankName: ['', Validators.required],
+      accountNumber: ['', Validators.required],
+      CLABE: ['', Validators.required]
     });
 
     this.leptonForeignForm = this.fb.group({
@@ -192,9 +198,13 @@ export class CotizacionesComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const role = this.authService.getUserRole();
+    this.isAdminUser = role === 'admin';
+
     this.restoreDraft();
     this.loadQuotes();
     this.loadBuilderCatalogs();
+    this.loadBankAccounts();
     this.setupDraftPersistence();
   }
 
@@ -221,6 +231,37 @@ export class CotizacionesComponent implements OnInit {
     });
   }
 
+  loadBankAccounts(selectId?: string): void {
+    this.bankAccountsLoading = true;
+
+    this.api.getBankAccounts().subscribe({
+      next: response => {
+        this.bankAccounts = this.extractList(response)
+          .map(item => this.mapBankAccount(item))
+          .sort((a, b) => a.holder.localeCompare(b.holder, 'es'));
+
+        if (selectId && this.bankAccounts.some(item => item._id === selectId)) {
+          this.onBankAccountSelected(selectId);
+        } else {
+          this.syncPaymentBankAccountSelection();
+        }
+      },
+
+      error: error => {
+        console.error('Error al cargar métodos de pago:', error);
+        this.toast.error({
+          detail: 'Error',
+          summary: 'No se pudieron cargar los métodos de pago',
+          duration: 5000
+        });
+      },
+
+      complete: () => {
+        this.bankAccountsLoading = false;
+      }
+    });
+  }
+
   loadBuilderCatalogs(forceRefresh = false): void {
     this.builderLoading = true;
 
@@ -233,7 +274,7 @@ export class CotizacionesComponent implements OnInit {
         this.travelExpenseExtras = [...data.travelExpenseExtras].sort((a, b) => this.createdTime(b as any) - this.createdTime(a as any));
       },
       error: error => {
-        console.error('Error al cargar catalogos del cotizador:', error);
+        console.error('Error al cargar catálogos del cotizador:', error);
         this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar productos y sugerencias', duration: 5000 });
       },
       complete: () => {
@@ -311,7 +352,7 @@ export class CotizacionesComponent implements OnInit {
   }
 
   get subtotal(): number {
-    return this.roundMoney(this.quoteProducts.reduce((sum, item) => sum + (item.price * item.amount), 0));
+    return this.roundMoney(this.quoteProducts.reduce((sum, item) => sum + (item.priceIVA * item.amount), 0));
   }
 
   get IVA(): number {
@@ -353,6 +394,16 @@ export class CotizacionesComponent implements OnInit {
   get selectedForeignTechnician(): ForeignTechnicianItem | null {
     const technicianId = this.externalTechnicianForm.get('technicianId')?.value;
     return this.foreignTechnicians.find(item => item._id === technicianId) ?? null;
+  }
+
+  get selectedBillingClient(): BillingClientItem | null {
+    if (!this.selectedBillingClientId) return null;
+
+    const client = this.billingClients.find(item => item._id === this.selectedBillingClientId);
+    if (!client) return null;
+
+    const formClientName = this.clientForm.get('clientName')?.value;
+    return this.normalize(formClientName) === this.normalize(client.billingName) ? client : null;
   }
 
   get maxMealCount(): number {
@@ -491,10 +542,12 @@ export class CotizacionesComponent implements OnInit {
   }
 
   onBillingClientSelected(client: BillingClientItem): void {
+    this.selectedBillingClientId = client._id;
     this.clientForm.patchValue({
       clientName: client.billingName,
       companyName: client.companyName || ''
     });
+    this.saveDraft();
   }
 
   displayBillingClient(client: BillingClientItem | string): string {
@@ -502,15 +555,138 @@ export class CotizacionesComponent implements OnInit {
     return typeof client === 'string' ? client : client.billingName;
   }
 
-  onPaymentHolderChange(holder: string): void {
-    const account = this.bankAccounts.find(item => item.holder === holder);
+  get selectedBankAccount(): BankAccountItem | null {
+    const id = this.paymentForm.get('bankAccountId')?.value;
+    return this.bankAccounts.find(item => item._id === id) ?? null;
+  }
+
+  onBankAccountSelected(id: string): void {
+    const account = this.bankAccounts.find(item => item._id === id);
     if (!account) return;
 
     this.paymentForm.patchValue({
+      bankAccountId: account._id,
       paymentMethodHolder: account.holder,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
       CLABE: account.CLABE
+    });
+  }
+
+  openBankAccountCreateModal(): void {
+    this.bankAccountModalMode = 'create';
+    this.bankAccountEditingId = '';
+    this.bankAccountForm.reset({
+      holder: '',
+      bankName: '',
+      accountNumber: '',
+      CLABE: ''
+    });
+    this.bankAccountModalOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  openBankAccountEditModal(): void {
+    const account = this.selectedBankAccount;
+    if (!account) return;
+
+    this.bankAccountModalMode = 'edit';
+    this.bankAccountEditingId = account._id;
+    this.bankAccountForm.reset({
+      holder: account.holder,
+      bankName: account.bankName,
+      accountNumber: account.accountNumber,
+      CLABE: account.CLABE
+    });
+    this.bankAccountModalOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeBankAccountModal(): void {
+    this.bankAccountModalOpen = false;
+    this.bankAccountEditingId = '';
+    document.body.style.overflow = this.foreignServiceModalOpen || this.suggestionModalOpen || this.clientDiscountModalOpen || this.replicationNoticeModalOpen ? 'hidden' : '';
+  }
+
+  submitBankAccount(): void {
+    if (this.bankAccountForm.invalid || this.savingBankAccount) {
+      this.bankAccountForm.markAllAsTouched();
+      return;
+    }
+
+    const payload = this.buildBankAccountPayload();
+    const request$ = this.bankAccountModalMode === 'create'
+      ? this.api.createBankAccount(payload)
+      : this.api.updateBankAccount(this.bankAccountEditingId, payload);
+
+    this.savingBankAccount = true;
+
+    request$.subscribe({
+      next: response => {
+        const saved = this.mapBankAccount(response?.data ?? response?.bankAccount ?? response);
+        this.toast.success({
+          detail: 'Exito',
+          summary: this.bankAccountModalMode === 'create' ? 'Método de pago creado' : 'Método de pago actualizado',
+          duration: 3500
+        });
+        this.closeBankAccountModal();
+        this.loadBankAccounts(saved._id);
+
+        if (saved._id) {
+          this.paymentForm.patchValue({ bankAccountId: saved._id });
+          this.onBankAccountSelected(saved._id);
+        }
+      },
+      error: error => {
+        console.error('Error al guardar método de pago:', error);
+        this.toast.error({ detail: 'Error', summary: error?.error?.error || error?.error?.message || 'No se pudo guardar el método de pago', duration: 6000 });
+      },
+      complete: () => {
+        this.savingBankAccount = false;
+      }
+    });
+  }
+
+  async deleteSelectedBankAccount(): Promise<void> {
+    const account = this.selectedBankAccount;
+    if (!account || this.deletingBankAccount) return;
+
+    const result = await Swal.fire({
+      title: 'Eliminar método de pago',
+      text: `Se eliminará ${account.holder} - ${account.bankName}.`,
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonColor: 'var(--color-primary)',
+      confirmButtonColor: 'var(--color-danger)',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    this.deletingBankAccount = true;
+
+    this.api.deleteBankAccount(account._id).subscribe({
+      next: () => {
+        this.toast.success({ detail: 'Exito', summary: 'Método de pago eliminado', duration: 3500 });
+        this.paymentForm.patchValue({
+          bankAccountId: '',
+          paymentMethodHolder: '',
+          bankName: '',
+          accountNumber: '',
+          CLABE: ''
+        });
+        this.loadBankAccounts();
+        this.saveDraft();
+      },
+      error: error => {
+        console.error('Error al eliminar método de pago:', error);
+        this.toast.error({ detail: 'Error', summary: error?.error?.error || error?.error?.message || 'No se pudo eliminar el método de pago', duration: 6000 });
+      },
+      complete: () => {
+        this.deletingBankAccount = false;
+      }
     });
   }
 
@@ -521,7 +697,95 @@ export class CotizacionesComponent implements OnInit {
     this.productSearch = '';
   }
 
-  downloadSelectedQuotes(): void {
+  async previewQuotePdf(quote: QuoteItem): Promise<void> {
+    const pdf = await this.pdfService.createQuotePdf(quote);
+    const dataUri = pdf.output('datauristring');
+    this.previewPdfUrl = this.sanitizer.bypassSecurityTrustResourceUrl(dataUri);
+    this.previewQuote = quote;
+  }
+
+  closeQuotePreview(): void {
+    this.previewPdfUrl = null;
+    this.previewQuote = null;
+  }
+
+  replicateQuote(quote: QuoteItem): void {
+    if (this.builderLoading) {
+      this.toast.warning({ detail: 'Cotizador', summary: 'Espera a que terminen de cargar los catálogos', duration: 3000 });
+      return;
+    }
+
+    this.clearDraft();
+    this.activeView = 'builder';
+    this.activeSection = 'products';
+
+    this.clientForm.patchValue({
+      clientName: quote.clientName ?? '',
+      companyName: quote.companyName ?? '',
+      place: quote.place ?? '',
+      validity: quote.validity ? new Date(quote.validity) : this.defaultValidityDate()
+    }, { emitEvent: false });
+
+    const billingClient = this.billingClients.find(client => this.normalize(client.billingName) === this.normalize(quote.clientName));
+    this.selectedBillingClientId = billingClient?._id ?? '';
+
+    this.productsForm.patchValue({
+      units: quote.units ?? 1,
+      model: quote.model ?? '',
+      billable: Boolean(quote.billable)
+    }, { emitEvent: false });
+
+    const bankAccount = this.bankAccounts.find(account =>
+      this.normalize(account.holder) === this.normalize(quote.paymentMethodHolder) &&
+      this.normalize(account.bankName) === this.normalize(quote.bankName) &&
+      this.normalize(account.accountNumber) === this.normalize(quote.accountNumber) &&
+      this.normalize(account.CLABE) === this.normalize(quote.CLABE)
+    );
+
+    this.paymentForm.patchValue({
+      bankAccountId: bankAccount?._id ?? '',
+      paymentMethodHolder: quote.paymentMethodHolder ?? '',
+      bankName: quote.bankName ?? '',
+      accountNumber: quote.accountNumber ?? '',
+      CLABE: quote.CLABE ?? '',
+      comments: quote.comments ?? ''
+    }, { emitEvent: false });
+
+    const result = this.buildReplicatedProducts(quote.products ?? []);
+    this.quoteProducts = result.products;
+    this.replicationNotices = result.notices;
+    this.rebuildDiscountAmounts();
+
+    if (!this.quoteProducts.length) this.activeSection = 'client';
+
+    this.saveDraft();
+    this.toast.info({
+      detail: 'Cotizador',
+      summary: this.replicationNotices.length
+        ? 'Cotizacion replicada con avisos'
+        : 'Cotizacion replicada con datos actuales',
+      duration: 3500
+    });
+  }
+
+  openReplicationNotices(): void {
+    if (!this.replicationNotices.length) return;
+    this.replicationNoticeModalOpen = true;
+    document.body.style.overflow = 'hidden';
+  }
+
+  closeReplicationNotices(): void {
+    this.replicationNoticeModalOpen = false;
+    document.body.style.overflow = this.foreignServiceModalOpen || this.suggestionModalOpen || this.clientDiscountModalOpen ? 'hidden' : '';
+  }
+
+  getReplicationNoticeTooltip(): string {
+    if (!this.replicationNotices.length) return '';
+    const count = this.replicationNotices.length;
+    return `${count} aviso${count === 1 ? '' : 's'} al replicar la cotizacion`;
+  }
+
+  async downloadSelectedQuotes(): Promise<void> {
     const selected = this.selectedQuotes;
 
     if (!selected.length) {
@@ -529,10 +793,62 @@ export class CotizacionesComponent implements OnInit {
       return;
     }
 
-    selected.forEach(quote => {
-      const pdf = this.createQuotePdf(quote);
+    for (const quote of selected) {
+      const pdf = await this.pdfService.createQuotePdf(quote);
       const fileName = `Cotizacion-${this.sanitizeFileName(quote.quoteNum || quote._id)}.pdf`;
       pdf.save(fileName);
+    }
+  }
+
+  async deleteSelectedQuotes(): Promise<void> {
+    if (!this.isAdminUser || this.selectedCount === 0) return;
+
+    const selected = this.selectedQuotes;
+
+    const html = selected
+      .slice(0, 8)
+      .map(item => `<div><b>${item.quoteNum || '-'}</b> - ${item.clientName || '-'}</div>`)
+      .join('');
+
+    const result = await Swal.fire({
+      title: `¿Eliminar ${selected.length} ${selected.length === 1 ? 'cotización' : 'cotizaciones'}?`,
+      html: `
+      <div style="text-align:center">
+        ${html}
+        ${selected.length > 8 ? `<div style="margin-top:.5rem; opacity:.8">...y ${selected.length - 8} más</div>` : ''}
+      </div>
+      <br>Esta acción no se puede deshacer.
+    `,
+      icon: 'warning',
+      showCancelButton: true,
+      cancelButtonColor: 'var(--color-primary)',
+      confirmButtonColor: 'var(--color-danger)',
+      cancelButtonText: 'Cancelar',
+      confirmButtonText: 'Sí, eliminar',
+      reverseButtons: true
+    });
+
+    if (!result.isConfirmed) return;
+
+    this.api.deleteQuotes(selected.map(item => item._id)).subscribe({
+      next: response => {
+        this.toast.success({
+          detail: 'Éxito',
+          summary: response?.message || `Se eliminaron ${selected.length} ${selected.length === 1 ? 'cotización' : 'cotizaciones'}`,
+          duration: 4000
+        });
+
+        this.loadQuotes(true);
+      },
+      error: error => {
+        console.error('Error al eliminar cotizaciones:', error);
+
+        this.toast.error({
+          detail: 'Error',
+          summary: error?.error?.error || 'No se pudieron eliminar las cotizaciones',
+          duration: 6000
+        });
+      }
     });
   }
 
@@ -603,9 +919,12 @@ export class CotizacionesComponent implements OnInit {
     if (!product) return;
 
     const existing = this.quoteProducts.find(item => item.productId === productId);
+    let quoteProduct: QuoteBuilderProduct;
+
     if (existing) {
       existing.amount += 1;
       this.recalculateProduct(existing);
+      quoteProduct = existing;
     } else {
       const item: QuoteBuilderProduct = {
         productId: product._id,
@@ -620,42 +939,85 @@ export class CotizacionesComponent implements OnInit {
         total: 0
       };
 
+      this.discountAmounts[item.productId] = this.roundMoney(
+        Number(item.priceIVA || 0) * (Number(item.discount || 0) / 100)
+      );
+
       this.recalculateProduct(item);
       this.quoteProducts.push(item);
+      quoteProduct = item;
     }
 
-    if (applySuggestion) this.promptSuggestions(productId, 'add');
+    if (applySuggestion) {
+      this.promptClientDiscount(quoteProduct);
+      this.promptSuggestions(productId, 'add');
+    }
     this.saveDraft();
   }
 
   removeProduct(productId: string, applySuggestion = true): void {
     this.quoteProducts = this.quoteProducts.filter(item => item.productId !== productId);
+    delete this.discountAmounts[productId];
     this.ignoredSuggestions = this.ignoredSuggestions.filter(item => !item.iconProductIds.includes(productId));
+    this.clientDiscountQueue = this.clientDiscountQueue.filter(item => item.productId !== productId);
+
+    if (this.activeClientDiscount?.productId === productId) {
+      this.closeClientDiscountModal();
+    }
+
     if (applySuggestion) this.promptSuggestions(productId, 'remove');
+
     this.saveDraft();
   }
 
-  updateProductAmount(item: QuoteBuilderProduct, value: number): void {
+  updateProductAmount(item: QuoteBuilderProduct, value: number | null): void {
     if (item.lockedAmount) {
       item.amount = 1;
-      this.recalculateProduct(item);
-      this.saveDraft();
-      return;
+    } else {
+      item.amount = Math.max(1, Number(value || 1));
     }
 
-    item.amount = Math.max(1, Number(value || 1));
     this.recalculateProduct(item);
     this.saveDraft();
   }
 
-  updateProductDiscount(item: QuoteBuilderProduct, value: number): void {
-    item.discount = Math.max(0, Number(value || 0));
+  updateProductDiscount(item: QuoteBuilderProduct, value: number | null): void {
+    const discount = Number(value);
+    item.discount = Number.isFinite(discount) && discount >= 0 ? discount : 0;
     this.recalculateProduct(item);
     this.saveDraft();
   }
 
   updateProductDiscountType(item: QuoteBuilderProduct, value: DiscountType): void {
     item.discountType = value;
+    this.recalculateProduct(item);
+    this.saveDraft();
+  }
+
+  getProductDiscountAmount(item: QuoteBuilderProduct): number {
+    return this.discountAmounts[item.productId] ?? 0;
+  }
+
+  updateProductDiscountPercent(item: QuoteBuilderProduct, value: number | null): void {
+    const percent = Math.min(100, Math.max(0, Number(value || 0)));
+    const priceIVA = Number(item.priceIVA || 0);
+
+    item.discount = percent;
+    item.discountType = '%';
+    this.discountAmounts[item.productId] = this.roundMoney(priceIVA * (percent / 100));
+
+    this.recalculateProduct(item);
+    this.saveDraft();
+  }
+
+  updateProductDiscountAmount(item: QuoteBuilderProduct, value: number | null): void {
+    const discountAmount = Math.max(0, Number(value ?? 0));
+    const priceIVA = Number(item.priceIVA || 0);
+
+    this.discountAmounts[item.productId] = discountAmount;
+    item.discount = priceIVA > 0 ? this.roundMoney((discountAmount * 100) / priceIVA) : 0;
+    item.discountType = '%';
+
     this.recalculateProduct(item);
     this.saveDraft();
   }
@@ -770,6 +1132,10 @@ export class CotizacionesComponent implements OnInit {
       ?? 'Producto no encontrado';
   }
 
+  getClientDiscountProductName(item: PendingClientDiscount | null): string {
+    return item ? this.getProductName(item.productId) : '';
+  }
+
   getSuggestionTitle(item: PendingQuoteSuggestion | null): string {
     if (!item) return '';
     const action = item.action === 'add' ? 'agregaste' : 'quitaste';
@@ -781,6 +1147,7 @@ export class CotizacionesComponent implements OnInit {
     this.activeSuggestion = null;
     document.body.style.overflow = this.foreignServiceModalOpen ? 'hidden' : '';
     this.showNextSuggestion();
+    this.showNextClientDiscount();
   }
 
   applyActiveSuggestion(): void {
@@ -813,7 +1180,36 @@ export class CotizacionesComponent implements OnInit {
     this.closeSuggestionModal();
   }
 
-  private buildQuotePayload(): Omit<QuoteItem, 'userId' | '_id' | 'quoteNum' | 'createdAt'> {
+  closeClientDiscountModal(): void {
+    this.clientDiscountModalOpen = false;
+    this.activeClientDiscount = null;
+    document.body.style.overflow = this.foreignServiceModalOpen ? 'hidden' : '';
+    this.showNextClientDiscount();
+    this.showNextSuggestion();
+  }
+
+  applyActiveClientDiscount(): void {
+    if (!this.activeClientDiscount) return;
+
+    const item = this.quoteProducts.find(product => product.productId === this.activeClientDiscount?.productId);
+    if (item) {
+      this.updateProductDiscountPercent(item, this.activeClientDiscount.clientDiscount);
+    }
+
+    this.closeClientDiscountModal();
+  }
+
+  ignoreActiveClientDiscount(): void {
+    if (!this.activeClientDiscount) return;
+    this.closeClientDiscountModal();
+  }
+
+  selectInput(event: FocusEvent): void {
+    const input = event.target as HTMLInputElement;
+    input.select();
+  }
+
+  private buildQuotePayload(): Omit<QuoteItem, 'userName' | '_id' | 'quoteNum' | 'createdAt'> {
     const client = this.clientForm.getRawValue();
     const products = this.productsForm.getRawValue();
     const payment = this.paymentForm.getRawValue();
@@ -826,10 +1222,11 @@ export class CotizacionesComponent implements OnInit {
       products: this.quoteProducts.map(item => ({
         name: item.name,
         description: item.description ?? '',
+        type: item.type,
         price: item.price,
         priceIVA: item.priceIVA,
         discount: item.discount,
-        discountType: item.discountType,
+        discountType: '%',
         amount: item.amount,
         total: item.total
       })),
@@ -840,7 +1237,7 @@ export class CotizacionesComponent implements OnInit {
       units: Number(products.units ?? 1),
       model: String(products.model ?? '').trim(),
       paymentNextMonthly: this.hasPlan ? this.paymentNextMonthly : undefined,
-      billable: Boolean(payment.billable),
+      billable: Boolean(products.billable),
       bankName: String(payment.bankName ?? '').trim(),
       paymentMethodHolder: String(payment.paymentMethodHolder ?? '').trim(),
       accountNumber: String(payment.accountNumber ?? '').trim(),
@@ -869,7 +1266,13 @@ export class CotizacionesComponent implements OnInit {
   }
 
   private showNextSuggestion(): void {
-    if (this.suggestionModalOpen || this.activeSuggestion || !this.suggestionQueue.length) return;
+    if (
+      this.suggestionModalOpen ||
+      this.clientDiscountModalOpen ||
+      this.activeSuggestion ||
+      this.activeClientDiscount ||
+      !this.suggestionQueue.length
+    ) return;
 
     this.activeSuggestion = this.suggestionQueue.shift() ?? null;
     this.suggestionModalOpen = !!this.activeSuggestion;
@@ -877,15 +1280,212 @@ export class CotizacionesComponent implements OnInit {
     if (this.suggestionModalOpen) document.body.style.overflow = 'hidden';
   }
 
+  private promptClientDiscount(item: QuoteBuilderProduct): void {
+    const client = this.selectedBillingClient;
+    const discountKey = this.getDiscountKeyByProductType(item.type);
+    if (!client || !discountKey) return;
+
+    const clientDiscount = this.normalizePercent(client.discounts?.[discountKey]);
+    const productDiscount = this.normalizePercent(item.discount);
+    if (clientDiscount <= 0 || clientDiscount === productDiscount) return;
+
+    const alreadyPending = [this.activeClientDiscount, ...this.clientDiscountQueue].some(pending =>
+      pending?.productId === item.productId &&
+      pending?.clientId === client._id &&
+      pending?.discountKey === discountKey &&
+      pending?.clientDiscount === clientDiscount
+    );
+    if (alreadyPending) return;
+
+    this.clientDiscountQueue.push({
+      productId: item.productId,
+      clientId: client._id,
+      clientName: client.billingName,
+      categoryLabel: this.getDiscountCategoryLabel(discountKey),
+      discountKey,
+      clientDiscount,
+      productDiscount
+    });
+
+    this.showNextClientDiscount();
+  }
+
+  private showNextClientDiscount(): void {
+    if (
+      this.clientDiscountModalOpen ||
+      this.suggestionModalOpen ||
+      this.activeClientDiscount ||
+      this.activeSuggestion ||
+      !this.clientDiscountQueue.length
+    ) return;
+
+    this.activeClientDiscount = this.clientDiscountQueue.shift() ?? null;
+    this.clientDiscountModalOpen = !!this.activeClientDiscount;
+
+    if (this.clientDiscountModalOpen) document.body.style.overflow = 'hidden';
+  }
+
+  private buildReplicatedProducts(products: QuoteProduct[]): { products: QuoteBuilderProduct[]; notices: QuoteReplicationNotice[] } {
+    const replicated: QuoteBuilderProduct[] = [];
+    const notices: QuoteReplicationNotice[] = [];
+
+    products.forEach((source, index) => {
+      const type = this.resolveQuoteProductType(source);
+
+      if (type === 'Servicio') {
+        const service = this.buildReplicatedForeignService(source, index, notices);
+        if (service) replicated.push(service);
+        return;
+      }
+
+      const catalogProduct = this.findCatalogProduct(source.name, type);
+      if (!catalogProduct) {
+        notices.push({
+          productName: source.name || 'Producto sin nombre',
+          type,
+          message: `No se encontró en la lista general de productos ${type}.`
+        });
+        return;
+      }
+
+      const item = this.buildQuoteProductFromCatalog(catalogProduct, source.amount);
+      this.addReplicationUpdateNotices(source, item, notices);
+      replicated.push(item);
+    });
+
+    return { products: replicated, notices };
+  }
+
+  private resolveQuoteProductType(product: QuoteProduct): QuoteProductType {
+    const knownTypes: QuoteProductType[] = ['GPS', 'Accesorio', 'Plan', 'Servicio'];
+    if (knownTypes.includes(product.type)) return product.type;
+
+    const catalogMatch = this.products.find(item => this.sameName(item.name, product.name));
+    return catalogMatch?.type ?? 'Servicio';
+  }
+
+  private findCatalogProduct(name: string, type: QuoteProductType): QuoteProductItem | null {
+    return this.products.find(item => item.type === type && this.sameName(item.name, name)) ?? null;
+  }
+
+  private buildQuoteProductFromCatalog(product: QuoteProductItem, amount: number | null | undefined): QuoteBuilderProduct {
+    const item: QuoteBuilderProduct = {
+      productId: product._id,
+      type: product.type,
+      name: product.name,
+      description: product.description ?? '',
+      price: Number(product.price ?? 0),
+      priceIVA: Number(product.priceIVA ?? 0),
+      discount: Number(product.discount ?? 0),
+      discountType: '%',
+      amount: Math.max(1, Number(amount || 1)),
+      total: 0
+    };
+
+    this.recalculateProduct(item);
+    return item;
+  }
+
+  private buildReplicatedForeignService(source: QuoteProduct, index: number, notices: QuoteReplicationNotice[]): QuoteBuilderProduct | null {
+    const place = this.findForeignServicePlace(source.name);
+    if (!place) {
+      notices.push({
+        productName: source.name || 'Servicio sin nombre',
+        type: 'Servicio',
+        message: 'Verifica que el precio final sea correcto.'
+      });
+      return null;
+    }
+
+    const item: QuoteBuilderProduct = {
+      productId: `replicated-foreign-${place._id}-${index}`,
+      type: 'Servicio',
+      name: `Servicio foráneo realizado por Leptón en ${place.place}`,
+      description: source.description ?? '',
+      price: Number(source.price ?? 0),
+      priceIVA: Number(source.priceIVA ?? 0),
+      discount: Number(source.discount ?? 0),
+      discountType: '%',
+      amount: Math.max(1, Number(source.amount || 1)),
+      total: 0,
+      lockedAmount: true
+    };
+
+    this.recalculateProduct(item);
+    notices.push({
+      productName: source.name || item.name,
+      type: 'Servicio',
+      message: `Verifica que el precio final sea correcto.`
+    });
+
+    return item;
+  }
+
+  private findForeignServicePlace(name: string): TravelExpenseItem | null {
+    const normalizedName = this.normalizeLookup(name);
+    return this.travelExpenses.find(item => normalizedName.includes(this.normalizeLookup(item.place))) ?? null;
+  }
+
+  private addReplicationUpdateNotices(source: QuoteProduct, item: QuoteBuilderProduct, notices: QuoteReplicationNotice[]): void {
+    const priceChanged =
+      this.roundMoney(source.price) !== this.roundMoney(item.price) ||
+      this.roundMoney(source.priceIVA) !== this.roundMoney(item.priceIVA);
+    const discountChanged = this.normalizePercent(source.discount) !== this.normalizePercent(item.discount);
+
+    if (!priceChanged && !discountChanged) return;
+
+    const changes = [
+      priceChanged ? `el precio $${this.roundMoney(source.priceIVA)} -> $${this.roundMoney(item.priceIVA)} con IVA` : '',
+      discountChanged ? `el descuento ${this.normalizePercent(source.discount)}% -> ${this.normalizePercent(item.discount)}%` : ''
+    ].filter(Boolean).join(', ');
+
+    notices.push({
+      productName: source.name || item.name,
+      type: item.type,
+      message: `Se actualizó ${changes}.`
+    });
+  }
+
+  private rebuildDiscountAmounts(): void {
+    this.discountAmounts = {};
+    this.quoteProducts.forEach(item => {
+      this.discountAmounts[item.productId] = this.roundMoney(
+        Number(item.priceIVA || 0) * (Number(item.discount || 0) / 100)
+      );
+    });
+  }
+
+  private sameName(a: string, b: string): boolean {
+    return this.normalizeLookup(a) === this.normalizeLookup(b);
+  }
+
+  private getDiscountKeyByProductType(type: QuoteProductType): keyof BillingClientItem['discounts'] | null {
+    if (type === 'GPS') return 'devices';
+    if (type === 'Accesorio') return 'accessories';
+    if (type === 'Plan') return 'monthly';
+    return null;
+  }
+
+  private getDiscountCategoryLabel(key: keyof BillingClientItem['discounts']): string {
+    if (key === 'devices') return 'GPS';
+    if (key === 'accessories') return 'Accesorios';
+    return 'Planes';
+  }
+
+  private normalizePercent(value: unknown): number {
+    return this.roundMoney(Math.min(100, Math.max(0, Number(value || 0))));
+  }
+
   private recalculateProduct(item: QuoteBuilderProduct): void {
     const amount = item.lockedAmount ? 1 : Math.max(1, Number(item.amount || 1));
     const gross = Number(item.priceIVA || 0) * amount;
-    const discount = item.discountType === '%'
-      ? gross * (Math.min(Number(item.discount || 0), 100) / 100)
-      : Math.min(Number(item.discount || 0), gross);
+    const discountPercent = Math.min(100, Math.max(0, Number(item.discount || 0)));
+    const discountAmount = gross * (discountPercent / 100);
 
     item.amount = amount;
-    item.total = this.roundMoney(Math.max(0, gross - discount));
+    item.discount = discountPercent;
+    item.discountType = '%';
+    item.total = this.roundMoney(Math.max(0, gross - discountAmount));
   }
 
   private buildLeptonForeignProduct(): QuoteBuilderProduct {
@@ -895,8 +1495,8 @@ export class CotizacionesComponent implements OnInit {
     const item: QuoteBuilderProduct = {
       productId: `foreign-lepton-${Date.now()}`,
       type: 'Servicio',
-      name: `Servicio foraneo realizado por Lepton en ${place}`,
-      description: 'Incluye viaticos y hospedaje',
+      name: `Servicio foráneo realizado por Leptón en ${place}`,
+      description: 'Incluye viáticos y hospedaje',
       price,
       priceIVA: this.roundMoney(price * 1.16),
       discount: 0,
@@ -915,8 +1515,8 @@ export class CotizacionesComponent implements OnInit {
     const item: QuoteBuilderProduct = {
       productId: `foreign-technician-${Date.now()}`,
       type: 'Servicio',
-      name: 'Servicio tecnico realizado por instalador certificado',
-      description: 'Incluye viaticos y hospedaje',
+      name: 'Servicio técnico realizado por instalador certificado',
+      description: 'Incluye viáticos y hospedaje',
       price,
       priceIVA: this.roundMoney(price * 1.16),
       discount: 0,
@@ -956,7 +1556,44 @@ export class CotizacionesComponent implements OnInit {
     return Math.min(count, this.maxMealCount);
   }
 
+  private syncPaymentBankAccountSelection(): void {
+    const currentId = this.paymentForm.get('bankAccountId')?.value;
+    if (currentId && this.bankAccounts.some(item => item._id === currentId)) {
+      this.onBankAccountSelected(currentId);
+      return;
+    }
+
+    const payment = this.paymentForm.getRawValue();
+    const account = this.bankAccounts.find(item =>
+      this.normalize(item.holder) === this.normalize(payment.paymentMethodHolder) &&
+      this.normalize(item.bankName) === this.normalize(payment.bankName) &&
+      this.normalize(item.accountNumber) === this.normalize(payment.accountNumber) &&
+      this.normalize(item.CLABE) === this.normalize(payment.CLABE)
+    );
+
+    if (account) {
+      this.paymentForm.patchValue({ bankAccountId: account._id }, { emitEvent: false });
+    }
+  }
+
+  private buildBankAccountPayload(): CreateBankAccountPayload {
+    const value = this.bankAccountForm.getRawValue();
+
+    return {
+      holder: String(value.holder ?? '').trim(),
+      bankName: String(value.bankName ?? '').trim(),
+      accountNumber: String(value.accountNumber ?? '').trim(),
+      CLABE: String(value.CLABE ?? '').trim()
+    };
+  }
+
   private setupDraftPersistence(): void {
+    this.clientForm.get('clientName')?.valueChanges.subscribe(value => {
+      const selected = this.billingClients.find(item => item._id === this.selectedBillingClientId);
+      if (selected && this.normalize(value) !== this.normalize(selected.billingName)) {
+        this.selectedBillingClientId = '';
+      }
+    });
     this.clientForm.valueChanges.subscribe(() => this.saveDraft());
     this.productsForm.valueChanges.subscribe(() => this.saveDraft());
     this.paymentForm.valueChanges.subscribe(() => this.saveDraft());
@@ -966,12 +1603,14 @@ export class CotizacionesComponent implements OnInit {
     const draft: QuoteDraft = {
       activeView: this.activeView,
       client: this.clientForm.getRawValue(),
+      selectedBillingClientId: this.selectedBillingClientId,
       productsForm: this.productsForm.getRawValue(),
       products: this.quoteProducts,
       payment: this.paymentForm.getRawValue(),
       productSearch: this.productSearch,
       activeSection: this.activeSection,
-      ignoredSuggestions: this.ignoredSuggestions
+      ignoredSuggestions: this.ignoredSuggestions,
+      replicationNotices: this.replicationNotices
     };
 
     localStorage.setItem(this.draftKey, JSON.stringify(draft));
@@ -1000,15 +1639,20 @@ export class CotizacionesComponent implements OnInit {
       this.quoteProducts = Array.isArray(draft.products)
         ? draft.products.map(item => {
           const product = { ...item };
+          this.discountAmounts[product.productId] = this.roundMoney(
+            Number(product.priceIVA || 0) * (Number(product.discount || 0) / 100)
+          );
           this.recalculateProduct(product);
           return product;
         })
         : [];
 
       this.productSearch = draft.productSearch ?? '';
+      this.selectedBillingClientId = draft.selectedBillingClientId ?? '';
       this.activeSection = draft.activeSection ?? 'client';
       this.activeView = draft.activeView ?? 'list';
       this.ignoredSuggestions = Array.isArray(draft.ignoredSuggestions) ? draft.ignoredSuggestions : [];
+      this.replicationNotices = Array.isArray(draft.replicationNotices) ? draft.replicationNotices : [];
     } catch {
       localStorage.removeItem(this.draftKey);
     }
@@ -1024,15 +1668,16 @@ export class CotizacionesComponent implements OnInit {
 
     this.productsForm.reset({
       units: 1,
-      model: ''
+      model: '',
+      billable: false,
     }, { emitEvent: false });
 
     this.paymentForm.reset({
+      bankAccountId: '',
       paymentMethodHolder: '',
       bankName: '',
       accountNumber: '',
       CLABE: '',
-      billable: false,
       comments: ''
     }, { emitEvent: false });
 
@@ -1041,371 +1686,41 @@ export class CotizacionesComponent implements OnInit {
     this.productTypeFilter = '';
     this.selectedProductId = '';
     this.ignoredSuggestions = [];
+    this.replicationNotices = [];
     this.suggestionQueue = [];
+    this.clientDiscountQueue = [];
     this.activeSuggestion = null;
+    this.activeClientDiscount = null;
     this.suggestionModalOpen = false;
+    this.clientDiscountModalOpen = false;
+    this.replicationNoticeModalOpen = false;
+    this.bankAccountModalOpen = false;
+    this.bankAccountEditingId = '';
+    this.selectedBillingClientId = '';
     this.activeSection = 'client';
     localStorage.removeItem(this.draftKey);
   }
 
-  private createQuotePdf(quote: QuoteItem): jsPDF {
-    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const margin = 14;
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    const rows = this.buildPdfLines(quote);
-    const totals = this.buildPdfTotals(quote, rows);
-    let tableFinalY = 0;
-
-    autoTable(doc, {
-      startY: 78,
-      margin: { top: 78, right: margin, bottom: 35, left: margin },
-      head: [['Cant.', 'Producto / descripcion', 'Precio unitario', 'Descuento', 'Importe']],
-      body: rows.map(row => [
-        String(row.amount),
-        `${row.name}${row.description ? `\n${row.description}` : ''}`,
-        this.money(row.unitPrice),
-        this.money(row.discount),
-        this.money(row.import)
-      ]),
-      theme: 'plain',
-      styles: {
-        font: 'helvetica',
-        fontSize: 8.5,
-        textColor: [34, 34, 34],
-        cellPadding: { top: 3, right: 2, bottom: 3, left: 2 },
-        lineColor: [220, 220, 220],
-        lineWidth: 0.2,
-        valign: 'top'
-      },
-      headStyles: {
-        fontStyle: 'bold',
-        textColor: [34, 34, 34],
-        lineColor: [168, 168, 168],
-        lineWidth: 0.3,
-        fillColor: [255, 255, 255]
-      },
-      columnStyles: {
-        0: { cellWidth: 13, halign: 'center' },
-        1: { cellWidth: 78 },
-        2: { cellWidth: 31, halign: 'right' },
-        3: { cellWidth: 29, halign: 'right' },
-        4: { cellWidth: 31, halign: 'right' }
-      },
-      didDrawPage: data => {
-        this.drawQuoteHeader(doc, quote, data.pageNumber);
-        const footerY = pageHeight - 9;
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7);
-        doc.setTextColor(104, 104, 104);
-        doc.text(`Pagina ${data.pageNumber}`, pageWidth / 2, footerY, { align: 'center' });
-      }
-    });
-
-    tableFinalY = (doc as any).lastAutoTable?.finalY ?? 78;
-
-    const requiredHeight = 82;
-    if (tableFinalY + requiredHeight > pageHeight - 18) {
-      doc.addPage();
-      this.drawQuoteHeader(doc, quote, doc.getNumberOfPages());
-      tableFinalY = 78;
+  async previewBuilderQuote(): Promise<void> {
+    if (!this.quoteComplete) {
+      this.clientForm.markAllAsTouched();
+      this.productsForm.markAllAsTouched();
+      this.paymentForm.markAllAsTouched();
+      this.toast.warning({ detail: 'Campos incompletos', summary: 'Completa todas las secciones', duration: 3500 });
+      return;
     }
 
-    let y = Math.max(tableFinalY + 10, 90);
-    y = this.drawPdfTotals(doc, quote, totals, y, pageWidth, pageHeight);
-    y = Math.max(y + 8, 145);
-    y = this.drawPdfPayment(doc, quote, y, pageWidth, pageHeight);
-    this.drawPdfTerms(doc, y + 8, pageWidth, pageHeight);
+    const payload = this.buildQuotePayload();
 
-    return doc;
-  }
+    const previewQuote: QuoteItem = {
+      ...payload,
+      _id: 'preview',
+      quoteNum: 'PREVISUALIZACIÓN',
+      userName: '',
+      createdAt: new Date().toISOString()
+    } as QuoteItem;
 
-  private buildPdfLines(quote: QuoteItem): QuotePdfLine[] {
-    return quote.products.map(product => {
-      const amount = Math.max(1, Number(product.amount || 1));
-      const unitPrice = quote.billable ? Number(product.price || 0) : Number(product.priceIVA || 0);
-      const gross = unitPrice * amount;
-      const discount = product.discountType === '%'
-        ? gross * (Math.min(Number(product.discount || 0), 100) / 100)
-        : Math.min(Number(product.discount || 0), gross);
-
-      return {
-        amount,
-        name: product.name || 'Producto',
-        description: product.description || '',
-        unitPrice: this.roundMoney(unitPrice),
-        discount: this.roundMoney(discount),
-        import: this.roundMoney(Math.max(0, gross - discount))
-      };
-    });
-  }
-
-  private buildPdfTotals(quote: QuoteItem, rows: QuotePdfLine[]): QuotePdfTotals {
-    const subtotal = this.roundMoney(rows.reduce((sum, row) => sum + (row.unitPrice * row.amount), 0));
-    const discounts = this.roundMoney(rows.reduce((sum, row) => sum + row.discount, 0));
-    const taxableBase = this.roundMoney(subtotal - discounts);
-    const IVA = quote.billable ? this.roundMoney(taxableBase * 0.16) : undefined;
-    const total = quote.billable ? this.roundMoney(taxableBase + (IVA ?? 0)) : taxableBase;
-
-    return {
-      subtotal: quote.billable ? subtotal : undefined,
-      discounts,
-      IVA,
-      total,
-      paymentNextMonthly: quote.paymentNextMonthly != null ? Number(quote.paymentNextMonthly) : undefined
-    };
-  }
-
-  private drawQuoteHeader(doc: jsPDF, quote: QuoteItem, page: number): void {
-    const width = doc.internal.pageSize.getWidth();
-    const margin = 14;
-    const issueDate = quote.createdAt ? new Date(quote.createdAt) : new Date();
-    const validity = quote.validity ? new Date(quote.validity) : null;
-    const units = quote.units ?? 1;
-
-    doc.setFillColor(15, 107, 255);
-    doc.rect(margin, 14, 13, 13, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(18);
-    doc.text('>', margin + 6.5, 23.2, { align: 'center' });
-
-    doc.setTextColor(47, 58, 69);
-    doc.setFontSize(17);
-    doc.text('Lepton', margin + 17, 20);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(5.5);
-    doc.setTextColor(90, 100, 112);
-    doc.text('Monitoreo y control GPS', margin + 17, 24);
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(page === 1 ? 18 : 16);
-    doc.setTextColor(34, 34, 34);
-    doc.text('Cotizacion', width - margin, 18, { align: 'right' });
-
-    if (page === 1) {
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8.5);
-      doc.text(`Folio: ${quote.quoteNum || '-'}`, width - margin, 25, { align: 'right' });
-      doc.text(`Fecha de emision: ${this.formatDate(issueDate)}`, width - margin, 31, { align: 'right' });
-      doc.text(`Vencimiento: ${validity ? this.formatDate(validity) : '-'}`, width - margin, 37, { align: 'right' });
-      doc.setDrawColor(168, 168, 168);
-      doc.setLineWidth(0.3);
-      doc.line(margin, 42, width - margin, 42);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.setTextColor(34, 34, 34);
-      doc.text('Cliente', margin, 50);
-      doc.setFontSize(10.5);
-      doc.text(quote.clientName || '-', margin, 56);
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(quote.companyName || '-', margin, 62);
-      doc.text(quote.place || '-', margin, 68);
-
-      doc.setFont('helvetica', 'bold');
-      doc.setFontSize(8.5);
-      doc.text('Unidades', width - margin, 50, { align: 'right' });
-      doc.setFontSize(10.5);
-      doc.text(String(units), width - margin, 56, { align: 'right' });
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(8);
-      doc.text(quote.model || 'Sin modelo/tipo', width - margin, 62, { align: 'right' });
-
-      doc.setDrawColor(224, 224, 224);
-      doc.line(margin, 73, width - margin, 73);
-    } else {
-      doc.setDrawColor(168, 168, 168);
-      doc.setLineWidth(0.3);
-      doc.line(margin, 29, width - margin, 29);
-    }
-  }
-
-  private drawPdfTotals(doc: jsPDF, quote: QuoteItem, totals: QuotePdfTotals, startY: number, width: number, height: number): number {
-    let y = startY;
-    const labelX = width - 67;
-    const valueX = width - 14;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8.5);
-    doc.setTextColor(34, 34, 34);
-
-    if (quote.billable && totals.subtotal != null) {
-      doc.text('Subtotal:', labelX, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(this.money(totals.subtotal), valueX, y, { align: 'right' });
-      y += 5.5;
-    }
-
-    doc.setFont('helvetica', 'bold');
-    doc.text('Descuentos:', labelX, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(this.money(totals.discounts), valueX, y, { align: 'right' });
-    y += 5.5;
-
-    if (quote.billable && totals.IVA != null) {
-      doc.setFont('helvetica', 'bold');
-      doc.text('IVA 16%:', labelX, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(this.money(totals.IVA), valueX, y, { align: 'right' });
-      y += 5.5;
-    }
-
-    doc.setDrawColor(168, 168, 168);
-    doc.setLineWidth(0.3);
-    doc.line(labelX, y, valueX, y);
-    y += 7;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10.5);
-    doc.text('Total:', labelX, y);
-    doc.text(this.money(totals.total), valueX, y, { align: 'right' });
-    y += 7;
-
-    doc.setFontSize(7.5);
-    doc.text(this.amountToWords(totals.total), 14, y);
-    y += 6;
-
-    if (totals.paymentNextMonthly != null && totals.paymentNextMonthly > 0) {
-      doc.setFontSize(8);
-      doc.text('Pago proxima mensualidad:', labelX - 10, y);
-      doc.setFont('helvetica', 'normal');
-      doc.text(this.money(totals.paymentNextMonthly), valueX, y, { align: 'right' });
-      y += 5;
-    }
-
-    return Math.min(y, height - 100);
-  }
-
-  private drawPdfPayment(doc: jsPDF, quote: QuoteItem, startY: number, width: number, height: number): number {
-    let y = startY;
-    const margin = 14;
-
-    if (y > height - 72) {
-      doc.addPage();
-      this.drawQuoteHeader(doc, quote, doc.getNumberOfPages());
-      y = 42;
-    }
-
-    doc.setDrawColor(224, 224, 224);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, width - margin, y);
-    y += 7;
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.setTextColor(34, 34, 34);
-    doc.text('Metodo de pago', margin, y);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.8);
-    doc.text(`Titular: ${quote.paymentMethodHolder || '-'}`, margin, y + 7);
-    doc.text(`Banco: ${quote.bankName || '-'}`, margin, y + 13);
-    doc.text(`Cuenta: ${quote.accountNumber || '-'}`, margin + 75, y + 7);
-    doc.text(`CLABE: ${quote.CLABE || '-'}`, margin + 75, y + 13);
-    doc.setFontSize(7.5);
-    doc.text(`Facturable: ${quote.billable ? 'Si' : 'No'}`, width - margin, y, { align: 'right' });
-
-    if (quote.comments) {
-      const commentLines = doc.splitTextToSize(`Comentarios: ${quote.comments}`, width - (margin * 2));
-      doc.text(commentLines, margin, y + 21);
-      y += 21 + (commentLines.length * 3.5);
-    } else {
-      y += 19;
-    }
-
-    return y;
-  }
-
-  private drawPdfTerms(doc: jsPDF, startY: number, width: number, height: number): void {
-    const margin = 14;
-    let y = startY;
-
-    if (y > height - 47) {
-      doc.addPage();
-      this.drawQuoteHeader(doc, {} as QuoteItem, doc.getNumberOfPages());
-      y = 42;
-    }
-
-    doc.setDrawColor(224, 224, 224);
-    doc.setLineWidth(0.3);
-    doc.line(margin, y, width - margin, y);
-    y += 6;
-
-    const terms = [
-      'Los precios incluyen IVA.',
-      'Los montos estan en pesos mexicanos.',
-      'Cualquier accesorio fuera de los especificados en la propuesta se cotizara aparte.',
-      'Incluye instalacion, programacion y activacion del servicio en linea segun corresponda.',
-      'La inversion inicial sera en una sola exhibicion.'
-    ];
-
-    const address = [
-      'Av. de la Cultura #25, Ciudad del Valle',
-      'Tel.: (311) 456 4344 / (55) 4440 0609',
-      'ventas@lepton-seguridad.com',
-      'C.P. 63157 Tepic, Nay.'
-    ];
-
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7.8);
-    doc.setTextColor(34, 34, 34);
-    doc.text('Terminos y condiciones', margin, y);
-    doc.text('Domicilio Lepton', width - 69, y);
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(6.5);
-    y += 5;
-
-    terms.forEach(term => {
-      const lines = doc.splitTextToSize(term, 105);
-      doc.text(lines, margin, y);
-      y += lines.length * 3.2;
-    });
-
-    let addressY = y - (terms.length * 3.2) - 1;
-    address.forEach(line => {
-      doc.text(line, width - 69, addressY);
-      addressY += 3.2;
-    });
-  }
-
-  private money(value: number): string {
-    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(Number(value || 0));
-  }
-
-  private formatDate(value: Date): string {
-    return new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' }).format(value);
-  }
-
-  private amountToWords(value: number): string {
-    const pesos = Math.floor(Number(value || 0));
-    const cents = Math.round((Number(value || 0) - pesos) * 100);
-    return `${this.numberToSpanish(pesos).toUpperCase()} PESOS ${String(cents).padStart(2, '0')}/100 MXN`;
-  }
-
-  private numberToSpanish(value: number): string {
-    const units = ['cero', 'uno', 'dos', 'tres', 'cuatro', 'cinco', 'seis', 'siete', 'ocho', 'nueve', 'diez', 'once', 'doce', 'trece', 'catorce', 'quince', 'dieciseis', 'diecisiete', 'dieciocho', 'diecinueve'];
-    const tens = ['', '', 'veinte', 'treinta', 'cuarenta', 'cincuenta', 'sesenta', 'setenta', 'ochenta', 'noventa'];
-    const hundreds = ['', 'ciento', 'doscientos', 'trescientos', 'cuatrocientos', 'quinientos', 'seiscientos', 'setecientos', 'ochocientos', 'novecientos'];
-
-    if (value < 20) return units[value];
-    if (value < 30) return value === 20 ? 'veinte' : `veinti${units[value - 20]}`;
-    if (value < 100) return value % 10 === 0 ? tens[Math.floor(value / 10)] : `${tens[Math.floor(value / 10)]} y ${units[value % 10]}`;
-    if (value === 100) return 'cien';
-    if (value < 1000) return value % 100 === 0 ? hundreds[Math.floor(value / 100)] : `${hundreds[Math.floor(value / 100)]} ${this.numberToSpanish(value % 100)}`;
-    if (value < 2000) return value === 1000 ? 'mil' : `mil ${this.numberToSpanish(value % 1000)}`;
-    if (value < 1000000) {
-      const thousands = Math.floor(value / 1000);
-      const rest = value % 1000;
-      return rest === 0 ? `${this.numberToSpanish(thousands)} mil` : `${this.numberToSpanish(thousands)} mil ${this.numberToSpanish(rest)}`;
-    }
-
-    const millions = Math.floor(value / 1000000);
-    const rest = value % 1000000;
-    const millionText = millions === 1 ? 'un millon' : `${this.numberToSpanish(millions)} millones`;
-    return rest === 0 ? millionText : `${millionText} ${this.numberToSpanish(rest)}`;
+    await this.previewQuotePdf(previewQuote);
   }
 
   private sanitizeFileName(value: string): string {
@@ -1431,6 +1746,10 @@ export class CotizacionesComponent implements OnInit {
     return String(value ?? '').trim().toLowerCase();
   }
 
+  private normalizeLookup(value: unknown): string {
+    return this.normalize(value).normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
   private roundMoney(value: number): number {
     return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
   }
@@ -1443,8 +1762,19 @@ export class CotizacionesComponent implements OnInit {
 
   private extractList(response: any): any[] {
     if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.bankAccounts)) return response.bankAccounts;
     if (Array.isArray(response)) return response;
     return [];
+  }
+
+  private mapBankAccount(item: any): BankAccountItem {
+    return {
+      _id: String(item?._id ?? item?.id ?? ''),
+      holder: String(item?.holder ?? ''),
+      bankName: String(item?.bankName ?? ''),
+      accountNumber: String(item?.accountNumber ?? ''),
+      CLABE: String(item?.CLABE ?? '')
+    };
   }
 
   private mapBillingClient(item: any): BillingClientItem {
