@@ -137,7 +137,7 @@
         </div>
 
         <mat-paginator *ngIf="filteredSuggestions.length > 0" [length]="filteredSuggestions.length"
-          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]"
           [showFirstLastButtons]="true" (page)="onPageChange($event)">
         </mat-paginator>
       </div>
@@ -254,11 +254,13 @@
         <mat-form-field appearance="outline">
           <mat-label>Producto</mat-label>
 
-          <mat-select formControlName="productId">
-            <mat-option *ngFor="let product of products" [value]="product._id">
+          <input matInput formControlName="productId" [matAutocomplete]="productAuto" autocomplete="off" />
+
+          <mat-autocomplete #productAuto="matAutocomplete" [displayWith]="displayProduct">
+            <mat-option *ngFor="let product of getFilteredProducts(form.get('productId')?.value)" [value]="product">
               {{ product.type }} - {{ product.name }}
             </mat-option>
-          </mat-select>
+          </mat-autocomplete>
 
           <mat-error *ngIf="form.get('productId')?.hasError('required')">
             Campo obligatorio
@@ -307,15 +309,22 @@
           <mat-form-field appearance="outline">
             <mat-label>Producto</mat-label>
 
-            <mat-select formControlName="productId">
-              <mat-option *ngFor="let product of products" [value]="product._id">
+            <input matInput formControlName="productId" [matAutocomplete]="responseProductAuto" autocomplete="off" />
+
+            <mat-autocomplete #responseProductAuto="matAutocomplete" [displayWith]="displayProduct">
+              <mat-option *ngFor="let product of getFilteredProducts(group.get('productId')?.value)" [value]="product">
                 {{ product.type }} - {{ product.name }}
               </mat-option>
-            </mat-select>
+            </mat-autocomplete>
+
+            <mat-error *ngIf="group.get('productId')?.hasError('required')">
+              Campo obligatorio
+            </mat-error>
           </mat-form-field>
 
-          <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;" (click)="removeSuggestionResponse(i)"
-            [disabled]="suggestionResponse.length === 1" matTooltip="Eliminar instrucción">
+          <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
+            (click)="removeSuggestionResponse(i)" [disabled]="suggestionResponse.length === 1"
+            matTooltip="Eliminar instrucción">
             <mat-icon>delete</mat-icon>
           </button>
         </div>

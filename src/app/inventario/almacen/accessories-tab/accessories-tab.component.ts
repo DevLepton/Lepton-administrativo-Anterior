@@ -51,7 +51,7 @@ export class AccessoriesTabComponent implements OnChanges {
   accessoriesDeletingId: string | null = null;
 
   // paginado/filtros
-  accessoriesPerPage = 10;
+  accessoriesPerPage = 25;
   accessoriesCurrentPage = 1;
 
   accessorySearch = '';

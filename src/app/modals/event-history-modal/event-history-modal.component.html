@@ -8,7 +8,7 @@
     <div class="modal-body">
       <!-- Encabezado de contexto (opcional) -->
       <div class="grid">
-        <div><span class="k">Colección:</span><strong>{{ data?.collectionName }}</strong></div>
+        <div><span class="k">Colección:</span><strong>{{ data.collectionName }}</strong></div>
         <div><span class="k">Eventos encontrados:</span><strong>{{ relatedEvents.length }}</strong></div>
       </div>
 
@@ -19,35 +19,34 @@
               <!-- Columnas fijas -->
               <th>Operación</th>
               <th>Usuario</th>
-              <th>Fecha</th>
               <th>Colección</th>
 
               <!-- Columnas dinámicas (todas las claves de finalValues, en español) -->
               <th *ngFor="let label of dynamicLabels">{{ label }}</th>
+              <th>Fecha de creación</th>
+              <th *ngIf="hasEventComments">Comentarios del evento</th>
             </tr>
           </thead>
 
           <tbody>
-            <tr *ngFor="let ev of relatedEvents" class="row-values">
+            <tr *ngFor="let ev of relatedEvents; let i = index" class="row-values">
               <!-- Fijas -->
               <td>
-                <span class="status-badge"
-                      [ngClass]="{ cre: ev.operation === 'Creación',
+                <span class="status-badge" [ngClass]="{ cre: ev.operation === 'Creación',
                                    upd: ev.operation === 'Actualización',
                                    del: ev.operation === 'Eliminación' }">
                   {{ ev.operation }}
                 </span>
               </td>
               <td>{{ displayUser(ev) }}</td>
-              <td>{{ ev.createdAt | date:'dd MMM yyyy' }}</td> <!-- sin hora -->
               <td>{{ ev.collectionName }}</td>
 
               <!-- Dinámicas -->
-              <td *ngFor="let key of dynamicKeys" class="cell-val">
+              <td *ngFor="let key of dynamicKeys" class="cell-val" [class.cell-changed]="isCellChanged(i, key)">
                 <ng-container [ngSwitch]="true">
                   <!-- fecha sin hora si corresponde -->
                   <ng-container *ngSwitchCase="asDateOnly(key)">
-                    {{ getCellValue(ev, key) | date:'dd MMM yyyy' }}
+                    {{ getCellValue(ev, key) | date:'dd MMM yyyy, HH:mm:ss' }}
                   </ng-container>
 
                   <!-- objeto/array -->
@@ -61,6 +60,8 @@
                   </ng-container>
                 </ng-container>
               </td>
+              <td>{{ ev.createdAt | date:'dd MMM yyyy, HH:mm:ss' }}</td>
+              <td *ngIf="hasEventComments">{{ ev.eventComments || '—' }}</td>
             </tr>
           </tbody>
         </table>

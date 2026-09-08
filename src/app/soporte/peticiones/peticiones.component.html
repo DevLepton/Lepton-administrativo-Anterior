@@ -246,7 +246,7 @@
         </div>
 
         <mat-paginator *ngIf="requestsFiltered.length > 0" [length]="requestsFiltered.length"
-          [pageIndex]="requestsCurrentPage - 1" [pageSize]="requestsPerPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [pageIndex]="requestsCurrentPage - 1" [pageSize]="requestsPerPage" [pageSizeOptions]="[25, 50, 100]"
           [showFirstLastButtons]="true" (page)="onRequestsPageChange($event)">
         </mat-paginator>
       </div>

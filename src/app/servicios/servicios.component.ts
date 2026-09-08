@@ -22,7 +22,7 @@ export class ServiciosComponent implements OnInit {
   @ViewChild(EditServiciosModalComponent) editServiciosModal!: EditServiciosModalComponent; // Modal de edición
 
   servicios: Servicio[] = [];
-  serviciosPerPage = 10; // Cantidad de servicios por página
+  serviciosPerPage = 25; // Cantidad de servicios por página
   currentPage = 1; // Página actual
   showAll = true; // Controla si se muestran todos los servicios o se paginan
 

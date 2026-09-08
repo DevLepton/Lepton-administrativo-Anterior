@@ -97,7 +97,7 @@
                 </th>
                 <th>No.</th>
                 <!-- <th>Tipo</th> -->
-                <th>Nombre facturación</th>
+                <th>Nombre cobranza</th>
                 <th>Relación</th>
                 <th>Comprobante</th>
                 <th>Día de corte</th>
@@ -169,14 +169,14 @@
                 <td>
                   <div class="row-actions">
                     <button class="icon-button view-button" matTooltip="Ver"
-                    (click)="openSidebar(row.item); $event.stopPropagation()">
-                    <span class="material-icons">visibility</span>
-                  </button>
-                  <button class="icon-button edit-button" matTooltip="Editar"
-                    (click)="openEditModal(row.item); $event.stopPropagation()">
-                    <span class="material-icons">edit</span>
-                  </button>
-                </div>
+                      (click)="openSidebar(row.item); $event.stopPropagation()">
+                      <span class="material-icons">visibility</span>
+                    </button>
+                    <button class="icon-button edit-button" matTooltip="Editar"
+                      (click)="openEditModal(row.item); $event.stopPropagation()">
+                      <span class="material-icons">edit</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
 
@@ -196,7 +196,7 @@
         </div>
 
         <mat-paginator *ngIf="filteredBillingClients.length > 0" [length]="filteredBillingClients.length"
-          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+          [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]"
           [showFirstLastButtons]="true" (page)="onPageChange($event)">
         </mat-paginator>
       </div>
@@ -314,22 +314,30 @@
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Nombre de facturación</mat-label>
+                <mat-label>Nombre de cobranza</mat-label>
                 <input matInput formControlName="billingName" required />
                 <mat-error *ngIf="form.get('billingName')?.hasError('required')">Campo obligatorio</mat-error>
               </mat-form-field>
 
               <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'client'">
                 <mat-label>Cliente vinculado</mat-label>
-                <mat-select formControlName="userId" [disabled]="clientsLoading">
-                  <mat-option *ngIf="!clientsLoading && linkedClientOptions.length === 0" disabled>
+                <input matInput formControlName="userId" [matAutocomplete]="linkedClientAuto"
+                  [readonly]="clientsLoading" autocomplete="off" />
+                <mat-autocomplete #linkedClientAuto="matAutocomplete" [displayWith]="displayClientOption"
+                  autoActiveFirstOption>
+                  <mat-option *ngIf="clientsLoading" disabled>
+                    Cargando clientes...
+                  </mat-option>
+                  <mat-option *ngIf="!clientsLoading && filteredLinkedClientOptions.length === 0" disabled>
                     Sin clientes disponibles
                   </mat-option>
-                  <mat-option *ngFor="let client of linkedClientOptions" [value]="client.userId">
+                  <mat-option *ngFor="let client of filteredLinkedClientOptions" [value]="client.userId">
                     #{{ client.userId }} - {{ client.fullName }}
                   </mat-option>
-                </mat-select>
+                </mat-autocomplete>
                 <mat-error *ngIf="form.get('userId')?.hasError('required')">Campo obligatorio para clientes</mat-error>
+                <mat-error *ngIf="form.get('userId')?.hasError('invalidClient')">Selecciona un cliente de la
+                  lista</mat-error>
               </mat-form-field>
 
               <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'subClient'">
@@ -367,7 +375,7 @@
               </mat-form-field>
 
               <mat-form-field appearance="outline">
-                <mat-label>Correo facturación</mat-label>
+                <mat-label>Correo cobranza</mat-label>
                 <input matInput type="email" formControlName="email" />
                 <mat-error *ngIf="form.get('email')?.hasError('email')">Correo inválido</mat-error>
               </mat-form-field>
@@ -377,7 +385,8 @@
                 <input matInput formControlName="companyName" />
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="small-field">
+              <mat-form-field appearance="outline" class="small-field"
+                *ngIf="form.get('voucherType')?.value === 'Factura'">
                 <mat-label>RFC</mat-label>
                 <input matInput formControlName="RFC" />
               </mat-form-field>
@@ -388,7 +397,8 @@
                   (focus)="selectInput($event)" />
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="medium-field">
+              <mat-form-field appearance="outline" class="medium-field"
+                *ngIf="form.get('voucherType')?.value === 'Factura'">
                 <mat-label>Régimen fiscal</mat-label>
                 <mat-select formControlName="taxRegime">
                   <mat-option *ngFor="let regime of taxRegimes" [value]="regime.codigo">
@@ -397,7 +407,8 @@
                 </mat-select>
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="medium-field">
+              <mat-form-field appearance="outline" class="medium-field"
+                *ngIf="form.get('voucherType')?.value === 'Factura'">
                 <mat-label>Uso de la factura</mat-label>
                 <mat-select formControlName="useInvoice">
                   <mat-option *ngFor="let use of invoceUses" [value]="use.codigo">
@@ -476,15 +487,20 @@
               </mat-form-field>
             </div>
 
-            <div class="stepper-controls">
-              <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
-                <mat-icon>arrow_back</mat-icon>
-                Anterior
-              </button>
-              <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
-                Siguiente
-                <mat-icon>arrow_forward</mat-icon>
-              </button>
+            <div class="stepper-controls final">
+              <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+                (click)="closeModal()">Cancelar</button>
+              <div class="modal-actions">
+
+                <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Anterior
+                </button>
+                <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
+                  Siguiente
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+              </div>
             </div>
           </div>
         </mat-step>
@@ -492,65 +508,66 @@
         <mat-step>
           <ng-template matStepLabel>Descuentos y contactos</ng-template>
           <div class="step-content">
-            <h3>Descuentos</h3>
-            <div class="form-flex" formGroupName="discounts">
-              <mat-form-field appearance="outline">
-                <mat-label>Mensualidad</mat-label>
-                <span matTextSuffix>%&nbsp;</span>
-                <input matInput type="number" min="0" formControlName="monthly" (focus)="selectInput($event)" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Dispositivos</mat-label>
-                <span matTextSuffix>%&nbsp;</span>
-                <input matInput type="number" min="0" formControlName="devices" (focus)="selectInput($event)" />
-              </mat-form-field>
-
-              <mat-form-field appearance="outline">
-                <mat-label>Accesorios</mat-label>
-                <span matTextSuffix>%&nbsp;</span>
-                <input matInput type="number" min="0" formControlName="accessories" (focus)="selectInput($event)" />
-              </mat-form-field>
-            </div>
-
-            <div class="contacts-header">
-              <h3>Contactos de pago</h3>
-              <button type="button" mat-icon-button color="primary" class="add-contact" (click)="addPaymentContact()"
-                matTooltip="Agregar contacto">
-                <mat-icon>add</mat-icon>
-              </button>
-            </div>
-
-            <div formArrayName="paymentContacts" class="contacts-list">
-              <div class="contact-form" *ngFor="let contact of paymentContacts.controls; let i = index"
-                [formGroupName]="i">
+            <div>
+              <h3>Descuentos</h3>
+              <div class="form-flex" formGroupName="discounts">
                 <mat-form-field appearance="outline">
-                  <mat-label>Nombre</mat-label>
-                  <input matInput formControlName="name" />
-                  <mat-error *ngIf="contact.get('name')?.hasError('required')">Campo obligatorio</mat-error>
+                  <mat-label>Mensualidad</mat-label>
+                  <span matTextSuffix>%&nbsp;</span>
+                  <input matInput type="number" min="0" formControlName="monthly" (focus)="selectInput($event)" />
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Correo</mat-label>
-                  <input matInput type="email" formControlName="email" />
-                  <mat-error *ngIf="contact.get('email')?.hasError('email')">Correo inválido</mat-error>
+                  <mat-label>Dispositivos</mat-label>
+                  <span matTextSuffix>%&nbsp;</span>
+                  <input matInput type="number" min="0" formControlName="devices" (focus)="selectInput($event)" />
                 </mat-form-field>
 
                 <mat-form-field appearance="outline">
-                  <mat-label>Celular</mat-label>
-                  <input matInput formControlName="cel" />
+                  <mat-label>Accesorios</mat-label>
+                  <span matTextSuffix>%&nbsp;</span>
+                  <input matInput type="number" min="0" formControlName="accessories" (focus)="selectInput($event)" />
                 </mat-form-field>
+              </div>
 
-                <mat-form-field appearance="outline">
-                  <mat-label>Notas</mat-label>
-                  <input matInput formControlName="notes" />
-                </mat-form-field>
-
-                <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
-                  (click)="removePaymentContact(i)" [disabled]="paymentContacts.length === 1"
-                  matTooltip="Eliminar contacto">
-                  <mat-icon>delete</mat-icon>
+              <div class="contacts-header">
+                <h3>Contactos de pago</h3>
+                <button type="button" mat-icon-button color="primary" class="add-contact" (click)="addPaymentContact()"
+                  matTooltip="Agregar contacto">
+                  <mat-icon>add</mat-icon>
                 </button>
+              </div>
+
+              <div formArrayName="paymentContacts" class="contacts-list">
+                <div class="contact-form" *ngFor="let contact of paymentContacts.controls; let i = index"
+                  [formGroupName]="i">
+                  <mat-form-field appearance="outline">
+                    <mat-label>Nombre</mat-label>
+                    <input matInput formControlName="name" />
+                    <mat-error *ngIf="contact.get('name')?.hasError('required')">Campo obligatorio</mat-error>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Correo</mat-label>
+                    <input matInput type="email" formControlName="email" />
+                    <mat-error *ngIf="contact.get('email')?.hasError('email')">Correo inválido</mat-error>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Celular</mat-label>
+                    <input matInput formControlName="cel" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Notas</mat-label>
+                    <input matInput formControlName="notes" />
+                  </mat-form-field>
+
+                  <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
+                    (click)="removePaymentContact(i)" [disabled]="paymentContacts.length === 1" matTooltip="Eliminar contacto">
+                    <mat-icon>delete</mat-icon>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -562,7 +579,7 @@
                   <mat-icon>arrow_back</mat-icon>
                   Anterior
                 </button>
-                <button type="submit" mat-flat-button class="custom-button save-btn" [disabled]="saving">
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save" [disabled]="saving || form.invalid || !hasChanges">
                   <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
                   Guardar
                 </button>

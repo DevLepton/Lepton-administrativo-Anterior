@@ -84,6 +84,8 @@ export class HeaderComponent implements OnInit {
       this.logout();
     } else if (label === 'Perfil') {
       this.router.navigate(['/perfil']);
+    } else if (label === 'Configuración') {
+      this.router.navigate(['/configuracion']);
     } else {
       console.log(`Opción seleccionada: ${label}`);
     }

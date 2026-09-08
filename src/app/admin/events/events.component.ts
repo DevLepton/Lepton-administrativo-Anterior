@@ -24,7 +24,7 @@ export class EventsComponent implements OnInit {
   errorMsg = '';
 
   /** paginación en UI (cliente) */
-  perPage = 10;
+  perPage = 25;
   currentPage = 1;
 
   /** búsqueda (cliente) */
@@ -66,15 +66,17 @@ export class EventsComponent implements OnInit {
             return bms - ams;
           });
 
+          this.updateCollectionOptions();
+
           this.currentPage = 1;
         },
         error: (err) => {
           // console.error(err);
           this.toast.error({
-              detail: 'Error',
-              summary: 'No se pudieron cargar los eventos. Intente más tarde.',
-              duration: 5000,
-            });
+            detail: 'Error',
+            summary: 'No se pudieron cargar los eventos. Intente más tarde.',
+            duration: 5000,
+          });
           this.errorMsg = 'No se pudieron cargar los eventos.';
         },
         complete: () => {
@@ -178,6 +180,7 @@ export class EventsComponent implements OnInit {
       identifier: ev.identifier,
       collectionName: ev.collectionName,
       operation: ev.operation as any,
+      eventComments: ev.eventComments,
       finalValues: (ev as any).finalValues,
       user: (ev as any).user,
       request: (ev as any).request,
@@ -191,10 +194,10 @@ export class EventsComponent implements OnInit {
     if (!docId) {
       this.errorMsg = 'No se encontró el _id del documento en este evento.';
       this.toast.error({
-              detail: 'Error',
-              summary: 'No se encontró el _id del documento en este evento.',
-              duration: 5000,
-            });
+        detail: 'Error',
+        summary: 'No se encontró el _id del documento en este evento.',
+        duration: 5000,
+      });
       return;
     }
 
@@ -218,6 +221,7 @@ export class EventsComponent implements OnInit {
           identifier: (ev as any).identifier,
           collectionName: (ev as any).collectionName,
           operation: ev.operation as any,
+          eventComments: ev.eventComments,
           finalValues: (ev as any).finalValues,
           user: (ev as any).user,
           request: (ev as any).request,
@@ -230,10 +234,10 @@ export class EventsComponent implements OnInit {
       error: (err) => {
         // console.error(err);
         this.toast.error({
-              detail: 'Error',
-              summary: 'No se pudo cargar el historial.',
-              duration: 5000,
-            });
+          detail: 'Error',
+          summary: 'No se pudo cargar el historial.',
+          duration: 5000,
+        });
         this.errorMsg = 'No se pudo cargar el historial.';
       }
     });
@@ -284,7 +288,7 @@ export class EventsComponent implements OnInit {
 
   /** Filtros */
   opsOptions = ['Creación', 'Actualización', 'Eliminación'];
-  colOptions = ['Dispositivos', 'Usuarios', 'Servicios'];
+  colOptions: string[] = [];
 
   selectedOps: string[] = [];
   selectedCols: string[] = [];
@@ -302,5 +306,12 @@ export class EventsComponent implements OnInit {
     this.currentPage = 1;
   }
 
+  private updateCollectionOptions(): void {
+    this.colOptions = [...new Set(
+      this.events
+        .map(ev => this.mapCollectionToEs(ev.collectionName))
+        .filter(Boolean)
+    )].sort();
+  }
 
 }

@@ -245,7 +245,7 @@
         </table>
       </div>
       <mat-paginator *ngIf="accessoriesFiltered.length > 0" [length]="accessoriesFiltered.length"
-        [pageIndex]="accessoriesCurrentPage - 1" [pageSize]="accessoriesPerPage" [pageSizeOptions]="[10, 25, 50, 100]"
+        [pageIndex]="accessoriesCurrentPage - 1" [pageSize]="accessoriesPerPage" [pageSizeOptions]="[25, 50, 100]"
         [showFirstLastButtons]="true" (page)="onPageChange($event)">
       </mat-paginator>
     </div>

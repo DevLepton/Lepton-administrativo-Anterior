@@ -50,7 +50,7 @@ export class SimsTabComponent implements OnChanges {
   selectedIds = new Set<string>();
 
   // paginado
-  simsPerPage = 10;
+  simsPerPage = 25;
   simsCurrentPage = 1;
 
   // filtros

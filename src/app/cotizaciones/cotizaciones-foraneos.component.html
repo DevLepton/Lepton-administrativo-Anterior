@@ -2,7 +2,7 @@
   <mat-tab-group [selectedIndex]="activeTabIndex" (selectedIndexChange)="onTabChange($event)" class="almacen-tabs">
     <mat-tab label="Técnicos foráneos">
       <div class="tab-pane">
-        <div class="header actions-container">
+        <div class="header actions-container" style="margin-bottom: 0.5rem;">
           <div class="filter-bar">
             <div class="filter-container">
               <mat-form-field appearance="outline" class="search" subscriptSizing="dynamic">
@@ -35,6 +35,42 @@
                 </span>
               </div>
             </div>
+          </div>
+        </div>
+
+        <div class="technician-averages">
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>build</mat-icon> </div>
+            <div class="average-card__content"> <span>Instalación</span> <strong> {{
+                technicianAverages.installation | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN </strong>
+            </div>
+          </div>
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>search</mat-icon> </div>
+            <div class="average-card__content"> <span>Revisión</span> <strong> {{ technicianAverages.inspection |
+                currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN </strong> </div>
+          </div>
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>delete_outline</mat-icon> </div>
+            <div class="average-card__content"> <span>Retiro</span> <strong> {{ technicianAverages.withdrawal |
+                currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN </strong> </div>
+          </div>
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>undo</mat-icon> </div>
+            <div class="average-card__content"> <span>Vuelta en falso</span> <strong> {{
+                technicianAverages.falseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN </strong>
+            </div>
+          </div>
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>directions_car</mat-icon> </div>
+            <div class="average-card__content"> <span>Viáticos</span> <strong> {{
+                technicianAverages.travelExpenses | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN
+              </strong> </div>
+          </div>
+          <div class="average-card">
+            <div class="average-card__icon"> <mat-icon>local_shipping</mat-icon> </div>
+            <div class="average-card__content"> <span>Traslado</span> <strong> {{ technicianAverages.transfer |
+                currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN </strong> </div>
           </div>
         </div>
 
@@ -117,7 +153,7 @@
               </div>
 
               <mat-paginator *ngIf="filteredTechnicians.length > 0" [length]="filteredTechnicians.length"
-                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]"
                 [showFirstLastButtons]="true" (page)="onPageChange($event)">
               </mat-paginator>
             </div>
@@ -151,7 +187,8 @@
                 <div class="side-table">
                   <div class="side-table__row">
                     <div>Instalación</div>
-                    <div class="right">{{ item.installationPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
+                    <div class="right">{{ item.installationPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+                    </div>
                   </div>
                   <div class="side-table__row">
                     <div>Revisión</div>
@@ -163,11 +200,13 @@
                   </div>
                   <div class="side-table__row">
                     <div>Vuelta en falso</div>
-                    <div class="right">{{ item.priceFalseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
+                    <div class="right">{{ item.priceFalseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+                    </div>
                   </div>
                   <div class="side-table__row">
                     <div>Viáticos</div>
-                    <div class="right">{{ item.travelExpensesPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
+                    <div class="right">{{ item.travelExpensesPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+                    </div>
                   </div>
                   <div class="side-table__row">
                     <div>Traslado</div>
@@ -192,6 +231,49 @@
                     </span>
                   </div>
                 </div>
+              </div>
+
+              <div class="side-section">
+                <h4>Métodos de pago</h4>
+                <div class="side-table" *ngIf="item.paymentMethods.length; else noPaymentMethodsTpl">
+                  <div class="side-table__row"
+                    style="display: flex; flex-direction: column; font-size: 0.75rem; align-items: start; gap: 0.2rem;"
+                    *ngFor="let paymentMethod of item.paymentMethods">
+                    <div>
+                      <b>Titular:</b>
+                      <span class="status-badge">
+                        {{ paymentMethod.holder }}
+                      </span>
+                    </div>
+                    <div>
+                      <b>Banco:</b>
+                      <span class="status-badge">
+                        {{ paymentMethod.bankName }}
+                      </span>
+                    </div>
+                    <div>
+                      <b>Número de cuenta:</b>
+                      <span class="status-badge">
+                        {{ paymentMethod.accountNumber }}
+                      </span>
+                    </div>
+                    <div>
+                      <b>Clabe:</b>
+                      <span class="status-badge">
+                        {{ paymentMethod.CLABE }}
+                      </span>
+                    </div>
+                    <div>
+                      <b>Número de tarjeta:</b>
+                      <span class="status-badge">
+                        {{ paymentMethod.cardNumber }}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+                <ng-template #noPaymentMethodsTpl>
+                  <div class="comments-box">Sin métodos de pago registrados.</div>
+                </ng-template>
               </div>
 
               <div class="side-section">
@@ -309,7 +391,7 @@
               </div>
 
               <mat-paginator *ngIf="filteredTravelExpenses.length > 0" [length]="filteredTravelExpenses.length"
-                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [pageIndex]="currentPage - 1" [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]"
                 [showFirstLastButtons]="true" (page)="onPageChange($event)">
               </mat-paginator>
             </div>
@@ -338,7 +420,8 @@
                   </div>
                   <div class="side-table__row">
                     <div>Tarifa por km</div>
-                    <div class="right">{{ (currentExtra?.kmRate || 0) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
+                    <div class="right">{{ (currentExtra?.kmRate || 0) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US'
+                      }}</div>
                   </div>
                   <div class="side-table__row">
                     <div>Total casetas</div>
@@ -346,7 +429,8 @@
                   </div>
                   <div class="side-table__row">
                     <div>Total estimado</div>
-                    <div class="right">{{ travelExpenseTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</div>
+                    <div class="right">{{ travelExpenseTotal(item) | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -451,7 +535,7 @@
 </div>
 
 <div class="modal-backdrop" *ngIf="modalOpen" (click)="closeModal()">
-  <div class="modal-content quote-modal" (click)="$event.stopPropagation()">
+  <div class="modal-content quote-modal" style="width: min(90vw, 900px);" (click)="$event.stopPropagation()">
     <button mat-icon-button class="close-button" (click)="closeModal()">
       <mat-icon>close</mat-icon>
     </button>
@@ -529,6 +613,54 @@
           <mat-label>Comentarios</mat-label>
           <textarea matInput rows="3" formControlName="comments"></textarea>
         </mat-form-field>
+
+        <div class="payment-methods-editor big-field" formArrayName="paymentMethods">
+          <div class="payment-methods-editor__head">
+            <h3>Métodos de pago</h3>
+            <button type="button" mat-button class="custom-button" (click)="addPaymentMethod()">
+              <mat-icon>add</mat-icon>
+              Agregar método de pago
+            </button>
+          </div>
+
+          <div class="payment-method-row" *ngFor="let paymentMethod of paymentMethodFormArray.controls; let i = index"
+            [formGroupName]="i">
+            <div class="payment-method-fields">
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Titular</mat-label>
+                <input matInput formControlName="holder" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Banco</mat-label>
+                <input matInput formControlName="bankName" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Número de cuenta</mat-label>
+                <input matInput formControlName="accountNumber" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Clabe</mat-label>
+                <input matInput formControlName="CLABE" />
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                <mat-label>Número de tarjeta</mat-label>
+                <input matInput formControlName="cardNumber" />
+              </mat-form-field>
+            </div>
+            <button type="button" mat-icon-button class="remove-payment-method" matTooltip="Eliminar método de pago"
+              (click)="removePaymentMethod(i)">
+              <mat-icon>delete</mat-icon>
+            </button>
+          </div>
+
+          <div class="comments-box" *ngIf="paymentMethodFormArray.length === 0">
+            Sin métodos de pago registrados.
+          </div>
+        </div>
       </div>
 
       <div class="modal-actions">

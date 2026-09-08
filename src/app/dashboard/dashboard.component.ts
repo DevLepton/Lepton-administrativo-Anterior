@@ -31,7 +31,7 @@ export class DashboardComponent implements OnInit {
   clientes: Cliente[] = []; // Lista completa de clientes
   filteredClientes: Cliente[] = []; // Clientes filtrados por los criterios seleccionados
   selectedStatus: string = 'pendiente'; // Filtro de estatus seleccionado
-  clientesPerPage = 10; // Clientes por página
+  clientesPerPage = 25; // Clientes por página
   currentPage = 1; // Página actual
   showAll = true; // Indica si se muestran todos los clientes o se aplica paginación
   sortStates: { [key: string]: boolean } = {

@@ -34,7 +34,7 @@
                 </mat-form-field>
 
                 <!-- 🗂️ Filtro por Colección (múltiple) -->
-                <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+                <mat-form-field appearance="outline" class="filter" style="flex: 0 1 270px;" subscriptSizing="dynamic">
                     <mat-label>Colección</mat-label>
                     <mat-select [(ngModel)]="selectedCols" multiple (selectionChange)="onFiltersChange()">
                         <mat-option *ngFor="let c of colOptions" [value]="c">{{ c }}</mat-option>
@@ -134,7 +134,7 @@
             </table>
         </div>
         <mat-paginator *ngIf="filtered.length > 0" [length]="filtered.length" [pageIndex]="currentPage - 1"
-            [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+            [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]" [showFirstLastButtons]="true"
             (page)="onPageChange($event)">
         </mat-paginator>
     </div>

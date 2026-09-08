@@ -1,14 +1,14 @@
 
 
 .panel {
-  width: min(560px, 92vw);
+  width: min(700px, 92vw);
   background: var(--mat-sys-surface, #fff);
   border-radius: 16px;
-  padding: 1rem 1rem 1.25rem;
+  padding: 1.3rem 1.5rem;
 }
 
 .title {
-  margin: .25rem 0 1rem;
+  margin: .25rem 0 1.2rem;
 }
 
 .grid {
@@ -24,43 +24,43 @@
   display: flex;
   justify-content: flex-end;
   gap: .5rem;
-  padding-top: .5rem;
-}
-
-.cancel-btn {
-  color: red !important;
-  border-color: red !important;
-  transition: all 0.3s ease;
-
-   &:hover {
-    background-color: rgba(255, 0, 0, 0.1) !important;
-    border-color: red !important;
-  }
-
-  // Al hacer clic (estado activo)
-  &:active {
-    background-color: rgba(255, 0, 0, 0.2) !important;
-  }
-
-  // Deshabilitado
-  &:disabled {
-    color: rgba(255, 0, 0, 0.3) !important;
-    border-color: rgba(255, 0, 0, 0.3) !important;
-  }
-}
-
-.submit-btn:disabled {
-  background-color: #ccc !important;
-  color: #666 !important;
-}
-
-.actions button {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
+  padding-top: 1rem;
 }
 
 .mr-1 {
   margin-right: .25rem;
+}
+
+.form-flex {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: flex-start;
+
+  > mat-form-field {
+    flex: 1 1 300px;
+  }
+
+  .tiny-field {
+    flex: 1 1 80px;
+  }
+
+  .small-field {
+    flex: 1 1 200px;
+  }
+
+  .medium-field {
+    flex: 1 1 calc(50% - 15px);
+  }
+
+  .big-field {
+    flex: 1 1 100%;
+  }
+
+  .checkbox-field {
+    flex: 1 1 200px;
+    min-height: 56px;
+    display: flex;
+    align-items: center;
+  }
 }

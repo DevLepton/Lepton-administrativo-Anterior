@@ -1,5 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormArray, FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
@@ -49,7 +49,7 @@ export class SubClientesComponent implements OnInit {
   voucherTypeFilter: '' | 'Recibo' | 'Factura' = '';
   userIdFilter: number | '' = '';
   currentPage = 1;
-  perPage = 10;
+  perPage = 25;
 
   selectedIds = new Set<string>();
   sidePanelOpen = false;
@@ -59,6 +59,7 @@ export class SubClientesComponent implements OnInit {
   modalMode: ModalMode = 'create';
   saving = false;
   editingId: string | null = null;
+  originalEditPayload: CreateBillingClientPayload | null = null;
   form: FormGroup;
   colonias: string[] = [];
   loadingColonias = false;
@@ -141,6 +142,7 @@ export class SubClientesComponent implements OnInit {
     this.loadInitialData();
     this.onCodigoPostalChange();
     this.onBillingClientTypeChange();
+    this.onVoucherTypeChange();
   }
 
   selectInput(event: FocusEvent): void {
@@ -173,26 +175,12 @@ export class SubClientesComponent implements OnInit {
       .filter((item): item is BillingClientItem => !!item);
   }
 
-  uniqueLinkedClients: ClientOption[] = [];
+  get hasChanges(): boolean {
+    if (this.modalMode === 'create') return true;
+    if (!this.originalEditPayload) return false;
 
-  // private updateUniqueLinkedClients(): void {
-  //   const ids = new Set(
-  //     this.billingClients
-  //       .filter(item => item.type === 'client')
-  //       .map(item => item.userId)
-  //       .filter((id): id is number => typeof id === 'number')
-  //   );
-
-  //   this.uniqueLinkedClients = Array.from(ids)
-  //     .map(id =>
-  //       this.clientByUserId.get(id) ?? {
-  //         userId: id,
-  //         fullName: 'Sin nombre',
-  //         email: ''
-  //       }
-  //     )
-  //     .sort((a, b) => a.userId - b.userId);
-  // }
+    return JSON.stringify(this.buildPayload()) !== JSON.stringify(this.originalEditPayload);
+  }
 
   get linkedClientOptions(): ClientOption[] {
     const currentUserId = this.form.get('userId')?.value;
@@ -213,6 +201,21 @@ export class SubClientesComponent implements OnInit {
 
       return isActive && !isExcluded && (!isUsedByOtherBillingClient || isCurrentValue);
     });
+  }
+
+  get filteredLinkedClientOptions(): ClientOption[] {
+    const value = this.form.get('userId')?.value;
+    const q = typeof value === 'number'
+      ? ''
+      : this.normalize(value);
+
+    if (!q) return this.linkedClientOptions;
+
+    return this.linkedClientOptions.filter(client =>
+      this.normalize(client.fullName).includes(q) ||
+      this.normalize(client.email).includes(q) ||
+      String(client.userId).includes(q)
+    );
   }
 
   get parentBillingClientOptions(): BillingClientItem[] {
@@ -339,6 +342,7 @@ export class SubClientesComponent implements OnInit {
 
             this.currentPage = 1;
             this.clearSelection();
+            this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
           }
         },
         complete: () => {
@@ -346,7 +350,6 @@ export class SubClientesComponent implements OnInit {
         }
       });
 
-    // Las demás peticiones pueden seguir juntas
     forkJoin({
       clients: this.api.getClientsListCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
       activeConfig: this.api.getActiveClientsConfigCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
@@ -382,6 +385,8 @@ export class SubClientesComponent implements OnInit {
               .filter((id: number) => Number.isFinite(id))
             : [];
         }
+
+        this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
       },
       complete: () => {
         this.clientsLoading = false;
@@ -476,6 +481,7 @@ export class SubClientesComponent implements OnInit {
   openCreateModal(): void {
     this.modalMode = 'create';
     this.editingId = null;
+    this.originalEditPayload = null;
     this.resetForm();
     this.modalOpen = true;
     document.body.style.overflow = 'hidden';
@@ -498,6 +504,7 @@ export class SubClientesComponent implements OnInit {
     this.modalOpen = false;
     this.saving = false;
     this.editingId = null;
+    this.originalEditPayload = null;
     document.body.style.overflow = '';
   }
 
@@ -835,8 +842,9 @@ export class SubClientesComponent implements OnInit {
     return `#${userId} - ${this.getClientName(userId)}`;
   }
 
-  displayClientOption = (value: number | null): string => {
+  displayClientOption = (value: number | string | null): string => {
     if (value === null || value === undefined) return '';
+    if (typeof value === 'string') return value;
     return this.getClientLabel(value);
   };
 
@@ -880,6 +888,7 @@ export class SubClientesComponent implements OnInit {
     }, { emitEvent: false });
 
     this.applyTypeRules(item?.type ?? 'client');
+    this.applyVoucherTypeRules(item?.voucherType ?? 'Recibo');
     this.colonias = item?.suburb ? [item.suburb] : [];
 
     if (item?.cp && /^[0-9]{5}$/.test(String(item.cp))) {
@@ -888,6 +897,12 @@ export class SubClientesComponent implements OnInit {
 
     const contacts = item?.paymentContacts?.length ? item.paymentContacts : [{ name: '', email: '', cel: '', notes: '' }];
     contacts.forEach(contact => this.addPaymentContact(contact));
+
+    if (item) {
+      this.originalEditPayload = this.buildPayload();
+    } else {
+      this.originalEditPayload = null;
+    }
   }
 
   private buildPayload(): CreateBillingClientPayload {
@@ -897,6 +912,8 @@ export class SubClientesComponent implements OnInit {
     const subBillingClients = Array.isArray(value.subBillingClients)
       ? value.subBillingClients.map((id: unknown) => String(id)).filter(Boolean)
       : [];
+
+    const isInvoice = value.voucherType === 'Factura';
 
     const payload: CreateBillingClientPayload = {
       type,
@@ -915,9 +932,11 @@ export class SubClientesComponent implements OnInit {
       voucherType: value.voucherType,
       cutoffDay: Number(value.cutoffDay ?? 1),
       companyName: String(value.companyName ?? '').trim(),
-      RFC: String(value.RFC ?? '').trim(),
-      useInvoice: String(value.useInvoice ?? '').trim(),
-      taxRegime: String(value.taxRegime ?? '').trim(),
+
+      RFC: isInvoice ? String(value.RFC ?? '').trim() : '',
+      useInvoice: isInvoice ? String(value.useInvoice ?? '').trim() : '',
+      taxRegime: isInvoice ? String(value.taxRegime ?? '').trim() : '',
+
       email: String(value.email ?? '').trim(),
       cp: value.cp === null || value.cp === '' ? null : Number(value.cp),
       street: String(value.street ?? '').trim(),
@@ -948,6 +967,7 @@ export class SubClientesComponent implements OnInit {
       .sort((a: ClientOption, b: ClientOption) => a.userId - b.userId);
 
     this.clientByUserId = new Map(this.clients.map(client => [client.userId, client] as const));
+    this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
   }
 
   private mapClient(item: ClientListItem): ClientOption | null {
@@ -1012,13 +1032,19 @@ export class SubClientesComponent implements OnInit {
     });
   }
 
+  private onVoucherTypeChange(): void {
+    this.form.get('voucherType')?.valueChanges.subscribe((voucherType: 'Recibo' | 'Factura') => {
+      this.applyVoucherTypeRules(voucherType);
+    });
+  }
+
   private applyTypeRules(type: BillingClientType): void {
     const userId = this.form.get('userId');
     const billingClientFather = this.form.get('billingClientFather');
     const subBillingClients = this.form.get('subBillingClients');
 
     if (type === 'client') {
-      userId?.setValidators([Validators.required]);
+      userId?.setValidators([Validators.required, this.validLinkedClientValidator]);
       billingClientFather?.clearValidators();
       billingClientFather?.setValue(null, { emitEvent: false });
       subBillingClients?.enable({ emitEvent: false });
@@ -1034,6 +1060,51 @@ export class SubClientesComponent implements OnInit {
     billingClientFather?.updateValueAndValidity({ emitEvent: false });
     subBillingClients?.updateValueAndValidity({ emitEvent: false });
   }
+
+  private applyVoucherTypeRules(voucherType: 'Recibo' | 'Factura'): void {
+    const RFC = this.form.get('RFC');
+    const taxRegime = this.form.get('taxRegime');
+    const useInvoice = this.form.get('useInvoice');
+
+    if (voucherType === 'Factura') {
+      RFC?.setValidators([
+        Validators.required,
+        Validators.maxLength(13)
+      ]);
+
+      taxRegime?.setValidators([
+        Validators.required
+      ]);
+
+      useInvoice?.setValidators([
+        Validators.required
+      ]);
+    } else {
+      RFC?.clearValidators();
+      taxRegime?.clearValidators();
+      useInvoice?.clearValidators();
+
+      RFC?.setValue('', { emitEvent: false });
+      taxRegime?.setValue('', { emitEvent: false });
+      useInvoice?.setValue('', { emitEvent: false });
+    }
+
+    RFC?.updateValueAndValidity({ emitEvent: false });
+    taxRegime?.updateValueAndValidity({ emitEvent: false });
+    useInvoice?.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private validLinkedClientValidator = (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value;
+    if (value === null || value === undefined || value === '') return null;
+
+    const userId = Number(value);
+    if (!Number.isFinite(userId)) return { invalidClient: true };
+
+    return this.linkedClientOptions.some(client => client.userId === userId)
+      ? null
+      : { invalidClient: true };
+  };
 
   private normalizeObjectId(value: unknown): string | null {
     if (!value) return null;

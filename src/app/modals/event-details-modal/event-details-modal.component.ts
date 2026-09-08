@@ -5,6 +5,7 @@ export interface EventDetailsData {
   identifier: string;
   collectionName: string;
   operation: 'Creación' | 'Actualización' | 'Eliminación';
+  eventComments?: string;
   finalValues: any;
   user?: { _id?: string; email?: string; userName?: string; role?: string };
   request?: { method?: string; path?: string; ip?: string };
@@ -60,14 +61,13 @@ export class EventDetailsModalComponent {
       installationDate: 'Fecha de instalación',
       client: 'Cliente',
       comments: 'Comentarios',
-      // agrega más si lo necesitas
     };
     return dict[key] ?? key;
   }
 
   /** Claves que son fechas (se muestran sin hora) */
   isDateKey(key: string): boolean {
-    return key === 'purchaseDate' || key === 'entryDate' || key === 'installationDate';
+    return key === 'purchaseDate' || key === 'entryDate' || key === 'installationDate' || key === 'createdAt';
   }
 
   /** Entradas (clave/valor) de finalValues sin _id */

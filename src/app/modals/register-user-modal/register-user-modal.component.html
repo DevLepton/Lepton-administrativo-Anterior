@@ -4,7 +4,7 @@
 
     <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="grid gap-4">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form-flex">
 
       <mat-form-field appearance="outline">
         <mat-label>Nombre de usuario</mat-label>
@@ -39,16 +39,16 @@
         </mat-select>
       </mat-form-field>
 
-      <div class="actions">
-        <button mat-stroked-button class="cancel-btn" type="button" (click)="close()" [disabled]="loading">
-          Cancelar
-        </button>
-
-        <button mat-raised-button color="primary" type="submit" class="submit-btn" [disabled]="form.invalid || loading">
-          <mat-icon class="mr-1" *ngIf="!loading">person_add</mat-icon>
-          {{ loading ? 'Registrando…' : 'Registrar' }}
-        </button>
-      </div>
     </form>
+    <div class="actions">
+      <button mat-button color="warn" class="custom-button" type="button" (click)="close()" [disabled]="loading">
+        Cancelar
+      </button>
+
+      <button mat-flat-button color="primary" type="submit" class="custom-button" [disabled]="form.invalid || loading">
+        <mat-icon class="mr-1" *ngIf="!loading">person_add</mat-icon>
+        {{ loading ? 'Registrando…' : 'Registrar' }}
+      </button>
+    </div>
   </div>
 </div>

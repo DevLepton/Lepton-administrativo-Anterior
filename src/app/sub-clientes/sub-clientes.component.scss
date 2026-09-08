@@ -316,7 +316,6 @@ mat-paginator {
     display: flex;
     align-items: center;
   }
-
 }
 
 .subclient-stepper {
@@ -333,6 +332,10 @@ mat-paginator {
 
 .step-content {
   min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  justify-content: space-between;
 }
 
 .stepper-controls {
@@ -340,7 +343,7 @@ mat-paginator {
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 20px;
+  // margin-top: 20px;
 
   &.final {
     justify-content: space-between;
@@ -396,9 +399,9 @@ mat-paginator {
 .save-btn {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background-color: var(--color-success) !important;
-  color: #fff !important;
+  // gap: 6px;
+  // background-color: var(--color-success) !important;
+  // color: #fff !important;
 }
 
 @media (max-width: 900px) {
@@ -438,4 +441,8 @@ mat-paginator {
 
 .child-row {
     background: #fafafa;
+}
+
+.btn-save:not(:disabled) {
+  background-color: var(--color-success);
 }

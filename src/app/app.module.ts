@@ -87,6 +87,7 @@ import { ConfirmModalComponent } from './services/confirm-modal/confirm-modal.co
 import { MatCheckboxModule } from '@angular/material/checkbox';
 import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { UserProfileComponent } from './general/user-profile/user-profile.component';
+import { SystemSettingsComponent } from './general/system-settings/system-settings.component';
 import { A11yModule } from "@angular/cdk/a11y";
 import { AuthService } from './services/auth.service';
 import { SubClientesComponent } from './sub-clientes/sub-clientes.component';
@@ -165,6 +166,7 @@ export function initAuth(authService: AuthService) {
     CotizacionesProductosComponent,
     CotizacionesForaneosComponent,
     CotizacionesSugerenciasComponent,
+    SystemSettingsComponent,
   ],
   imports: [
     BrowserModule,

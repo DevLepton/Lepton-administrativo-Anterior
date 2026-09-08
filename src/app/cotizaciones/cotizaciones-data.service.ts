@@ -166,6 +166,7 @@ export class CotizacionesDataService {
       products: Array.isArray(item?.products)
         ? item.products.map((p: any) => ({
           name: String(p?.name ?? ''),
+          concept: String(p?.concept ?? ''),
           description: String(p?.description ?? ''),
           type: (p?.type ?? '') as any,
           price: Number(p?.price ?? 0),
@@ -198,6 +199,7 @@ export class CotizacionesDataService {
       _id: String(item?._id ?? item?.id ?? ''),
       type: item?.type,
       name: String(item?.name ?? ''),
+      concept: String(item?.concept ?? ''),
       description: String(item?.description ?? ''),
       price: Number(item?.price ?? 0),
       priceIVA: Number(item?.priceIVA ?? 0),
@@ -224,6 +226,15 @@ export class CotizacionesDataService {
       priceFalseReversal: Number(item?.priceFalseReversal ?? 0),
       travelExpensesPrice: Number(item?.travelExpensesPrice ?? 0),
       transferPrice: Number(item?.transferPrice ?? 0),
+      paymentMethods: Array.isArray(item?.paymentMethods)
+        ? item.paymentMethods.map((paymentMethod: any) => ({
+          holder: String(paymentMethod?.holder ?? ''),
+          bankName: String(paymentMethod?.bankName ?? ''),
+          accountNumber: String(paymentMethod?.accountNumber ?? ''),
+          CLABE: String(paymentMethod?.CLABE ?? ''),
+          cardNumber: String(paymentMethod?.cardNumber ?? '')
+        }))
+        : [],
       comments: String(item?.comments ?? '')
     };
   }

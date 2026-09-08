@@ -13,9 +13,10 @@
         <div><span class="k">Usuario:</span>
           <span>{{ data?.user?.userName || data?.user?.email || data?.user?._id || '-' }}</span>
         </div>
+
         <div><span class="k">Fecha:</span>
           <!-- sin hora -->
-          <span>{{ data.createdAt | date:'dd MMM yyyy' }}</span>
+          <span>{{ data.createdAt | date:'dd MMM yyyy, HH:mm' }}</span>
         </div>
       </div>
 
@@ -35,7 +36,7 @@
               <td class="cell-val">
                 <!-- si la clave es fecha, mostrar sin hora -->
                 <ng-container *ngIf="isDateKey(row.key); else notDate">
-                  {{ row.value | date:'dd MMM yyyy':'UTC' }}
+                  {{ row.value | date:'dd MMM yyyy, HH:mm' }}
                 </ng-container>
 
                 <ng-template #notDate>
@@ -52,6 +53,11 @@
           </tbody>
         </table>
       </div>
+
+      <div class="event-comments" *ngIf="data.eventComments">
+          <span class="k">Comentarios:</span>
+          <span>{{ data.eventComments }}</span>
+        </div>
     </div>
 
     <div class="modal-footer">

@@ -4,22 +4,21 @@
 
     <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
 
-    <form [formGroup]="form" (ngSubmit)="submit()" class="grid gap-4">
-
-      <mat-form-field appearance="outline">
+    <form [formGroup]="form" (ngSubmit)="submit()" class="form-flex">
+      <mat-form-field appearance="outline" class="medium-field">
         <mat-label>Nombre de usuario</mat-label>
         <input matInput formControlName="userName" placeholder="" />
         <mat-error *ngIf="form.get('userName')?.hasError('required')">Nombre requerido</mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="medium-field">
         <mat-label>Correo electrónico</mat-label>
         <input matInput type="email" formControlName="email" placeholder="usuario@lepton-seguridad.com" />
         <mat-error *ngIf="form.get('email')?.hasError('required')">Correo requerido</mat-error>
         <mat-error *ngIf="form.get('email')?.hasError('email')">Correo inválido</mat-error>
       </mat-form-field>
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="medium-field">
         <mat-label>Contraseña</mat-label>
         <input matInput [type]="hide ? 'password' : 'text'" formControlName="password" placeholder="(Opcional)">
         <button mat-icon-button matSuffix type="button" (click)="hide = !hide" aria-label="Mostrar/ocultar contraseña">
@@ -28,7 +27,7 @@
       </mat-form-field>
 
 
-      <mat-form-field appearance="outline">
+      <mat-form-field appearance="outline" class="medium-field">
         <mat-label>Rol</mat-label>
         <mat-select formControlName="role">
           <mat-option value="admin">Admin</mat-option>
@@ -39,19 +38,19 @@
         </mat-select>
         <mat-error *ngIf="form.get('role')?.hasError('required')">Rol requerido</mat-error>
       </mat-form-field>
-
-      <div class="actions">
-        <button mat-stroked-button class="cancel-btn" type="button" (click)="close()" [disabled]="loading">
-          Cancelar
-        </button>
-
-        <button mat-raised-button color="primary" type="submit" class="submit-btn"
-          [disabled]="form.invalid || loading || !hasChanges()">
-          <mat-icon class="mr-1" *ngIf="!loading">save</mat-icon>
-          {{ loading ? 'Guardando…' : 'Guardar' }}
-        </button>
-
-      </div>
     </form>
+    <div class="actions">
+      <button mat-button color="warn" class="custom-button" type="button" (click)="close()" [disabled]="loading">
+        Cancelar
+      </button>
+
+      <button mat-flat-button color="primary" type="submit" class="custom-button"
+        [disabled]="form.invalid || loading || !hasChanges()">
+        <mat-icon class="mr-1" *ngIf="!loading">save</mat-icon>
+        {{ loading ? 'Guardando…' : 'Guardar' }}
+      </button>
+
+    </div>
+
   </div>
 </div>

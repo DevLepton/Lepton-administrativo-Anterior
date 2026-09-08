@@ -31,7 +31,7 @@ export class CotizacionesForaneosComponent implements OnInit {
   loading = false;
   search = '';
   currentPage = 1;
-  perPage = 10;
+  perPage = 25;
   selectedIds = new Set<string>();
   deletingId: string | null = null;
 
@@ -86,6 +86,7 @@ export class CotizacionesForaneosComponent implements OnInit {
       priceFalseReversal: [0, [Validators.min(0)]],
       travelExpensesPrice: [0, [Validators.min(0)]],
       transferPrice: [0, [Validators.min(0)]],
+      paymentMethods: this.fb.array([]),
       comments: ['']
     });
 
@@ -125,6 +126,23 @@ export class CotizacionesForaneosComponent implements OnInit {
   get displayedTechnicians(): ForeignTechnicianItem[] {
     const start = (this.currentPage - 1) * this.perPage;
     return this.filteredTechnicians.slice(start, start + this.perPage);
+  }
+
+  get technicianAverages() {
+    const technicians = this.technicians.filter(item =>
+      this.normalize(item.type).startsWith('for')
+    );
+
+    const count = technicians.length || 1;
+
+    return {
+      installation: technicians.reduce((sum, item) => sum + Number(item.installationPrice ?? 0), 0) / count,
+      inspection: technicians.reduce((sum, item) => sum + Number(item.inspectionFee ?? 0), 0) / count,
+      withdrawal: technicians.reduce((sum, item) => sum + Number(item.withdrawalPrice ?? 0), 0) / count,
+      falseReversal: technicians.reduce((sum, item) => sum + Number(item.priceFalseReversal ?? 0), 0) / count,
+      travelExpenses: technicians.reduce((sum, item) => sum + Number(item.travelExpensesPrice ?? 0), 0) / count,
+      transfer: technicians.reduce((sum, item) => sum + Number(item.transferPrice ?? 0), 0) / count
+    };
   }
 
   get filteredTravelExpenses(): TravelExpenseItem[] {
@@ -183,6 +201,10 @@ export class CotizacionesForaneosComponent implements OnInit {
 
   get travelExpenseTitle(): string {
     return this.travelExpenseModalMode === 'create' ? 'Nuevo viático' : 'Editar viático';
+  }
+
+  get paymentMethodFormArray(): FormArray {
+    return this.form.get('paymentMethods') as FormArray;
   }
 
   get boothsFormArray(): FormArray {
@@ -465,6 +487,20 @@ export class CotizacionesForaneosComponent implements OnInit {
     document.body.style.overflow = '';
   }
 
+  addPaymentMethod(paymentMethod?: { holder?: string; bankName?: string; accountNumber?: string; CLABE?: string; cardNumber?: string }): void {
+    this.paymentMethodFormArray.push(this.fb.group({
+      holder: [paymentMethod?.holder ?? '', [Validators.required, Validators.maxLength(120)]],
+      bankName: [paymentMethod?.bankName ?? '', [Validators.required, Validators.maxLength(50)]],
+      accountNumber: [paymentMethod?.accountNumber ?? '', [Validators.required, Validators.maxLength(50)]],
+      CLABE: [paymentMethod?.CLABE ?? '', [Validators.required, Validators.maxLength(50)]],
+      cardNumber: [paymentMethod?.cardNumber ?? '', [Validators.required, Validators.maxLength(50)]]
+    }));
+  }
+
+  removePaymentMethod(index: number): void {
+    this.paymentMethodFormArray.removeAt(index);
+  }
+
   addBooth(booth?: { name?: string; cost?: number }): void {
     this.boothsFormArray.push(this.fb.group({
       name: [booth?.name ?? '', [Validators.required, Validators.maxLength(120)]],
@@ -665,6 +701,8 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   private resetForm(item?: ForeignTechnicianItem): void {
+    this.paymentMethodFormArray.clear();
+
     this.form.reset({
       type: item?.type ?? 'Foráneo',
       name: item?.name ?? '',
@@ -681,6 +719,8 @@ export class CotizacionesForaneosComponent implements OnInit {
       transferPrice: item?.transferPrice ?? 0,
       comments: item?.comments ?? ''
     });
+
+    (item?.paymentMethods?.length ? item.paymentMethods : []).forEach(paymentMethod => this.addPaymentMethod(paymentMethod));
   }
 
   private resetTravelExpenseForm(item?: TravelExpenseItem): void {
@@ -724,6 +764,13 @@ export class CotizacionesForaneosComponent implements OnInit {
       priceFalseReversal: Number(value.priceFalseReversal ?? 0),
       travelExpensesPrice: Number(value.travelExpensesPrice ?? 0),
       transferPrice: Number(value.transferPrice ?? 0),
+      paymentMethods: (value.paymentMethods ?? []).map((paymentMethod: any) => ({
+        holder: String(paymentMethod.holder ?? '').trim(),
+        bankName: String(paymentMethod.bankName ?? '').trim(),
+        accountNumber: String(paymentMethod.accountNumber ?? '').trim(),
+        CLABE: String(paymentMethod.CLABE ?? '').trim(),
+        cardNumber: String(paymentMethod.cardNumber ?? '').trim()
+      })),
       comments: String(value.comments ?? '').trim()
     };
   }

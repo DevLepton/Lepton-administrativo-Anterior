@@ -35,7 +35,7 @@ export class DispositivosComponent implements OnInit {
   filterOptions: string[] = [];
 
   // Variables de paginación
-  dispositivosPerPage = 10; // Cantidad de productos por página
+  dispositivosPerPage = 25; // Cantidad de productos por página
   currentPage = 1; // Página actual
   showAll = true; // Controla si se muestran todos los productos o se paginan
 

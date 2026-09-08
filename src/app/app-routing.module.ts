@@ -9,6 +9,7 @@ import { AccesoDenegadoComponent } from './acceso-denegado/acceso-denegado.compo
 import { InicioRedireccionComponent } from './inicio-redireccion/inicio-redireccion.component';
 import { navbarData } from './sidenav/nav-data';
 import { UserProfileComponent } from './general/user-profile/user-profile.component';
+import { SystemSettingsComponent } from './general/system-settings/system-settings.component';
 
 const dynamicRoutes = navbarData.flatMap(item => [item, ...(item.children ?? [])]).map(item => ({
   path: item.RouteLink,
@@ -30,6 +31,12 @@ const routes: Routes = [
       {
         path: 'perfil',
         component: UserProfileComponent,
+        canActivate: [RoleGuard],
+        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'] }
+      },
+      {
+        path: 'configuracion',
+        component: SystemSettingsComponent,
         canActivate: [RoleGuard],
         data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'] }
       },

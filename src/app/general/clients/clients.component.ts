@@ -1,7 +1,7 @@
 import { Component, ElementRef, HostListener, OnInit, QueryList, ViewChild, ViewChildren } from '@angular/core';
 import { ApiService, ClienteUI, TrackerUI } from '../../services/api.service';
 import { Observable, Subscription } from 'rxjs';
-import datos from './datos.json';
+// import datos from './datos.json';
 
 import {
   trigger,

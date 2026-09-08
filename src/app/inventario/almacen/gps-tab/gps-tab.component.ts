@@ -52,7 +52,7 @@ export class GpsTabComponent implements OnChanges {
   gpsDeletingId: string | null = null;
 
   // paginado/filtros
-  gpsPerPage = 10;
+  gpsPerPage = 25;
   gpsCurrentPage = 1;
 
   gpsSearch = '';

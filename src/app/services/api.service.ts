@@ -23,6 +23,7 @@ export interface EventItem {
   identifier: string;
   collectionName: string;
   operation: EventOperation;
+  eventComments: string;
   finalValues: any;
   user?: EventUserSnapshot;
   request?: EventRequestMeta;
@@ -306,6 +307,7 @@ export type UpdateBankAccountPayload = Partial<CreateBankAccountPayload>;
 /* ====================== Cotizaciones ====================== */
 export interface QuoteProduct {
   name: string;
+  concept: string;
   description?: string;
   type: QuoteProductType;
   price: number;
@@ -356,6 +358,7 @@ export interface QuoteProductItem {
   _id: string;
   type: QuoteProductType;
   name: string;
+  concept: string;
   description?: string;
   price: number;
   priceIVA: number;
@@ -366,6 +369,14 @@ export interface QuoteProductItem {
 }
 
 export type ForeignTechnicianType = 'Local' | 'Foráneo';
+
+export interface ForeignTechnicianPaymentMethod {
+  holder: string;
+  bankName: string;
+  accountNumber: string;
+  CLABE: string;
+  cardNumber: string;
+}
 
 export interface ForeignTechnicianItem {
   _id: string;
@@ -382,6 +393,7 @@ export interface ForeignTechnicianItem {
   priceFalseReversal: number;
   travelExpensesPrice: number;
   transferPrice: number;
+  paymentMethods: ForeignTechnicianPaymentMethod[];
   comments?: string;
 }
 
@@ -436,8 +448,8 @@ export interface SuggestionItem {
   createdAt?: string | Date;
 }
 
-export const apiUrl = 'http://localhost:3103';
-// export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
+// export const apiUrl = 'http://localhost:3103';
+export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {

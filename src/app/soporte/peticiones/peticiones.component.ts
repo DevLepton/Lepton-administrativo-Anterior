@@ -59,7 +59,7 @@ export class PeticionesComponent implements OnInit {
   requestsDeletingId: string | null = null; // '__bulk__' para borrado masivo
 
   // paginado
-  requestsPerPage = 10;
+  requestsPerPage = 25;
   requestsCurrentPage = 1;
 
   // ===== filtros =====

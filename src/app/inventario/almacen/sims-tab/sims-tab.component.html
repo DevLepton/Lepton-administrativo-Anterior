@@ -222,7 +222,7 @@
                 </table>
             </div>
             <mat-paginator *ngIf="simsFiltered.length > 0" [length]="simsFiltered.length"
-                [pageIndex]="simsCurrentPage - 1" [pageSize]="simsPerPage" [pageSizeOptions]="[10, 25, 50, 100]"
+                [pageIndex]="simsCurrentPage - 1" [pageSize]="simsPerPage" [pageSizeOptions]="[25, 50, 100]"
                 [showFirstLastButtons]="true" (page)="onPageChange($event)">
             </mat-paginator>
         </div>

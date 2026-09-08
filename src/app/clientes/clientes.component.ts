@@ -47,7 +47,7 @@ export class ClientesComponent implements OnInit {
   filteredClientes: Cliente[] = [];
   selectedStatus: string = '';
   selectedComprobante: string = '';
-  clientesPerPage = 10; // Cantidad de clientes por página
+  clientesPerPage = 25; // Cantidad de clientes por página
   currentPage = 1; // Página actual
   showAll = true; // Mostrar todos o paginar
 

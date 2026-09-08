@@ -4,8 +4,8 @@
     <p>¿Estás seguro de que deseas eliminar al usuario <strong>{{ userName }}</strong>?</p>
 
     <div class="actions">
-      <button mat-stroked-button class="cancel-btn" (click)="close()">Cancelar</button>
-      <button mat-raised-button color="warn" (click)="confirm()">Eliminar</button>
+      <button mat-button class="custom-button" (click)="close()">Cancelar</button>
+      <button mat-flat-button color="warn" class="custom-button" (click)="confirm()">Eliminar</button>
     </div>
   </div>
 </div>

@@ -27,6 +27,7 @@ import { CotizacionesPdfService } from '../services/cotizaciones-pdf.service';
 type QuoteView = 'list' | 'builder';
 type QuoteSection = 'client' | 'products' | 'payment';
 type DiscountType = '%' | '$';
+type BillableFilter = 'all' | 'billable' | 'nonBillable';
 
 interface QuoteBuilderProduct extends QuoteProduct {
   productId: string;
@@ -106,8 +107,11 @@ export class CotizacionesComponent implements OnInit {
   savingBankAccount = false;
   deletingBankAccount = false;
   search = '';
+  quoteUsers: string[] = [];
+  selectedQuoteUsers: string[] = [];
+  billableFilter: BillableFilter = 'all';
   currentPage = 1;
-  perPage = 10;
+  perPage = 25;
   selectedIds = new Set<string>();
   previewPdfUrl: SafeResourceUrl | null = null;
   previewQuote: QuoteItem | null = null;
@@ -132,8 +136,10 @@ export class CotizacionesComponent implements OnInit {
   replicationNoticeModalOpen = false;
   activeSuggestion: PendingQuoteSuggestion | null = null;
   activeClientDiscount: PendingClientDiscount | null = null;
+
   private suggestionQueue: PendingQuoteSuggestion[] = [];
   private clientDiscountQueue: PendingClientDiscount[] = [];
+
   ignoredSuggestions: PendingQuoteSuggestion[] = [];
   replicationNotices: QuoteReplicationNotice[] = [];
   selectedBillingClientId = '';
@@ -218,6 +224,7 @@ export class CotizacionesComponent implements OnInit {
     request$.subscribe({
       next: quotes => {
         this.quotes = [...quotes].sort((a, b) => this.createdTime(b) - this.createdTime(a));
+        this.syncQuoteUserFilter();
         this.currentPage = 1;
         this.clearSelection();
       },
@@ -297,14 +304,35 @@ export class CotizacionesComponent implements OnInit {
 
   get filteredQuotes(): QuoteItem[] {
     const q = this.normalize(this.search);
+    const selectedUsers = new Set(this.selectedQuoteUsers.map(user => this.normalize(user)));
 
     return this.quotes.filter(item =>
-      !q ||
-      this.normalize(item.quoteNum).includes(q) ||
-      this.normalize(item.clientName).includes(q) ||
-      this.normalize(item.companyName).includes(q) ||
-      this.normalize(item.place).includes(q)
+      (
+        !q ||
+        this.normalize(item.quoteNum).includes(q) ||
+        this.normalize(item.clientName).includes(q) ||
+        this.normalize(item.companyName).includes(q) ||
+        this.normalize(item.place).includes(q)
+      ) &&
+      selectedUsers.has(this.normalize(this.getQuoteUserName(item))) &&
+      (
+        this.billableFilter === 'all' ||
+        (this.billableFilter === 'billable' && item.billable) ||
+        (this.billableFilter === 'nonBillable' && !item.billable)
+      )
     );
+  }
+
+  get allQuoteUsersSelected(): boolean {
+    return this.quoteUsers.length > 0 && this.selectedQuoteUsers.length === this.quoteUsers.length;
+  }
+
+  get selectedQuoteUsersLabel(): string {
+    if (!this.quoteUsers.length) return 'Sin usuarios';
+    if (this.allQuoteUsersSelected) return 'Todos los usuarios';
+    if (!this.selectedQuoteUsers.length) return 'Ningun usuario';
+
+    return `${this.selectedQuoteUsers.length} usuario${this.selectedQuoteUsers.length === 1 ? '' : 's'}`;
   }
 
   get displayedQuotes(): QuoteItem[] {
@@ -762,8 +790,8 @@ export class CotizacionesComponent implements OnInit {
     this.toast.info({
       detail: 'Cotizador',
       summary: this.replicationNotices.length
-        ? 'Cotizacion replicada con avisos'
-        : 'Cotizacion replicada con datos actuales',
+        ? 'Cotización replicada con avisos'
+        : 'Cotización replicada con datos actuales',
       duration: 3500
     });
   }
@@ -782,20 +810,20 @@ export class CotizacionesComponent implements OnInit {
   getReplicationNoticeTooltip(): string {
     if (!this.replicationNotices.length) return '';
     const count = this.replicationNotices.length;
-    return `${count} aviso${count === 1 ? '' : 's'} al replicar la cotizacion`;
+    return `${count} aviso${count === 1 ? '' : 's'} al replicar la cotización`;
   }
 
   async downloadSelectedQuotes(): Promise<void> {
     const selected = this.selectedQuotes;
 
     if (!selected.length) {
-      this.toast.warning({ detail: 'Sin seleccion', summary: 'Selecciona al menos una cotizacion', duration: 3000 });
+      this.toast.warning({ detail: 'Sin seleccion', summary: 'Selecciona al menos una cotización', duration: 3000 });
       return;
     }
 
     for (const quote of selected) {
       const pdf = await this.pdfService.createQuotePdf(quote);
-      const fileName = `Cotizacion-${this.sanitizeFileName(quote.quoteNum || quote._id)}.pdf`;
+      const fileName = `Cotización-${this.sanitizeFileName(quote.quoteNum || quote._id)}.pdf`;
       pdf.save(fileName);
     }
   }
@@ -930,6 +958,7 @@ export class CotizacionesComponent implements OnInit {
         productId: product._id,
         type: product.type,
         name: product.name,
+        concept: product.concept ?? '',
         description: product.description ?? '',
         price: Number(product.price ?? 0),
         priceIVA: Number(product.priceIVA ?? 0),
@@ -1010,12 +1039,27 @@ export class CotizacionesComponent implements OnInit {
     this.saveDraft();
   }
 
+  // updateProductDiscountAmount(item: QuoteBuilderProduct, value: number | null): void {
+  //   const discountAmount = Math.max(0, Number(value ?? 0));
+  //   const priceIVA = Number(item.priceIVA || 0);
+
+  //   this.discountAmounts[item.productId] = discountAmount;
+  //   item.discount = priceIVA > 0 ? this.roundMoney((discountAmount * 100) / priceIVA) : 0;
+  //   item.discountType = '%';
+
+  //   this.recalculateProduct(item);
+  //   this.saveDraft();
+  // }
+
   updateProductDiscountAmount(item: QuoteBuilderProduct, value: number | null): void {
     const discountAmount = Math.max(0, Number(value ?? 0));
     const priceIVA = Number(item.priceIVA || 0);
 
     this.discountAmounts[item.productId] = discountAmount;
-    item.discount = priceIVA > 0 ? this.roundMoney((discountAmount * 100) / priceIVA) : 0;
+
+    // Conservar toda la precisión del porcentaje.
+    item.discount = priceIVA > 0 ? (discountAmount * 100) / priceIVA : 0;
+
     item.discountType = '%';
 
     this.recalculateProduct(item);
@@ -1035,14 +1079,14 @@ export class CotizacionesComponent implements OnInit {
 
     this.api.createQuote(this.buildQuotePayload()).subscribe({
       next: () => {
-        this.toast.success({ detail: 'Exito', summary: 'Cotizacion creada correctamente', duration: 3500 });
+        this.toast.success({ detail: 'Exito', summary: 'Cotización creada correctamente', duration: 3500 });
         this.clearDraft();
         this.activeView = 'list';
         this.loadQuotes(true);
       },
       error: error => {
-        console.error('Error al crear cotizacion:', error);
-        const msg = error?.error?.error || error?.error?.message || 'No se pudo crear la cotizacion';
+        console.error('Error al crear cotización:', error);
+        const msg = error?.error?.error || error?.error?.message || 'No se pudo crear la cotización';
         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
       },
       complete: () => {
@@ -1058,6 +1102,26 @@ export class CotizacionesComponent implements OnInit {
 
   updateSearch(value: string): void {
     this.search = (value ?? '').trim();
+    this.currentPage = 1;
+  }
+
+  updateQuoteUserFilter(value: string[]): void {
+    this.selectedQuoteUsers = Array.isArray(value) ? value : [];
+    this.currentPage = 1;
+  }
+
+  selectAllQuoteUsers(): void {
+    this.selectedQuoteUsers = [...this.quoteUsers];
+    this.currentPage = 1;
+  }
+
+  clearQuoteUsers(): void {
+    this.selectedQuoteUsers = [];
+    this.currentPage = 1;
+  }
+
+  updateBillableFilter(value: BillableFilter): void {
+    this.billableFilter = value;
     this.currentPage = 1;
   }
 
@@ -1221,6 +1285,7 @@ export class CotizacionesComponent implements OnInit {
       validity: this.toDateValue(client.validity),
       products: this.quoteProducts.map(item => ({
         name: item.name,
+        concept: item.concept ?? '',
         description: item.description ?? '',
         type: item.type,
         price: item.price,
@@ -1373,6 +1438,7 @@ export class CotizacionesComponent implements OnInit {
       productId: product._id,
       type: product.type,
       name: product.name,
+      concept: product.concept ?? '',
       description: product.description ?? '',
       price: Number(product.price ?? 0),
       priceIVA: Number(product.priceIVA ?? 0),
@@ -1401,6 +1467,7 @@ export class CotizacionesComponent implements OnInit {
       productId: `replicated-foreign-${place._id}-${index}`,
       type: 'Servicio',
       name: `Servicio foráneo realizado por Leptón en ${place.place}`,
+      concept: `Servicio foráneo realizado por Leptón en ${place.place}`,
       description: source.description ?? '',
       price: Number(source.price ?? 0),
       priceIVA: Number(source.priceIVA ?? 0),
@@ -1426,17 +1493,19 @@ export class CotizacionesComponent implements OnInit {
     return this.travelExpenses.find(item => normalizedName.includes(this.normalizeLookup(item.place))) ?? null;
   }
 
+  private displayPercent(value: unknown): string {
+  return Number(value || 0).toFixed(2);
+}
+
   private addReplicationUpdateNotices(source: QuoteProduct, item: QuoteBuilderProduct, notices: QuoteReplicationNotice[]): void {
-    const priceChanged =
-      this.roundMoney(source.price) !== this.roundMoney(item.price) ||
-      this.roundMoney(source.priceIVA) !== this.roundMoney(item.priceIVA);
+    const priceChanged = this.roundMoney(source.price) !== this.roundMoney(item.price) || this.roundMoney(source.priceIVA) !== this.roundMoney(item.priceIVA);
     const discountChanged = this.normalizePercent(source.discount) !== this.normalizePercent(item.discount);
 
     if (!priceChanged && !discountChanged) return;
 
     const changes = [
       priceChanged ? `el precio $${this.roundMoney(source.priceIVA)} -> $${this.roundMoney(item.priceIVA)} con IVA` : '',
-      discountChanged ? `el descuento ${this.normalizePercent(source.discount)}% -> ${this.normalizePercent(item.discount)}%` : ''
+      discountChanged ? `el descuento ${this.displayPercent(source.discount)}% -> ${this.displayPercent(item.discount)}%` : ''
     ].filter(Boolean).join(', ');
 
     notices.push({
@@ -1472,8 +1541,12 @@ export class CotizacionesComponent implements OnInit {
     return 'Planes';
   }
 
+  // private normalizePercent(value: unknown): number {
+  //   return this.roundMoney(Math.min(100, Math.max(0, Number(value || 0))));
+  // }
+
   private normalizePercent(value: unknown): number {
-    return this.roundMoney(Math.min(100, Math.max(0, Number(value || 0))));
+    return Math.min(100, Math.max(0, Number(value || 0)));
   }
 
   private recalculateProduct(item: QuoteBuilderProduct): void {
@@ -1496,9 +1569,10 @@ export class CotizacionesComponent implements OnInit {
       productId: `foreign-lepton-${Date.now()}`,
       type: 'Servicio',
       name: `Servicio foráneo realizado por Leptón en ${place}`,
-      description: 'Incluye viáticos y hospedaje',
-      price,
-      priceIVA: this.roundMoney(price * 1.16),
+      concept: `Servicio foráneo realizado por Leptón en ${place}`,
+      description: '',
+      price: this.roundMoney(price / 1.16),
+      priceIVA: this.roundMoney(price),
       discount: 0,
       discountType: '%',
       amount: 1,
@@ -1516,9 +1590,10 @@ export class CotizacionesComponent implements OnInit {
       productId: `foreign-technician-${Date.now()}`,
       type: 'Servicio',
       name: 'Servicio técnico realizado por instalador certificado',
-      description: 'Incluye viáticos y hospedaje',
-      price,
-      priceIVA: this.roundMoney(price * 1.16),
+      concept: 'Servicio técnico realizado por instalador certificado',
+      description: '',
+      price: this.roundMoney(price / 1.16),
+      priceIVA: this.roundMoney(price),
       discount: 0,
       discountType: '%',
       amount: 1,
@@ -1729,6 +1804,23 @@ export class CotizacionesComponent implements OnInit {
 
   private clearSelection(): void {
     this.selectedIds.clear();
+  }
+
+  private syncQuoteUserFilter(): void {
+    const previousSelected = new Set(this.selectedQuoteUsers.map(user => this.normalize(user)));
+    const hadAllSelected = !this.quoteUsers.length || this.selectedQuoteUsers.length === this.quoteUsers.length;
+
+    this.quoteUsers = Array.from(
+      new Set(this.quotes.map(item => this.getQuoteUserName(item)))
+    ).sort((a, b) => a.localeCompare(b, 'es'));
+
+    this.selectedQuoteUsers = hadAllSelected
+      ? [...this.quoteUsers]
+      : this.quoteUsers.filter(user => previousSelected.has(this.normalize(user)));
+  }
+
+  private getQuoteUserName(item: QuoteItem): string {
+    return String(item.userName || 'Sin usuario').trim() || 'Sin usuario';
   }
 
   private defaultValidityDate(): Date {

@@ -399,6 +399,10 @@ tr.row-selected td {
         color: #fff !important;
     }
 
+    &.btn-save {
+        background-color: var(--color-success);
+    }
+
     &.btn-add {
         background-color: var(--color-primary);
     }
@@ -409,6 +413,10 @@ tr.row-selected td {
 
     &.btn-delete {
         background-color: var(--color-danger);
+    }
+
+    &.btn-save:hover:not(:disabled) {
+        background-color: var(--color-success-hover);
     }
 
     &.btn-add:hover:not(:disabled) {

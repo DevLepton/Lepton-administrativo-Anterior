@@ -6,6 +6,7 @@ import { QuoteItem } from '../services/api.service';
 interface QuotePdfLine {
     amount: number;
     name: string;
+    concept: string;
     description: string;
     unitPrice: number;
     discount: number;
@@ -47,6 +48,7 @@ export class CotizacionesPdfService {
             return {
                 amount,
                 name: product.name || 'Producto',
+                concept: product.concept || 'Producto',
                 description: product.description || '',
                 unitPrice: this.roundMoney(unitPrice),
                 discount: this.roundMoney(discount),
@@ -83,47 +85,60 @@ export class CotizacionesPdfService {
     drawQuoteHeader(doc: jsPDF, quote: QuoteItem, page: number, logo: HTMLImageElement): void {
         const width = doc.internal.pageSize.getWidth();
         const margin = 14;
+
         const issueDate = quote.createdAt ? new Date(quote.createdAt) : new Date();
         const validity = quote.validity ? new Date(quote.validity) : null;
         const units = quote.units ?? 1;
 
+        // Logo
         doc.addImage(logo, 'PNG', margin - 2, 14, 53, 18);
 
+        // Título
         doc.setFont('helvetica', 'bold');
         doc.setFontSize(page === 1 ? 18 : 16);
         doc.setTextColor(34, 34, 34);
         doc.text('Cotización', width - margin, 18, { align: 'right' });
 
+        // Folio y fechas — todas las páginas
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+
+        doc.text(`Folio: ${quote.quoteNum || '-'}`, width - margin, 25, { align: 'right' });
+
+        doc.text(`Fecha de emisión: ${this.formatDate(issueDate)}`, width - margin, 29, { align: 'right' });
+
+        doc.text(`Vencimiento: ${validity ? this.formatDate(validity) : '-'}`, width - margin, 33, { align: 'right' });
+
+        // Información del cliente — solamente primera página
         if (page === 1) {
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(9);
-            doc.text(`Folio: ${quote.quoteNum || '-'}`, width - margin, 25, { align: 'right' });
-            doc.text(`Fecha de emisión: ${this.formatDate(issueDate)}`, width - margin, 29, { align: 'right' });
-            doc.text(`Vencimiento: ${validity ? this.formatDate(validity) : '-'}`, width - margin, 33, { align: 'right' });
+            const dataY = 42;
 
             doc.setFontSize(9);
             doc.setTextColor(34, 34, 34);
 
             doc.setFont('helvetica', 'bold');
-            doc.text('Cliente:', margin, 47);
+            doc.text('Cliente:', margin, dataY);
+
             let x = margin + doc.getTextWidth('Cliente:') + 1.5;
+
             doc.setFont('helvetica', 'normal');
-            doc.text(quote.clientName || '-', x, 47);
+            doc.text(quote.clientName || '-', x, dataY);
 
             doc.setFont('helvetica', 'bold');
-            doc.text('Empresa:', margin, 52);
+            doc.text('Empresa:', margin, dataY + 5);
+
             x = margin + doc.getTextWidth('Empresa:') + 1.5;
+
             doc.setFont('helvetica', 'normal');
-            doc.text(quote.companyName || '-', x, 52);
+            doc.text(quote.companyName || '-', x, dataY + 5);
 
             doc.setFont('helvetica', 'bold');
-            doc.text('Lugar:', margin, 57);
-            x = margin + doc.getTextWidth('Lugar:') + 1.5;
-            doc.setFont('helvetica', 'normal');
-            doc.text(quote.place || '-', x, 57);
+            doc.text('Lugar:', margin, dataY + 10);
 
-            doc.setFontSize(9);
-            doc.setTextColor(34, 34, 34);
+            x = margin + doc.getTextWidth('Lugar:') + 1.5;
+
+            doc.setFont('helvetica', 'normal');
+            doc.text(quote.place || '-', x, dataY + 10);
 
             const unitsLabel = 'Unidades:';
             const unitsValue = String(units);
@@ -131,42 +146,39 @@ export class CotizacionesPdfService {
 
             doc.setFont('helvetica', 'bold');
             const unitsLabelWidth = doc.getTextWidth(unitsLabel);
+
             doc.setFont('helvetica', 'normal');
             const unitsValueWidth = doc.getTextWidth(unitsValue);
 
             let x2 = width - margin - unitsLabelWidth - unitsGap - unitsValueWidth;
 
             doc.setFont('helvetica', 'bold');
-            doc.text(unitsLabel, x2, 47);
+            doc.text(unitsLabel, x2, dataY);
 
             doc.setFont('helvetica', 'normal');
-            doc.text(unitsValue, x2 + unitsLabelWidth + unitsGap, 47);
+            doc.text(unitsValue, x2 + unitsLabelWidth + unitsGap, dataY);
 
             const modelLabel = 'Modelo:';
             const modelValue = quote.model || 'Sin modelo/tipo';
 
             doc.setFont('helvetica', 'bold');
             const modelLabelWidth = doc.getTextWidth(modelLabel);
+
             doc.setFont('helvetica', 'normal');
             const modelValueWidth = doc.getTextWidth(modelValue);
 
             x2 = width - margin - modelLabelWidth - unitsGap - modelValueWidth;
 
             doc.setFont('helvetica', 'bold');
-            doc.text(modelLabel, x2, 52);
+            doc.text(modelLabel, x2, dataY + 5);
 
             doc.setFont('helvetica', 'normal');
-            doc.text(modelValue, x2 + modelLabelWidth + unitsGap, 52);
-
-        } else {
-            doc.setDrawColor(168, 168, 168);
-            doc.setLineWidth(0.3);
-            doc.line(margin, 29, width - margin, 29);
+            doc.text(modelValue, x2 + modelLabelWidth + unitsGap, dataY + 5);
         }
     }
 
     async createQuotePdf(quote: QuoteItem): Promise<jsPDF> {
-        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+        const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'letter' });
         const logo = await this.loadLogo();
         const margin = 14;
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -176,12 +188,13 @@ export class CotizacionesPdfService {
         let tableFinalY = 0;
 
         autoTable(doc, {
-            startY: 65,
+            startY: 60,
             margin: { top: 65, right: margin, bottom: 35, left: margin },
+            rowPageBreak: 'avoid',
             head: [['Cant.', 'Descripción', 'Precio unitario', 'Descuento', '', 'Importe']],
             body: rows.map(row => [
                 String(row.amount),
-                `${row.name}${row.description ? `\n${row.description}` : ''}`,
+                `${row.concept}${row.description ? `\n${row.description}` : ''}`,
                 this.money(row.unitPrice),
                 row.discount > 0 ? this.money(row.discount) : '',
                 row.discountPercent > 0 ? `${row.discountPercent}%` : '',
@@ -192,30 +205,74 @@ export class CotizacionesPdfService {
                 font: 'helvetica',
                 fontSize: 8.5,
                 textColor: [34, 34, 34],
-                cellPadding: { top: 3, right: 2, bottom: 3, left: 2 },
+                cellPadding: { top: 3, right: 2, bottom: 4, left: 2 },
                 // lineColor: [220, 220, 220],
                 lineWidth: 0,
-                valign: 'top'
+                valign: 'top',
             },
             headStyles: {
                 fontStyle: 'bold',
                 textColor: [34, 34, 34],
-                // lineColor: [168, 168, 168],
-                lineWidth: 0,
+                lineColor: [220, 220, 220],
+                lineWidth: { bottom: 0.2 },
                 fillColor: [255, 255, 255]
             },
             columnStyles: {
                 0: { cellWidth: 12, halign: 'center' }, // Cant.
                 1: { cellWidth: 'auto' },               // Descripción
-                2: { cellWidth: 27, halign: 'right' },  // Precio unitario
+                2: { cellWidth: 25, halign: 'right' },  // Precio unitario
                 3: { cellWidth: 25, halign: 'right' },  // Descuento $
                 4: { cellWidth: 14, halign: 'right' },  // Descuento %
-                5: { cellWidth: 30, halign: 'right' }   // Importe
+                5: { cellWidth: 26, halign: 'right' }   // Importe
             },
             didParseCell: data => {
                 if (data.section === 'head' && data.column.index >= 2) {
                     data.cell.styles.halign = 'right';
                 }
+
+                if (data.section !== 'body' || data.column.index !== 1) return;
+
+                const row = rows[data.row.index];
+                if (!row) return;
+
+                /*
+                 * Ancho real disponible para Descripción.
+                 *
+                 * Página carta = 215.9 mm
+                 * Márgenes = 14 + 14
+                 * Columnas fijas:
+                 * Cant.          12
+                 * Precio         25
+                 * Descuento $    25
+                 * Descuento %    14
+                 * Importe        26
+                 */
+                const descriptionWidth = pageWidth - (margin * 2) - 12 - 25 - 25 - 14 - 26;
+
+                const paddingX = 2;
+                const maxWidth = descriptionWidth - (paddingX * 2);
+
+                // Nombre
+                doc.setFont('helvetica', 'bold');
+                doc.setFontSize(8.5);
+
+                const nameLines = doc.splitTextToSize(row.concept, maxWidth);
+
+                // Descripción
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(7);
+
+                const descriptionLines = row.description
+                    ? doc.splitTextToSize(row.description, maxWidth)
+                    : [];
+
+                /*
+                 * AutoTable usa estas líneas únicamente para calcular
+                 * correctamente la altura de la fila.
+                 */
+                data.cell.text = [...nameLines, ...descriptionLines];
+
+                data.cell.styles.fontSize = 7;
             },
             willDrawCell: data => {
                 if (data.section !== 'body' || data.column.index !== 1) return;
@@ -224,60 +281,55 @@ export class CotizacionesPdfService {
                 if (!row) return;
 
                 const cell = data.cell;
+
                 const paddingLeft = 2;
                 const paddingTop = 3;
+
+                const nameLineHeight = 3.5;
+                const descriptionLineHeight = 2.9;
 
                 const x = cell.x + paddingLeft;
                 let y = cell.y + paddingTop + 2.8;
 
-                const maxWidth = cell.width - paddingLeft * 2;
+                const descriptionWidth = pageWidth - (margin * 2) - 12 - 25 - 25 - 14 - 26;
+                const maxWidth = descriptionWidth - (paddingLeft * 2);
 
-                // Evita que AutoTable dibuje el texto original
-                cell.text = [];
-
-                // Nombre del producto
+                // Nombre
                 doc.setFont('helvetica', 'bold');
                 doc.setFontSize(8.5);
                 doc.setTextColor(34, 34, 34);
 
-                const nameLines = doc.splitTextToSize(row.name, maxWidth);
+                const nameLines = doc.splitTextToSize(row.concept, maxWidth);
 
-                doc.text(nameLines, x, y);
+                doc.text(nameLines, x, y - 0.4);
 
-                y += nameLines.length * 3.5;
+                y += nameLines.length * nameLineHeight;
 
                 // Descripción
                 if (row.description) {
                     doc.setFont('helvetica', 'normal');
-                    doc.setFontSize(8.5);
+                    doc.setFontSize(7);
 
-                    const descriptionLines = doc.splitTextToSize(
-                        row.description,
-                        maxWidth
-                    );
+                    const descriptionLines = doc.splitTextToSize(row.description, maxWidth);
 
-                    doc.text(descriptionLines, x, y);
+                    doc.text(descriptionLines, x, y, { lineHeightFactor: descriptionLineHeight / 2.469 });
                 }
+
+                // Evitar que AutoTable dibuje el texto nuevamente
+                data.cell.text = [];
             },
             didDrawCell: data => {
                 if (data.section !== 'body' || data.column.index !== 0) return;
 
-                const yTop = data.cell.y;
                 const yBottom = data.cell.y + data.cell.height;
 
                 doc.setDrawColor(220, 220, 220);
                 doc.setLineWidth(0.2);
 
-                doc.line(margin, yTop, pageWidth - margin, yTop);
                 doc.line(margin, yBottom, pageWidth - margin, yBottom);
             },
             didDrawPage: data => {
                 this.drawQuoteHeader(doc, quote, data.pageNumber, logo);
-                const footerY = pageHeight - 9;
-                doc.setFont('helvetica', 'normal');
-                doc.setFontSize(7);
-                doc.setTextColor(104, 104, 104);
-                doc.text(`Pagina ${data.pageNumber}`, pageWidth / 2, footerY, { align: 'center' });
             }
         });
 
@@ -287,16 +339,39 @@ export class CotizacionesPdfService {
         if (tableFinalY + requiredHeight > pageHeight - 18) {
             doc.addPage();
             this.drawQuoteHeader(doc, quote, doc.getNumberOfPages(), logo);
-            tableFinalY = 78;
+            tableFinalY = 40;
         }
 
         let y = tableFinalY + 7;
         y = this.drawPdfTotals(doc, quote, totals, y, pageWidth, pageHeight);
-        y = y + 20;
+        y = y + 10;
         y = this.drawPdfPayment(doc, quote, y, pageWidth, pageHeight, logo);
-        this.drawPdfTerms(doc, y + 8, pageWidth, pageHeight, logo);
+        this.drawPdfTerms(doc, y + 5, pageWidth, pageHeight, logo);
+
+        this.drawPageNumbers(doc);
 
         return doc;
+    }
+
+    private drawPageNumbers(doc: jsPDF): void {
+        const totalPages = doc.getNumberOfPages();
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+
+        for (let page = 1; page <= totalPages; page++) {
+            doc.setPage(page);
+
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(7);
+            doc.setTextColor(104, 104, 104);
+
+            doc.text(
+                `Página ${page} de ${totalPages}`,
+                pageWidth / 2,
+                pageHeight - 9,
+                { align: 'center' }
+            );
+        }
     }
 
     private drawPdfTotals(doc: jsPDF, quote: QuoteItem, totals: QuotePdfTotals, startY: number, width: number, height: number): number {
@@ -331,7 +406,7 @@ export class CotizacionesPdfService {
         y += 4;
         doc.setDrawColor(220, 220, 220);
         doc.setLineWidth(0.3);
-        doc.line(labelX, y, valueX, y);
+        doc.line(labelX - 20, y, valueX, y);
         y += 6;
 
         doc.setFont('helvetica', 'bold');
@@ -405,17 +480,17 @@ export class CotizacionesPdfService {
             y += 5;
         }
 
-        return Math.min(y, height - 100);
+        return y;
     }
 
     private drawPdfPayment(doc: jsPDF, quote: QuoteItem, startY: number, width: number, height: number, logo: HTMLImageElement): number {
         let y = startY;
         const margin = 14;
 
-        if (y > height - 72) {
+        if (y > height - 52) {
             doc.addPage();
             this.drawQuoteHeader(doc, quote, doc.getNumberOfPages(), logo);
-            y = 42;
+            y = 38;
         }
 
         doc.setDrawColor(224, 224, 224);
@@ -431,9 +506,9 @@ export class CotizacionesPdfService {
         doc.setFont('helvetica', 'normal');
         doc.setFontSize(7.8);
         doc.text(`Titular: ${quote.paymentMethodHolder || '-'}`, margin, y + 7);
-        doc.text(`Banco: ${quote.bankName || '-'}`, margin, y + 13);
+        doc.text(`Banco: ${quote.bankName || '-'}`, margin, y + 11);
         doc.text(`Cuenta: ${quote.accountNumber || '-'}`, margin + 75, y + 7);
-        doc.text(`CLABE: ${quote.CLABE || '-'}`, margin + 75, y + 13);
+        doc.text(`CLABE: ${quote.CLABE || '-'}`, margin + 75, y + 11);
         doc.setFontSize(7.5);
         // doc.text(`Facturable: ${quote.billable ? 'Si' : 'No'}`, width - margin, y, { align: 'right' });
 
@@ -450,7 +525,7 @@ export class CotizacionesPdfService {
 
     private drawPdfTerms(doc: jsPDF, startY: number, width: number, height: number, logo: HTMLImageElement): void {
         const margin = 14;
-        let y = startY;
+        let y = startY - 5;
 
         if (y > height - 47) {
             doc.addPage();
@@ -464,7 +539,7 @@ export class CotizacionesPdfService {
         y += 6;
 
         const commentLines = [
-            'Gracias por confiar en Leptón, Seguridad y Confianza en Movimiento'
+            'Gracias por confiar en Leptón, Seguridad y Confianza en Movimiento.'
         ];
 
         const address = [

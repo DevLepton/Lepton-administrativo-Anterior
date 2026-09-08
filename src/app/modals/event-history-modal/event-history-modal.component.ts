@@ -5,6 +5,7 @@ export interface EventDetailsData {
   identifier: string;
   collectionName: string;
   operation: 'Creación' | 'Actualización' | 'Eliminación';
+  eventComments?: string;
   finalValues: any;
   user?: { _id?: string; email?: string; userName?: string; role?: string };
   request?: { method?: string; path?: string; ip?: string };
@@ -72,7 +73,7 @@ export class EventHistoryModalComponent {
     for (const ev of this.relatedEvents) {
       const fv = (ev?.finalValues ?? {}) as Record<string, any>;
       for (const k of Object.keys(fv)) {
-        if (k === '_id') continue; // excluir _id
+        if (k === '_id' || k === 'createdAt') continue; // excluir _id y createdAt
         set.add(k);
       }
     }
@@ -98,19 +99,29 @@ export class EventHistoryModalComponent {
       installationDate: 'Fecha de instalación',
       client: 'Cliente',
       comments: 'Comentarios',
+      price: 'Precio',
+      priceIVA: 'Precio con IVA',
+      concept: 'Concepto',
+      description: 'Descripción',
     };
     return dict[key] ?? key;
   }
 
   /** Claves que deben mostrarse como fecha sin hora */
   private isDateKey(key: string): boolean {
-    return key === 'purchaseDate' || key === 'entryDate' || key === 'installationDate';
+    return ['purchaseDate', 'entryDate', 'installationDate'].includes(key);
   }
 
   /** Valor (ya normalizado) de finalValues para una fila y una clave dinámica */
   getCellValue(ev: RowEvent, key: string): any {
     const fv = (ev?.finalValues ?? {}) as Record<string, any>;
     return fv[key];
+  }
+
+  get hasEventComments(): boolean {
+    return this.relatedEvents.some(ev =>
+      typeof ev.eventComments === 'string' && ev.eventComments.trim().length > 0
+    );
   }
 
   /** ¿Es objeto/array? (para mostrar pretty JSON) */
@@ -134,5 +145,33 @@ export class EventHistoryModalComponent {
   /** True si la clave debe renderizarse como fecha sin hora */
   asDateOnly(key: string): boolean {
     return this.isDateKey(key);
+  }
+
+  isCellChanged(index: number, key: string): boolean {
+    // La primera fila no tiene un evento anterior contra el cual comparar
+    if (index >= this.relatedEvents.length - 1) return false;
+
+    const current = this.getCellValue(this.relatedEvents[index], key);
+    const previous = this.getCellValue(this.relatedEvents[index + 1], key);
+
+    return !this.valuesEqual(current, previous);
+  }
+
+  private valuesEqual(a: any, b: any): boolean {
+    // Trata null y undefined como el mismo valor vacío
+    if ((a === null || a === undefined) && (b === null || b === undefined)) {
+      return true;
+    }
+
+    // Comparación de objetos/arrays
+    if (typeof a === 'object' && typeof b === 'object') {
+      try {
+        return JSON.stringify(a) === JSON.stringify(b);
+      } catch {
+        return a === b;
+      }
+    }
+
+    return a === b;
   }
 }

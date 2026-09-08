@@ -19,7 +19,7 @@ export class CotizacionesSugerenciasComponent {
   loading = false;
   search = '';
   currentPage = 1;
-  perPage = 10;
+  perPage = 25;
   selectedIds = new Set<string>();
   deletingId: string | null = null;
 
@@ -41,7 +41,7 @@ export class CotizacionesSugerenciasComponent {
     this.form = this.fb.group({
       productId: ['', Validators.required],
       action: ['add', Validators.required],
-      description: [''],
+      description: ['', Validators.required],
       response: this.fb.array([]),
     });
   }
@@ -99,19 +99,26 @@ export class CotizacionesSugerenciasComponent {
     this.suggestionResponse.clear();
 
     this.form.reset({
-      productId: item?.productId ?? '',
+      productId: item?.productId ? this.getProduct(item.productId) : null,
       action: item?.action ?? 'add',
       description: item?.description ?? ''
     });
 
-    const responses = item?.response?.length ? item.response : [{ action: 'add', productId: '' }];
+    const responses = item?.response?.length
+      ? item.response
+      : [{ action: 'add', productId: '' }];
+
     responses.forEach(response => this.addSuggestionResponse(response));
   }
 
   addSuggestionResponse(response?: SuggestionResponseItem): void {
+    const product = response?.productId
+      ? this.getProduct(response.productId)
+      : null;
+
     this.suggestionResponse.push(this.fb.group({
       action: [response?.action ?? 'add', Validators.required],
-      productId: [response?.productId ?? '', Validators.required]
+      productId: [product, Validators.required]
     }));
   }
 
@@ -201,6 +208,16 @@ export class CotizacionesSugerenciasComponent {
     return visible.some(item => this.selectedIds.has(item._id)) && !this.allVisibleSelected;
   }
 
+  displayProduct = (product: QuoteProductItem | string | null): string => {
+    if (!product) return '';
+
+    if (typeof product === 'string') {
+      return this.getProductLabel(product);
+    }
+
+    return `${product.type} - ${product.name}`;
+  };
+
   toggleSelectAllVisible(checked: boolean): void {
     if (checked) this.displayedSuggestions.forEach(item => this.selectedIds.add(item._id));
     else this.displayedSuggestions.forEach(item => this.selectedIds.delete(item._id));
@@ -255,12 +272,12 @@ export class CotizacionesSugerenciasComponent {
     const value = this.form.getRawValue();
 
     return {
-      productId: value.productId,
+      productId: value.productId?._id ?? value.productId,
       action: value.action,
       description: String(value.description ?? '').trim(),
       response: (value.response ?? []).map((item: any) => ({
         action: item.action,
-        productId: item.productId
+        productId: item.productId?._id ?? item.productId
       }))
     };
   }
@@ -336,6 +353,25 @@ export class CotizacionesSugerenciasComponent {
 
   get canViewOrEdit(): boolean {
     return this.selectedCount === 1;
+  }
+
+  getProductLabel(productId: string): string {
+    const product = this.getProduct(productId);
+    return product ? `${product.type} - ${product.name}` : '';
+  }
+
+  getFilteredProducts(value: unknown): QuoteProductItem[] {
+    const filterValue = typeof value === 'string'
+      ? value
+      : value
+        ? `${(value as QuoteProductItem).type} ${(value as QuoteProductItem).name}`
+        : '';
+
+    const normalized = this.normalize(filterValue);
+
+    return this.products.filter(product =>
+      this.normalize(`${product.type} ${product.name}`).includes(normalized)
+    );
   }
 
   refresh(): void {

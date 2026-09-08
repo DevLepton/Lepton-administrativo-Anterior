@@ -48,7 +48,7 @@ export const navbarData: NavItem[] = [
     component: ClientsComponent
   },
   {
-    RouteLink: 'almacen',
+    RouteLink: 'inventario',
     icon: 'fal fa-dolly',
     label: 'Inventario',
     roles: ['admin', 'inventario', 'soporte'],

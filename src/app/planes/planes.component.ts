@@ -31,7 +31,7 @@ export class PlanesComponent implements OnInit {
   planes: Plan[] = [];
   showAll = true;
   currentPage = 1;
-  plansPerPage = 10;
+  plansPerPage = 25;
 
   constructor(private apiService: ApiService, private toast: NgToastService) { }
 

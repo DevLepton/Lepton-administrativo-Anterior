@@ -1,0 +1,49 @@
+<div class="section-container">
+  <div class="settings-header">
+    <div class="title">
+      <span class="material-icons">settings</span>
+      <h2>Configuración</h2>
+    </div>
+
+    <button class="icon-button close-btn" matTooltip="Cerrar" (click)="closeSettings()">
+      <span class="material-icons">close</span>
+    </button>
+  </div>
+
+  <div class="settings-layout">
+    <section class="card version-card">
+      <div class="card-header">
+        <span class="material-icons">verified</span>
+        <h3>Versión del sistema</h3>
+      </div>
+
+      <div class="version-number">v{{ systemVersion }}</div>
+      <p>Versión actualmente registrada para el sistema administrativo Leptón.</p>
+    </section>
+
+    <section class="card sections-card">
+      <div class="card-header">
+        <span class="material-icons">view_list</span>
+        <h3>Versiones por sección</h3>
+      </div>
+
+      <div class="sections-table">
+        <div class="table-row table-head">
+          <span>Sección</span>
+          <span>Tipo</span>
+          <span>Ruta</span>
+          <span>Versión</span>
+        </div>
+
+        <div class="table-row" *ngFor="let section of sectionVersions">
+          <span class="section-name">{{ section.name }}</span>
+          <span>
+            <span class="type-badge">{{ section.type }}</span>
+          </span>
+          <span class="route-text">{{ section.route }}</span>
+          <span class="version-badge">v{{ section.version }}</span>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>

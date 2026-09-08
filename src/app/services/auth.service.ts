@@ -27,6 +27,7 @@ export class AuthService {
 
   logout(): void {
     if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('quote_builder_draft');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }

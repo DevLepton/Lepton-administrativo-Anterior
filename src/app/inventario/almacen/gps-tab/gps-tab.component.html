@@ -230,7 +230,7 @@
                 </table>
             </div>
             <mat-paginator *ngIf="gpsFiltered.length > 0" [length]="gpsFiltered.length" [pageIndex]="gpsCurrentPage - 1"
-                [pageSize]="gpsPerPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+                [pageSize]="gpsPerPage" [pageSizeOptions]="[25, 50, 100]" [showFirstLastButtons]="true"
                 (page)="onPageChange($event)">
             </mat-paginator>
         </div>

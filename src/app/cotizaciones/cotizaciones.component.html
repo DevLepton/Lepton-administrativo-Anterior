@@ -22,6 +22,27 @@
               {{ filteredQuotes.length }} resultado{{ filteredQuotes.length === 1 ? '' : 's' }}
             </mat-hint>
           </mat-form-field>
+
+          <div class="users-filter">
+            <mat-form-field appearance="outline" class="filter users-select" subscriptSizing="dynamic">
+              <mat-label>Usuarios</mat-label>
+              <mat-select multiple [(ngModel)]="selectedQuoteUsers" (ngModelChange)="updateQuoteUserFilter($event)">
+                <mat-select-trigger>{{ selectedQuoteUsersLabel }}</mat-select-trigger>
+                <mat-option *ngFor="let user of quoteUsers" [value]="user">
+                  {{ user }}
+                </mat-option>
+              </mat-select>
+            </mat-form-field>
+          </div>
+
+          <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Facturable</mat-label>
+            <mat-select [(ngModel)]="billableFilter" (ngModelChange)="updateBillableFilter($event)">
+              <mat-option value="all">Todas</mat-option>
+              <mat-option value="billable">Facturables</mat-option>
+              <mat-option value="nonBillable">No facturables</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
       </div>
 
@@ -31,13 +52,13 @@
           Cotizador
         </button>
 
-        <button class="download-button" matTooltip="Descargar cotizacion" (click)="downloadSelectedQuotes()"
+        <button class="download-button" matTooltip="Descargar cotización" (click)="downloadSelectedQuotes()"
           [disabled]="selectedCount === 0">
           <span class="material-icons">download</span>
         </button>
 
         <span *ngIf="isAdminUser" class="tooltip-wrap"
-          [matTooltip]="selectedCount === 0 ? 'Selecciona al menos 1 cotizacion' : 'Eliminar cotizaciones seleccionadas'">
+          [matTooltip]="selectedCount === 0 ? 'Selecciona al menos 1 cotización' : 'Eliminar cotizaciones seleccionadas'">
           <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedQuotes()"
             [disabled]="selectedCount === 0">
             <span class="material-icons">delete</span>
@@ -58,7 +79,7 @@
             </th>
 
             <th>No.</th>
-            <th>Cotizacion</th>
+            <th>Cotización</th>
             <th>Usuario</th>
             <th>Cliente</th>
             <th>Empresa</th>
@@ -103,7 +124,7 @@
           </tr>
 
           <tr *ngIf="displayedQuotes.length === 0">
-            <td colspan="8" style="text-align:center;padding:1rem;">
+            <td colspan="10" style="text-align:center;padding:1rem;">
               Sin cotizaciones para mostrar.
             </td>
           </tr>
@@ -112,7 +133,7 @@
         <ng-template #loadingTpl>
           <tbody>
             <tr>
-              <td colspan="8" style="text-align:center;padding:1rem;">
+              <td colspan="10" style="text-align:center;padding:1rem;">
                 Cargando cotizaciones...
               </td>
             </tr>
@@ -122,7 +143,7 @@
     </div>
 
     <mat-paginator *ngIf="filteredQuotes.length > 0" [length]="filteredQuotes.length" [pageIndex]="currentPage - 1"
-      [pageSize]="perPage" [pageSizeOptions]="[10, 25, 50, 100]" [showFirstLastButtons]="true"
+      [pageSize]="perPage" [pageSizeOptions]="[25, 50, 100]" [showFirstLastButtons]="true"
       (page)="onPageChange($event)">
     </mat-paginator>
   </div>
@@ -203,7 +224,7 @@
     <button mat-flat-button color="primary" class="custom-button" (click)="submitQuote()"
       [disabled]="!quoteComplete || savingQuote || builderLoading">
       <mat-icon>save</mat-icon>
-      {{ savingQuote ? 'Guardando...' : 'Crear cotizacion' }}
+      {{ savingQuote ? 'Guardando...' : 'Crear cotización' }}
     </button>
   </div>
 
@@ -227,7 +248,7 @@
               <mat-option *ngFor="let client of filteredBillingClients" [value]="client">
                 <div class="option">
                   <span class="name">{{ client.billingName }}</span>
-                  <small>{{ client.companyName || 'Sin razon social' }}</small>
+                  <small>{{ client.companyName || 'Sin nombre de la empresa' }}</small>
                 </div>
               </mat-option>
             </mat-autocomplete>
@@ -235,7 +256,7 @@
           </mat-form-field>
 
           <mat-form-field appearance="outline" class="field">
-            <mat-label>Razon social</mat-label>
+            <mat-label>Nombre de la empresa</mat-label>
             <input matInput formControlName="companyName">
             <mat-error *ngIf="clientForm.get('companyName')?.hasError('required')">Campo obligatorio</mat-error>
           </mat-form-field>
@@ -310,7 +331,7 @@
               (optionSelected)="onProductSelected($event.option.value)">
               <mat-option *ngFor="let product of filteredProducts" [value]="product">
                 <div class="option product-option">
-                  <span class="name">{{ product.name }}</span>
+                  <span class="name">{{ product.name }} - {{ product.concept }}</span>
                   <small>{{ product.type }} - {{ product.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}
                     MXN</small>
                 </div>
@@ -333,7 +354,7 @@
           <div class="product-row" *ngFor="let item of quoteProducts; trackBy: trackByProductId">
             <div class="product-main">
               <div class="product-title">
-                <b>{{ item.name }}</b>
+                <b>{{ item.concept }}</b>
                 <button *ngIf="hasIgnoredSuggestion(item.productId)" mat-icon-button class="suggestion-icon"
                   matTooltip="Ver sugerencia" (click)="openIgnoredSuggestion(item.productId); $event.stopPropagation()">
                   <mat-icon>tips_and_updates</mat-icon>
@@ -383,7 +404,8 @@
               <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
                 <mat-label>Descuento</mat-label>
                 <span matTextSuffix>%&nbsp;</span>
-                <input matInput type="number" min="0" max="100" [ngModel]="item.discount"
+                <input matInput type="number" min="0" max="100" step="0.01"
+                  [ngModel]="item.discount | number:'1.2-2':'en-US'"
                   (ngModelChange)="updateProductDiscountPercent(item, $event)" (focus)="selectInput($event)">
               </mat-form-field>
 
@@ -555,7 +577,7 @@
       <div class="suggestion-response">
         <h4>Acciones sugeridas</h4>
         <div class="suggestion-response-row" *ngFor="let response of suggestion.response">
-          <mat-icon>{{ response.action === 'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
+          <mat-icon [style.color]="response.action === 'add' ? null : 'var(--color-danger)'">{{ response.action === 'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
           <span>{{ response.action === 'add' ? 'Agregar' : 'Quitar' }}</span>
           <b>{{ getProductName(response.productId) }}</b>
         </div>
@@ -563,8 +585,8 @@
     </ng-container>
 
     <div class="modal-actions">
-      <button mat-button (click)="ignoreActiveSuggestion()">Ignorar</button>
-      <button mat-flat-button color="primary" (click)="applyActiveSuggestion()">
+      <button mat-button class="custom-button" (click)="ignoreActiveSuggestion()">Ignorar</button>
+      <button mat-flat-button color="primary" class="custom-button" (click)="applyActiveSuggestion()">
         <mat-icon>check</mat-icon>
         Aplicar sugerencia
       </button>
@@ -618,7 +640,7 @@
     <div class="modal-header">
       <div>
         <h3>Servicio foráneo</h3>
-        <small>Agrega viáticos, hospedaje y servicios técnicos como concepto de cotizacion.</small>
+        <small>Agrega viáticos, hospedaje y servicios técnicos como concepto de cotización.</small>
       </div>
       <button mat-icon-button (click)="closeForeignServiceModal()" matTooltip="Cerrar">
         <mat-icon>close</mat-icon>
@@ -700,9 +722,10 @@
         </div>
 
         <div class="calc-card total-card">
-          <span>Total con IVA</span>
-          <b>{{ leptonForeignTotalIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
-          <small>Subtotal: {{ leptonForeignSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</small>
+          <span>Total</span>
+          <b>{{ leptonForeignSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          <small>Incluye el IVA</small>
+          <!-- <small>Subtotal: {{ leptonForeignSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</small> -->
         </div>
       </div>
 
@@ -756,14 +779,14 @@
       </div>
 
       <div class="calculation-panel two">
-        <div class="calc-card">
+        <!-- <div class="calc-card">
           <span>Subtotal</span>
           <b>{{ externalTechnicianSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
-        </div>
+        </div> -->
 
         <div class="calc-card total-card">
           <span>Total con IVA</span>
-          <b>{{ externalTechnicianTotalIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+          <b>{{ externalTechnicianSubtotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
         </div>
       </div>
     </ng-template>
@@ -773,7 +796,7 @@
       <button mat-flat-button color="primary" class="custom-button" (click)="addForeignServiceProduct()"
         [disabled]="!canAddForeignService">
         <mat-icon>add</mat-icon>
-        Agregar a la cotizacion
+        Agregar a la cotización
       </button>
     </div>
   </div>
