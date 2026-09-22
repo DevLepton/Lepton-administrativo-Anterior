@@ -4,7 +4,9 @@ import { PageEvent } from '@angular/material/paginator';
 import {
   ApiService,
   BankAccountItem,
+  BillingClientAddress,
   BillingClientItem,
+  BillingClientType,
   CreateBankAccountPayload,
   ForeignTechnicianItem,
   QuoteItem,
@@ -178,6 +180,7 @@ export class CotizacionesComponent implements OnInit {
       bankName: ['', Validators.required],
       accountNumber: ['', Validators.required],
       CLABE: ['', Validators.required],
+      rfc: ['', Validators.required],
       comments: ['']
     });
 
@@ -185,7 +188,8 @@ export class CotizacionesComponent implements OnInit {
       holder: ['', Validators.required],
       bankName: ['', Validators.required],
       accountNumber: ['', Validators.required],
-      CLABE: ['', Validators.required]
+      CLABE: ['', Validators.required],
+      rfc: ['', Validators.required],
     });
 
     this.leptonForeignForm = this.fb.group({
@@ -272,7 +276,7 @@ export class CotizacionesComponent implements OnInit {
   loadBuilderCatalogs(forceRefresh = false): void {
     this.builderLoading = true;
 
-    this.quoteData.getCatalogData(false).subscribe({
+    this.quoteData.getCatalogData(forceRefresh).subscribe({
       next: data => {
         this.products = [...data.products].sort((a, b) => a.name.localeCompare(b.name, 'es'));
         this.suggestions = data.suggestions;
@@ -571,10 +575,25 @@ export class CotizacionesComponent implements OnInit {
 
   onBillingClientSelected(client: BillingClientItem): void {
     this.selectedBillingClientId = client._id;
+
     this.clientForm.patchValue({
       clientName: client.billingName,
       companyName: client.companyName || ''
     });
+
+    if (client.issuer) {
+      this.onBankAccountSelected(client.issuer);
+    } else {
+      this.paymentForm.patchValue({
+        bankAccountId: '',
+        paymentMethodHolder: '',
+        bankName: '',
+        accountNumber: '',
+        CLABE: '',
+        rfc: ''
+      });
+    }
+
     this.saveDraft();
   }
 
@@ -597,7 +616,8 @@ export class CotizacionesComponent implements OnInit {
       paymentMethodHolder: account.holder,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
-      CLABE: account.CLABE
+      CLABE: account.CLABE,
+      rfc: account.rfc
     });
   }
 
@@ -608,7 +628,8 @@ export class CotizacionesComponent implements OnInit {
       holder: '',
       bankName: '',
       accountNumber: '',
-      CLABE: ''
+      CLABE: '',
+      rfc: ''
     });
     this.bankAccountModalOpen = true;
     document.body.style.overflow = 'hidden';
@@ -624,7 +645,8 @@ export class CotizacionesComponent implements OnInit {
       holder: account.holder,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
-      CLABE: account.CLABE
+      CLABE: account.CLABE,
+      rfc: account.rfc,
     });
     this.bankAccountModalOpen = true;
     document.body.style.overflow = 'hidden';
@@ -703,7 +725,8 @@ export class CotizacionesComponent implements OnInit {
           paymentMethodHolder: '',
           bankName: '',
           accountNumber: '',
-          CLABE: ''
+          CLABE: '',
+          rfc: ''
         });
         this.loadBankAccounts();
         this.saveDraft();
@@ -742,7 +765,7 @@ export class CotizacionesComponent implements OnInit {
       this.toast.warning({ detail: 'Cotizador', summary: 'Espera a que terminen de cargar los catálogos', duration: 3000 });
       return;
     }
-
+    
     this.clearDraft();
     this.activeView = 'builder';
     this.activeSection = 'products';
@@ -767,7 +790,8 @@ export class CotizacionesComponent implements OnInit {
       this.normalize(account.holder) === this.normalize(quote.paymentMethodHolder) &&
       this.normalize(account.bankName) === this.normalize(quote.bankName) &&
       this.normalize(account.accountNumber) === this.normalize(quote.accountNumber) &&
-      this.normalize(account.CLABE) === this.normalize(quote.CLABE)
+      this.normalize(account.CLABE) === this.normalize(quote.CLABE) &&
+      this.normalize(account.rfc) === this.normalize(quote.rfc)
     );
 
     this.paymentForm.patchValue({
@@ -776,6 +800,7 @@ export class CotizacionesComponent implements OnInit {
       bankName: quote.bankName ?? '',
       accountNumber: quote.accountNumber ?? '',
       CLABE: quote.CLABE ?? '',
+      rfc: quote.rfc ?? '',
       comments: quote.comments ?? ''
     }, { emitEvent: false });
 
@@ -1307,6 +1332,7 @@ export class CotizacionesComponent implements OnInit {
       paymentMethodHolder: String(payment.paymentMethodHolder ?? '').trim(),
       accountNumber: String(payment.accountNumber ?? '').trim(),
       CLABE: String(payment.CLABE ?? '').trim(),
+      rfc: String(payment.rfc ?? '').trim(),
       comments: String(payment.comments ?? '').trim()
     };
   }
@@ -1494,8 +1520,8 @@ export class CotizacionesComponent implements OnInit {
   }
 
   private displayPercent(value: unknown): string {
-  return Number(value || 0).toFixed(2);
-}
+    return Number(value || 0).toFixed(2);
+  }
 
   private addReplicationUpdateNotices(source: QuoteProduct, item: QuoteBuilderProduct, notices: QuoteReplicationNotice[]): void {
     const priceChanged = this.roundMoney(source.price) !== this.roundMoney(item.price) || this.roundMoney(source.priceIVA) !== this.roundMoney(item.priceIVA);
@@ -1643,7 +1669,8 @@ export class CotizacionesComponent implements OnInit {
       this.normalize(item.holder) === this.normalize(payment.paymentMethodHolder) &&
       this.normalize(item.bankName) === this.normalize(payment.bankName) &&
       this.normalize(item.accountNumber) === this.normalize(payment.accountNumber) &&
-      this.normalize(item.CLABE) === this.normalize(payment.CLABE)
+      this.normalize(item.CLABE) === this.normalize(payment.CLABE) &&
+      this.normalize(item.rfc) === this.normalize(payment.rfc)
     );
 
     if (account) {
@@ -1658,7 +1685,8 @@ export class CotizacionesComponent implements OnInit {
       holder: String(value.holder ?? '').trim(),
       bankName: String(value.bankName ?? '').trim(),
       accountNumber: String(value.accountNumber ?? '').trim(),
-      CLABE: String(value.CLABE ?? '').trim()
+      CLABE: String(value.CLABE ?? '').trim(),
+      rfc: String(value.rfc ?? '').trim(),
     };
   }
 
@@ -1750,6 +1778,7 @@ export class CotizacionesComponent implements OnInit {
     this.paymentForm.reset({
       bankAccountId: '',
       paymentMethodHolder: '',
+      rfc: '',
       bankName: '',
       accountNumber: '',
       CLABE: '',
@@ -1865,11 +1894,27 @@ export class CotizacionesComponent implements OnInit {
       holder: String(item?.holder ?? ''),
       bankName: String(item?.bankName ?? ''),
       accountNumber: String(item?.accountNumber ?? ''),
-      CLABE: String(item?.CLABE ?? '')
+      CLABE: String(item?.CLABE ?? ''),
+      rfc: String(item?.rfc ?? ''),
     };
   }
 
   private mapBillingClient(item: any): BillingClientItem {
+    const addresses: BillingClientAddress[] = Array.isArray(item?.addresses) ? item.addresses.map((address: any) => (
+      {
+        _id: address?._id ? String(address._id) : undefined,
+        type: address?.type ?? 'fiscal',
+        cp: address?.cp ?? null,
+        street: String(address?.street ?? ''),
+        streetNumber: String(address?.streetNumber ?? ''),
+        suburb: String(address?.suburb ?? ''),
+        locality: String(address?.locality ?? ''),
+        state: String(address?.state ?? ''),
+        country: String(address?.country ?? 'México'),
+        comments: String(address?.comments ?? '')
+      }
+    )) : [];
+
     return {
       _id: String(item?._id ?? ''),
       type: item?.type ?? 'client',
@@ -1879,21 +1924,21 @@ export class CotizacionesComponent implements OnInit {
       billingName: String(item?.billingName ?? ''),
       paymentContacts: Array.isArray(item?.paymentContacts) ? item.paymentContacts : [],
       voucherType: item?.voucherType ?? 'Recibo',
+      issuer: String(item?.issuer ?? '') || null,
       cutoffDay: Number(item?.cutoffDay ?? 1),
       companyName: String(item?.companyName ?? ''),
       RFC: String(item?.RFC ?? ''),
       useInvoice: String(item?.useInvoice ?? ''),
       taxRegime: String(item?.taxRegime ?? ''),
       email: String(item?.email ?? ''),
-      cp: item?.cp ?? null,
-      street: String(item?.street ?? ''),
-      streetNumber: String(item?.streetNumber ?? ''),
-      suburb: String(item?.suburb ?? ''),
-      locality: String(item?.locality ?? ''),
-      state: String(item?.state ?? ''),
-      country: String(item?.country ?? ''),
       discounts: item?.discounts ?? { monthly: 0, devices: 0, accessories: 0 },
       blacklist: Boolean(item?.blacklist),
+      periodicity: item?.periodicity ?? 'monthly',
+      comments: String(item?.comments ?? ''),
+      labels: Array.isArray(item?.labels) ? item.labels.map((label: any) => typeof label === 'object' && label?._id ? String(label._id) : String(label)) : [],
+      contractType: item?.contractType ?? 'free',
+      addresses,
+      changeLog: Array.isArray(item?.changeLog) ? item.changeLog : [],
       createdAt: item?.createdAt
     };
   }

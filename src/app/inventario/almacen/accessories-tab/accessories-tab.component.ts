@@ -35,6 +35,7 @@ export interface AccessoryItem {
 })
 export class AccessoriesTabComponent implements OnChanges {
   @Input() accessoriesData: any[] = [];
+  @Input() isAdminUser = false;
   @Input() isInventoryUser = false;
 
   @Output() refreshRequested = new EventEmitter<void>();
@@ -355,7 +356,7 @@ export class AccessoriesTabComponent implements OnChanges {
   }
 
   onAccessoryCreated(evt: any) {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     this.apiService.createAccessory(evt).subscribe({
       next: () => { this.toast.success({ detail: 'Éxito', summary: 'Accesorio registrado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
@@ -366,7 +367,7 @@ export class AccessoriesTabComponent implements OnChanges {
   }
 
   onAccessoriesBulkCreated(list: any[]) {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay Accesorios para registrar.', duration: 3000 });
       return;
@@ -497,7 +498,7 @@ export class AccessoriesTabComponent implements OnChanges {
   }
 
   deleteSelectedAccessories() {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     if (this.accessoriesSelectedCount === 0) return;
 
     const selected = this.selectedAccessoriesItems;

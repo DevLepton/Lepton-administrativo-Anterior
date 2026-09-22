@@ -15,7 +15,7 @@
             <mat-label>Buscar</mat-label>
             <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
               placeholder="Producto o descripción..." autocomplete="off" />
-            <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+            <button *ngIf="search" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
               <mat-icon>close</mat-icon>
             </button>
             <mat-hint *ngIf="search">
@@ -102,7 +102,7 @@
                     aria-label="Seleccionar sugerencia" />
                 </td>
                 <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
-                <td class="comments-cell">{{ item.description || '-' }}</td>
+                <td class="compact-cell">{{ item.description || '-' }}</td>
                 <td>{{ getProduct(item.productId)?.name || '-' }}</td>
                 <td>{{ getProduct(item.productId)?.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</td>
                 <td>{{ getProduct(item.productId)?.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }}</td>

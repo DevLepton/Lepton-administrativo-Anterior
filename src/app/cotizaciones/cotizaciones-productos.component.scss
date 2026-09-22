@@ -34,13 +34,6 @@
   padding: 0 16px;
 }
 
-.comments-cell {
-  max-width: 300px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
 .quote-modal {
   position: relative;
   width: min(900px, 96vw);
@@ -63,34 +56,6 @@
   position: absolute;
   top: 12px;
   right: 12px;
-}
-
-.form-flex {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: flex-start;
-
-  > mat-form-field {
-    flex: 1 1 300px;
-  }
-
-  .tiny-field {
-    flex: 1 1 80px;
-  }
-
-  .small-field {
-    flex: 1 1 200px;
-  }
-
-  .medium-field {
-    flex: 1 1 calc(50% - 15px);
-  }
-
-  .big-field {
-    flex: 1 1 100%;
-  }
-
 }
 
 .span-2 {
@@ -118,12 +83,6 @@
 }
 
 @media (max-width: 760px) {
-  .form-flex {
-    > mat-form-field {
-      flex: 1 1 100%;
-    }
-  }
-
   .span-2 {
     grid-column: span 1;
   }

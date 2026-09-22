@@ -35,6 +35,7 @@ export interface GpsItem {
 })
 export class GpsTabComponent implements OnChanges {
   @Input() gpsData: any[] = [];
+  @Input() isAdminUser = false;
   @Input() isInventoryUser = false;
   @Input() isSupportUser = false;
 
@@ -271,7 +272,7 @@ export class GpsTabComponent implements OnChanges {
   nuevoGps() { this.newGpsModal?.open(); }
 
   onGpsCreated(evt: GpsPayload) {
-    if (!this.isInventoryUser) return;
+    if (!this.isAdminUser && !this.isInventoryUser) return;
     this.apiService.createGps(evt as any).subscribe({
       next: () => { this.toast.success({ detail: 'Éxito', summary: 'GPS registrado', duration: 4000 }); this.refreshRequested.emit(); },
       error: (err) => {
@@ -282,7 +283,7 @@ export class GpsTabComponent implements OnChanges {
   }
 
   onGpsBulkCreated(list: Array<any>) {
-    if (!this.isInventoryUser) return;
+    if (!this.isAdminUser && !this.isInventoryUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay GPS para registrar.', duration: 3000 });
       return;
@@ -367,49 +368,49 @@ export class GpsTabComponent implements OnChanges {
     });
   }
 
-  eliminarGps(g: GpsItem) {
-    if (!this.isInventoryUser) return;
-    Swal.fire({
-      title: '¿Eliminar GPS?',
-      html: `
-        <div style="text-align:center">
-          <div><b>IMEI:</b> ${g.imei}</div>
-          <div><b>Serie:</b> ${g.sn}</div>
-          <div><b>Modelo:</b> ${g.model}</div>
-          <div><b>Marca:</b> ${g.brand}</div>
-        </div>
-        <br>Esta acción no se puede deshacer.
-      `,
-      icon: 'warning',
-      showCancelButton: true,
-      cancelButtonColor: 'var(--color-primary)',
-      confirmButtonColor: 'var(--color-danger)',
-      cancelButtonText: 'Cancelar',
-      confirmButtonText: 'Sí, eliminar',
-      reverseButtons: true,
-    }).then(result => {
-      if (!result.isConfirmed) return;
+  // eliminarGps(g: GpsItem) {
+  //   if (!this.isInventoryUser) return;
+  //   Swal.fire({
+  //     title: '¿Eliminar GPS?',
+  //     html: `
+  //       <div style="text-align:center">
+  //         <div><b>IMEI:</b> ${g.imei}</div>
+  //         <div><b>Serie:</b> ${g.sn}</div>
+  //         <div><b>Modelo:</b> ${g.model}</div>
+  //         <div><b>Marca:</b> ${g.brand}</div>
+  //       </div>
+  //       <br>Esta acción no se puede deshacer.
+  //     `,
+  //     icon: 'warning',
+  //     showCancelButton: true,
+  //     cancelButtonColor: 'var(--color-primary)',
+  //     confirmButtonColor: 'var(--color-danger)',
+  //     cancelButtonText: 'Cancelar',
+  //     confirmButtonText: 'Sí, eliminar',
+  //     reverseButtons: true,
+  //   }).then(result => {
+  //     if (!result.isConfirmed) return;
 
-      this.gpsDeletingId = g.id;
+  //     this.gpsDeletingId = g.id;
 
-      this.apiService.deleteGps(g.id).subscribe({
-        next: () => {
-          this.gps = this.gps.filter(x => x.id !== g.id);
-          this.gpsInitial = this.gpsInitial.filter(x => x.id !== g.id);
+  //     this.apiService.deleteGps(g.id).subscribe({
+  //       next: () => {
+  //         this.gps = this.gps.filter(x => x.id !== g.id);
+  //         this.gpsInitial = this.gpsInitial.filter(x => x.id !== g.id);
 
-          const totalPages = Math.max(1, Math.ceil(this.gpsFiltered.length / this.gpsPerPage));
-          if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
+  //         const totalPages = Math.max(1, Math.ceil(this.gpsFiltered.length / this.gpsPerPage));
+  //         if (this.gpsCurrentPage > totalPages) this.gpsCurrentPage = totalPages;
 
-          this.toast.success({ detail: 'Éxito', summary: 'GPS eliminado', duration: 4000 });
-        },
-        error: (err) => {
-          const msg = err?.error?.error || 'No se pudo eliminar el GPS';
-          this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
-        },
-        complete: () => { this.gpsDeletingId = null; }
-      });
-    });
-  }
+  //         this.toast.success({ detail: 'Éxito', summary: 'GPS eliminado', duration: 4000 });
+  //       },
+  //       error: (err) => {
+  //         const msg = err?.error?.error || 'No se pudo eliminar el GPS';
+  //         this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+  //       },
+  //       complete: () => { this.gpsDeletingId = null; }
+  //     });
+  //   });
+  // }
 
   verGps(g: GpsItem) {
     const found = this.gps.find(x => x.id === g.id);
@@ -500,7 +501,7 @@ export class GpsTabComponent implements OnChanges {
   }
 
   deleteSelectedGps() {
-    if (!this.isInventoryUser) return;
+    if (!this.isAdminUser && !this.isInventoryUser) return;
     if (this.gpsSelectedCount === 0) return;
 
     const selected = this.selectedGpsItems;
@@ -624,190 +625,6 @@ export class GpsTabComponent implements OnChanges {
       .sort((a, b) => b.qty - a.qty);
   }
 
-  // async syncGpsWithApi() {
-  //   const gpsInConfig = this.gps.filter(
-  //     g => g.status === 'En configuración'
-  //   );
-
-  //   if (!gpsInConfig.length) {
-  //     this.toast.warning({
-  //       detail: 'Aviso',
-  //       summary: 'No hay GPS en configuración.',
-  //       duration: 4000
-  //     });
-
-  //     return;
-  //   }
-
-  //   // ===== MOSTRAR GPS EN CONFIGURACIÓN =====
-  //   const gpsConfigHtml = gpsInConfig.map(g => `
-  //   <div style="
-  //     padding:.65rem 0;
-  //     border-bottom:1px solid rgba(255,255,255,.08);
-  //   ">
-  //     <div>
-  //       <b>${g.imei}</b>
-  //     </div>
-
-  //     <div style="
-  //       opacity:.8;
-  //       font-size:.9rem;
-  //     ">
-  //       ${g.brand} ${g.model}
-  //     </div>
-  //   </div>
-  // `).join('');
-  //   const confirmed = await this.confirmModal.open({
-  //     title: `GPS en configuración (${gpsInConfig.length})`,
-  //     message: `
-  //     <div style="
-  //       text-align:left;
-  //       max-height:350px;
-  //       overflow:auto;
-  //       padding-right:.35rem;
-  //     ">
-  //       ${gpsConfigHtml}
-  //     </div>
-  //     <br>
-  //     <div style="
-  //       text-align:center;
-  //       font-weight:500;
-  //     ">
-  //       ¿Deseas sincronizar estos GPS?
-  //     </div>
-  //   `,
-  //     confirmText: 'Sincronizar',
-  //     cancelText: 'Cancelar'
-  //   });
-
-  //   if (!confirmed) {
-  //     return;
-  //   }
-
-  //   // ===== CONSULTAR API =====
-  //   this.gpsLoading = true;
-  //   this.apiService.syncGpsWithNavixy(46207).subscribe({
-  //     next: async (res: any) => {
-  //       const trackers = res?.trackers || [];
-  //       const imeis = new Set(
-  //         trackers
-  //           .map((t: any) => String(t.imei || '').trim())
-  //           .filter(Boolean)
-  //       );
-
-  //       const matches = gpsInConfig.filter(g =>
-  //         imeis.has(String(g.imei || '').trim())
-  //       );
-
-  //       if (!matches.length) {
-  //         this.gpsLoading = false;
-
-  //         await this.confirmModal.open({
-  //           title: 'Sin coincidencias',
-  //           message: `
-  //           <div style="text-align:center;">
-  //             Ningún GPS fue encontrado en la API.
-  //           </div>
-  //         `,
-  //           confirmText: 'Aceptar',
-  //           cancelText: ''
-  //         });
-
-  //         return;
-  //       }
-
-  //       // ===== ACTUALIZAR =====
-  //       const updates = matches.map(g =>
-  //         this.apiService.updateGps(g.id, {
-  //           status: 'Listo para usar'
-  //         })
-  //       );
-
-  //       forkJoin(updates).subscribe({
-  //         next: async () => {
-  //           matches.forEach(g => {
-  //             g.status = 'Listo para usar';
-  //           });
-  //           const syncedHtml = matches.map(g => `
-  //             <div style="
-  //               padding:.65rem 0;
-  //               border-bottom:1px solid rgba(255,255,255,.08);
-  //             ">
-  //               <div>
-  //                 <b>${g.imei}</b>
-  //               </div>
-
-  //               <div style="
-  //                 opacity:.8;
-  //                 font-size:.9rem;
-  //               ">
-  //                 ${g.brand} ${g.model}
-  //               </div>
-  //             </div>
-  //         `).join('');
-
-  //           await this.confirmModal.open({
-  //             title: 'Sincronización completada',
-  //             message: `
-  //               <div style="
-  //                 text-align:left;
-  //                 max-height:350px;
-  //                 overflow:auto;
-  //                 padding-right:.35rem;
-  //               ">
-  //                 ${syncedHtml}
-  //               </div>
-  //               <br>
-  //               <div style="
-  //                 margin-top:1rem;
-  //                 text-align:center;
-  //                 font-weight:500;
-  //               ">
-  //                 ${matches.length} GPS sincronizado(s) correctamente.
-  //               </div>
-  //             `,
-  //             confirmText: 'Aceptar',
-  //             cancelText: ''
-  //           });
-
-  //           this.refreshRequested.emit();
-  //         },
-
-  //         error: async () => {
-  //           await this.confirmModal.open({
-  //             title: 'Error',
-  //             message: `
-  //               <div style="text-align:center;">
-  //                 No se pudieron sincronizar los GPS.
-  //               </div>
-  //             `,
-  //             confirmText: 'Aceptar',
-  //             cancelText: ''
-  //           });
-  //         },
-
-  //         complete: () => {
-  //           this.gpsLoading = false;
-  //         }
-  //       });
-  //     },
-
-  //     error: async () => {
-  //       this.gpsLoading = false;
-
-  //       await this.confirmModal.open({
-  //         title: 'Error',
-  //         message: `
-  //           <div style="text-align:center;">
-  //             No se pudo consultar la API.
-  //           </div>
-  //         `,
-  //         confirmText: 'Aceptar',
-  //         cancelText: ''
-  //       });
-  //     }
-  //   });
-  // }
 
   async syncGpsWithApi() {
 
@@ -825,37 +642,24 @@ export class GpsTabComponent implements OnChanges {
       return;
     }
 
-    const gpsConfigHtml = gpsInConfig.map(g => `
-    <div style="
-      padding:.65rem 0;
-      border-bottom:1px solid rgba(255,255,255,.08);
-    ">
-      <div><b>${g.imei}</b></div>
-      <div style="opacity:.8;font-size:.9rem;">
-        ${g.brand} ${g.model}
-      </div>
-    </div>
-  `).join('');
+    const gpsConfigHtml = this.buildGpsTableHtml(gpsInConfig);
 
     const confirmed = await this.confirmModal.open({
       title: `GPS en configuración (${gpsInConfig.length})`,
       message: `
-      <div style="
-        text-align:left;
-        max-height:350px;
-        overflow:auto;
-        padding-right:.35rem;
-      ">
-        ${gpsConfigHtml}
-      </div>
-      <br>
-      <div style="
-        text-align:center;
-        font-weight:500;
-      ">
-        ¿Deseas sincronizar estos GPS?
-      </div>
-    `,
+        <div style="text-align:left;">
+          ${gpsConfigHtml}
+        </div>
+
+        <br>
+
+        <div style="
+          text-align:center;
+          font-weight:500;
+        ">
+          ¿Deseas sincronizar estos GPS?
+        </div>
+      `,
       confirmText: 'Continuar',
       cancelText: 'Cancelar'
     });
@@ -930,39 +734,23 @@ export class GpsTabComponent implements OnChanges {
               g.status = 'Listo para usar';
             });
 
-            const syncedHtml = matches.map(g => `
-              <div style="
-                padding:.65rem 0;
-                border-bottom:1px solid rgba(255,255,255,.08);
-              ">
-                <div><b>${g.imei}</b></div>
-                <div style="opacity:.8;font-size:.9rem;">
-                  ${g.brand} ${g.model}
-                </div>
-              </div>
-            `).join('');
+            const syncedHtml = this.buildGpsTableHtml(matches);
 
             await this.confirmModal.open({
               title: 'Sincronización completada',
               message: `
-              <div style="
-                text-align:left;
-                max-height:350px;
-                overflow:auto;
-                padding-right:.35rem;
-              ">
-                ${syncedHtml}
-              </div>
+                <div style="text-align:left;">
+                  ${syncedHtml}
+                </div>
 
-              <br>
-
-              <div style="
-                text-align:center;
-                font-weight:500;
-              ">
-                ${matches.length} GPS sincronizado(s) correctamente.
-              </div>
-            `,
+                <div style="
+                  text-align:center;
+                  font-weight:500;
+                  margin-top:16px;
+                ">
+                  ${matches.length} GPS sincronizado(s) correctamente.
+                </div>
+              `,
               confirmText: 'Aceptar',
               cancelText: ''
             });
@@ -971,7 +759,6 @@ export class GpsTabComponent implements OnChanges {
           },
 
           error: async () => {
-
             await this.confirmModal.open({
               title: 'Error',
               message: `
@@ -991,7 +778,6 @@ export class GpsTabComponent implements OnChanges {
       },
 
       error: async () => {
-
         this.gpsLoading = false;
 
         await this.confirmModal.open({
@@ -1006,6 +792,34 @@ export class GpsTabComponent implements OnChanges {
         });
       }
     });
+  }
+
+  private buildGpsTableHtml(gpsList: GpsItem[]): string {
+    return `
+    <div class="sync-gps-table-container">
+      <table class="sync-gps-table">
+        <thead>
+          <tr>
+            <th class="number-cell">No.</th>
+            <th>IMEI</th>
+            <th>Marca</th>
+            <th>Modelo</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          ${gpsList.map((g, index) => `
+            <tr>
+              <td class="number-cell">${index + 1}</td>
+              <td class="imei-cell">${g.imei || '-'}</td>
+              <td class="brand-cell">${g.brand || '-'}</td>
+              <td class="model-cell">${g.model || '-'}</td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
   }
 
 }

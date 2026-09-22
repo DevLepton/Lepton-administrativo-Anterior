@@ -391,7 +391,7 @@
 
 .bank-details {
   display: grid;
-  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  grid-template-columns: minmax(170px, 1.2fr) repeat(4, minmax(120px, 1fr));
   gap: 0.75rem;
 
   div {

@@ -2,8 +2,6 @@
   <div class="panel" (click)="$event.stopPropagation()">
     <h2 class="title">Registrar nuevo usuario</h2>
 
-    <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
-
     <form [formGroup]="form" (ngSubmit)="submit()" class="form-flex">
 
       <mat-form-field appearance="outline">
@@ -39,16 +37,19 @@
         </mat-select>
       </mat-form-field>
 
-    </form>
-    <div class="actions">
-      <button mat-button color="warn" class="custom-button" type="button" (click)="close()" [disabled]="loading">
-        Cancelar
-      </button>
+      <mat-progress-bar *ngIf="loading" mode="indeterminate"></mat-progress-bar>
 
-      <button mat-flat-button color="primary" type="submit" class="custom-button" [disabled]="form.invalid || loading">
-        <mat-icon class="mr-1" *ngIf="!loading">person_add</mat-icon>
-        {{ loading ? 'Registrando…' : 'Registrar' }}
-      </button>
-    </div>
+      <div class="actions">
+        <button mat-button color="warn" class="custom-button" type="button" (click)="close()" [disabled]="loading">
+          Cancelar
+        </button>
+
+        <button mat-flat-button color="primary" type="submit" class="custom-button"
+          [disabled]="form.invalid || loading">
+          <mat-icon class="mr-1" *ngIf="!loading">person_add</mat-icon>
+          {{ loading ? 'Registrando…' : 'Registrar' }}
+        </button>
+      </div>
+    </form>
   </div>
 </div>

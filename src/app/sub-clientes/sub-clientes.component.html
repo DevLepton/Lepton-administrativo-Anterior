@@ -138,21 +138,14 @@
                       </span>
                       <div class="muted" *ngIf="row.item.type === 'client'">
                         {{ row.item.subBillingClients?.length || 0 }} subcliente{{ (row.item.subBillingClients?.length
-                        ||
-                        0)
-                        === 1 ?
-                        '' : 's' }}
+                        || 0) === 1 ? '' : 's' }}
                       </div>
                     </div>
                     <button *ngIf="row.isParent" mat-icon-button
                       (click)="toggleExpanded(row.item._id); $event.stopPropagation()">
 
-                      <mat-icon>
-                        {{ isExpanded(row.item._id)
-                        ? 'keyboard_arrow_down'
-                        : 'keyboard_arrow_right' }}
-                      </mat-icon>
-
+                      <mat-icon>{{ isExpanded(row.item._id) ? 'keyboard_arrow_down' : 'keyboard_arrow_right'
+                        }}</mat-icon>
                     </button>
                   </div>
                 </td>
@@ -181,14 +174,14 @@
               </tr>
 
               <tr *ngIf="displayedBillingClients.length === 0">
-                <td colspan="12" style="text-align:center; padding:1rem;">Sin clientes de cobranza que mostrar.</td>
+                <td colspan="11" style="text-align:center; padding:1rem;">Sin clientes de cobranza que mostrar.</td>
               </tr>
             </tbody>
 
             <ng-template #loadingTpl>
               <tbody>
                 <tr>
-                  <td colspan="12" style="text-align:center; padding:1rem;">Cargando clientes de cobranza...</td>
+                  <td colspan="11" style="text-align:center; padding:1rem;">Cargando clientes de cobranza...</td>
                 </tr>
               </tbody>
             </ng-template>
@@ -236,24 +229,71 @@
         <div class="side-section">
           <h4>Facturación</h4>
           <div class="side-info">
-            <div><b>Razón/Nombre:</b> {{ item.billingName }}</div>
+            <div><b>Razón/Nombre:</b> {{ item.billingName || '-' }}</div>
             <div><b>Empresa:</b> {{ item.companyName || '-' }}</div>
-            <div><b>Comprobante:</b> {{ item.voucherType }}</div>
-            <div><b>RFC:</b> {{ item.RFC || '-' }}</div>
-            <div><b>Régimen:</b> {{ taxRegimeMap.get(item.taxRegime) || '-' }}</div>
-            <div><b>Uso de la factura:</b> {{ invoiceUseMap.get(item.useInvoice) || '-' }}</div>
+            <div><b>Comprobante:</b> {{ item.voucherType || '-' }}</div>
+            <div><b>Emisor:</b> {{ getBankAccount(item.issuer)?.rfc || '-' }} - {{ getBankAccount(item.issuer)?.holder
+              || '-' }}</div>
+            <div *ngIf="item.voucherType === 'Factura'"><b>RFC:</b> {{ item.RFC || '-' }}</div>
+            <div *ngIf="item.voucherType === 'Factura'"><b>Régimen:</b> {{ taxRegimeMap.get(item.taxRegime) || '-' }}
+            </div>
+            <div *ngIf="item.voucherType === 'Factura'"><b>Uso de la factura:</b> {{ invoiceUseMap.get(item.useInvoice)
+              || '-' }}</div>
             <div><b>Correo:</b> {{ item.email || '-' }}</div>
-            <div><b>Día de corte:</b> {{ item.cutoffDay }}</div>
+            <div><b>Día de corte:</b> {{ item.cutoffDay || '-' }}</div>
+            <div><b>Próxima fecha de corte:</b> {{ nextBillingDates.cutoff }}</div>
+            <div><b>Próxima fecha de pago:</b> {{ nextBillingDates.payment }}</div>
           </div>
         </div>
 
         <div class="side-section">
-          <h4>Domicilio</h4>
-          <div class="comments-box">
-            {{ item.street || '-' }} {{ item.streetNumber || '' }},
-            {{ item.suburb || '-' }}, {{ item.locality || '-' }},
-            {{ item.state || '-' }}, {{ item.country || '-' }}.
-            CP: {{ item.cp || '-' }}
+          <h4>Información adicional</h4>
+          <div class="side-info">
+            <div><b>Periodicidad:</b> {{ getPeriodicityLabel(item.periodicity) }}</div>
+            <div><b>Tipo de contrato:</b> {{ getContractTypeLabel(item.contractType) }}</div>
+            <div><b>Etiquetas:</b></div>
+
+            <div class="side-labels" *ngIf="item.labels?.length; else noLabels">
+              <span class="side-label" *ngFor="let labelId of item.labels"
+                [style.--label-color]="getLabelColor(labelId)"
+                [style.--label-bg]="getLabelLightColor(getLabelColor(labelId))">
+
+                {{ getLabelName(labelId) }}
+
+              </span>
+            </div>
+
+            <ng-template #noLabels>
+              <div class="muted">Sin etiquetas</div>
+            </ng-template>
+
+            <div><b>Comentarios:</b></div>
+            <div class="comments-box">{{ item.comments || 'Sin comentarios' }}</div>
+          </div>
+        </div>
+
+        <div class="side-section">
+          <h4>Domicilios</h4>
+
+          <div class="address-card" *ngFor="let address of item.addresses; let i = index">
+            <div class="address-card__header">
+              <b>Domicilio {{ i + 1 }}</b>
+              <span class="address-type">{{ getAddressTypeLabel(address.type) }}</span>
+            </div>
+
+            <div class="address-card__content">
+              <div><b>Calle:</b> {{ address.street || '-' }} {{ address.streetNumber || '' }}</div>
+              <div><b>Colonia:</b> {{ address.suburb || '-' }}</div>
+              <div><b>Municipio:</b> {{ address.locality || '-' }}</div>
+              <div><b>Estado:</b> {{ address.state || '-' }}</div>
+              <div><b>País:</b> {{ address.country || '-' }}</div>
+              <div><b>Código postal:</b> {{ address.cp || '-' }}</div>
+              <div *ngIf="address.comments"><b>Comentarios:</b> {{ address.comments }}</div>
+            </div>
+          </div>
+
+          <div class="comments-box" *ngIf="!item.addresses?.length">
+            Sin domicilios registrados.
           </div>
         </div>
 
@@ -281,6 +321,7 @@
             <b>{{ contact.name }}</b>
             <span>{{ contact.email || '-' }}</span>
             <span>{{ contact.cel || '-' }}</span>
+            <small>{{ contact.type || '-' }}</small>
             <small>{{ contact.notes || 'Sin notas' }}</small>
           </div>
           <div class="comments-box" *ngIf="item.paymentContacts.length === 0">Sin contactos registrados.</div>
@@ -296,7 +337,10 @@
       <mat-icon>close</mat-icon>
     </button>
 
-    <h2>{{ title }}</h2>
+    <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 18px;">
+      <h2 class="step-header-h2">{{ title }}</h2>
+      <mat-icon *ngIf="modalMode === 'edit' && hasChanges" matTooltip="Cualquier cambio debe ser justificado en el paso de comentarios antes de guardar." matTooltipPosition="right" class="info-icon">info</mat-icon>
+    </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
       <mat-horizontal-stepper [linear]="false" class="subclient-stepper" #stepper>
@@ -375,6 +419,27 @@
               </mat-form-field>
 
               <mat-form-field appearance="outline">
+                <mat-label>
+                  {{ form.get('voucherType')?.value === 'Factura' ? 'Emisor de factura' : 'Emisor de comprobante' }}
+                </mat-label>
+                <mat-select formControlName="issuer" [disabled]="bankAccountsLoading">
+                  <mat-option [value]="null">Sin emisor</mat-option>
+
+                  <mat-option *ngIf="bankAccountsLoading" disabled>
+                    Cargando cuentas bancarias...
+                  </mat-option>
+
+                  <mat-option *ngIf="!bankAccountsLoading && bankAccounts.length === 0" disabled>
+                    No hay cuentas bancarias registradas
+                  </mat-option>
+
+                  <mat-option *ngFor="let account of bankAccounts" [value]="account._id">
+                    {{ account.rfc }} — {{ account.holder }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline">
                 <mat-label>Correo cobranza</mat-label>
                 <input matInput type="email" formControlName="email" />
                 <mat-error *ngIf="form.get('email')?.hasError('email')">Correo inválido</mat-error>
@@ -385,16 +450,43 @@
                 <input matInput formControlName="companyName" />
               </mat-form-field>
 
-              <mat-form-field appearance="outline" class="small-field"
-                *ngIf="form.get('voucherType')?.value === 'Factura'">
-                <mat-label>RFC</mat-label>
-                <input matInput formControlName="RFC" />
-              </mat-form-field>
-
               <mat-form-field appearance="outline" class="tiny-field">
                 <mat-label>Día de corte</mat-label>
                 <input matInput type="number" min="1" max="31" formControlName="cutoffDay"
                   (focus)="selectInput($event)" />
+              </mat-form-field>
+
+              <div class="billing-date small-field">
+                <span>Próxima fecha de corte</span>
+                <strong>{{ nextCutoffDate }}</strong>
+              </div>
+
+              <div class="billing-date small-field">
+                <span>Próxima fecha de pago</span>
+                <strong>{{ nextPaymentDate }}</strong>
+              </div>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Periodicidad</mat-label>
+                <mat-select formControlName="periodicity">
+                  <mat-option value="monthly">Mensual</mat-option>
+                  <mat-option value="annual">Anual</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Tipo de contrato</mat-label>
+                <mat-select formControlName="contractType">
+                  <mat-option value="free">Libre</mat-option>
+                  <mat-option value="comodato">Comodato</mat-option>
+                  <mat-option value="lease">Arrendamiento</mat-option>
+                </mat-select>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field"
+                *ngIf="form.get('voucherType')?.value === 'Factura'">
+                <mat-label>RFC</mat-label>
+                <input matInput formControlName="RFC" />
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="medium-field"
@@ -416,10 +508,6 @@
                   </mat-option>
                 </mat-select>
               </mat-form-field>
-
-              <mat-checkbox formControlName="blacklist" class="checkbox-field">
-                Lista negra
-              </mat-checkbox>
             </div>
 
             <div class="stepper-controls final">
@@ -429,6 +517,11 @@
                 <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
                   Siguiente
                   <mat-icon>arrow_forward</mat-icon>
+                </button>
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save"
+                  [disabled]="saving || form.invalid || !hasChanges">
+                  <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                  Guardar
                 </button>
               </div>
             </div>
@@ -439,66 +532,113 @@
           <ng-template matStepLabel>Domicilio</ng-template>
 
           <div class="step-content">
-            <div class="form-flex">
-              <mat-form-field appearance="outline">
-                <mat-label>Código postal</mat-label>
-                <input matInput type="text" inputmode="numeric" maxlength="5" formControlName="cp"
-                  (input)="onCpInput($event)" autocomplete="postal-code" />
-                <mat-error *ngIf="form.get('cp')?.hasError('pattern')">Ingresa 5 dígitos</mat-error>
-              </mat-form-field>
+            <div>
+              <div class="contacts-header">
+                <h3 class="step-header-h3">Domicilios</h3>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Colonia</mat-label>
-                <mat-select formControlName="suburb">
-                  <mat-option *ngIf="loadingColonias" disabled>Cargando colonias...</mat-option>
-                  <mat-option *ngIf="!loadingColonias && colonias.length === 0" disabled>
-                    Ingresa un código postal válido
-                  </mat-option>
-                  <mat-option *ngFor="let colonia of colonias" [value]="colonia">
-                    {{ colonia }}
-                  </mat-option>
-                </mat-select>
-                <mat-hint *ngIf="loadingColonias">Cargando colonias...</mat-hint>
-              </mat-form-field>
+                <button type="button" mat-icon-button color="primary" class="add-contact" (click)="addAddress()"
+                  matTooltip="Agregar domicilio">
+                  <mat-icon>add</mat-icon>
+                </button>
+              </div>
 
-              <mat-form-field appearance="outline">
-                <mat-label>Calle</mat-label>
-                <input matInput formControlName="street" />
-              </mat-form-field>
+              <div formArrayName="addresses" class="contacts-list addresses-list">
+                <div class="address-form" *ngFor="let address of addressControls; let i = index" [formGroupName]="i">
 
-              <mat-form-field appearance="outline" class="tiny-field">
-                <mat-label>Número</mat-label>
-                <input matInput formControlName="streetNumber" />
-              </mat-form-field>
+                  <div class="address-title">
+                    <span>Domicilio {{ i + 1 }}</span>
 
-              <mat-form-field appearance="outline" class="small-field">
-                <mat-label>Municipio</mat-label>
-                <input matInput formControlName="locality" readonly />
-              </mat-form-field>
+                    <button type="button" mat-icon-button color="warn" (click)="removeAddress(i)"
+                      [disabled]="addresses.length === 1" matTooltip="Eliminar domicilio">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
 
-              <mat-form-field appearance="outline" class="small-field">
-                <mat-label>Estado</mat-label>
-                <input matInput formControlName="state" readonly />
-              </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Tipo de domicilio</mat-label>
+                    <mat-select formControlName="type">
+                      <mat-option value="fiscal">Fiscal</mat-option>
+                      <mat-option value="soporte">Soporte</mat-option>
+                      <mat-option value="cobranza">Cobranza</mat-option>
+                      <mat-option value="titular">Titular</mat-option>
+                    </mat-select>
+                    <mat-error *ngIf="address.get('type')?.hasError('required')">Campo obligatorio</mat-error>
+                  </mat-form-field>
 
-              <mat-form-field appearance="outline" class="small-field">
-                <mat-label>País</mat-label>
-                <input matInput formControlName="country" />
-              </mat-form-field>
+                  <mat-form-field appearance="outline">
+                    <mat-label>Código postal</mat-label>
+                    <input matInput type="text" inputmode="numeric" maxlength="5" formControlName="cp"
+                      (input)="onCpInput($event, address)" autocomplete="postal-code" />
+                    <mat-error *ngIf="address.get('cp')?.hasError('required')">Campo obligatorio</mat-error>
+                    <mat-error *ngIf="address.get('cp')?.hasError('pattern')">Ingresa 5 dígitos</mat-error>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Colonia</mat-label>
+                    <mat-select formControlName="suburb">
+                      <mat-option *ngIf="address.get('loadingColonias')?.value" disabled>Cargando
+                        colonias...</mat-option>
+                      <mat-option
+                        *ngIf="!address.get('loadingColonias')?.value && !address.get('colonias')?.value?.length"
+                        disabled>Ingresa un código postal válido</mat-option>
+                      <mat-option *ngFor="let colonia of address.get('colonias')?.value" [value]="colonia">{{ colonia
+                        }}</mat-option>
+                    </mat-select>
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Calle</mat-label>
+                    <input matInput formControlName="street" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="tiny-field">
+                    <mat-label>Número</mat-label>
+                    <input matInput formControlName="streetNumber" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Municipio</mat-label>
+                    <input matInput formControlName="locality" readonly />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>Estado</mat-label>
+                    <input matInput formControlName="state" readonly />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline">
+                    <mat-label>País</mat-label>
+                    <input matInput formControlName="country" />
+                  </mat-form-field>
+
+                  <mat-form-field appearance="outline" class="address-comments">
+                    <mat-label>Comentarios</mat-label>
+                    <textarea matInput formControlName="comments"></textarea>
+                  </mat-form-field>
+
+                </div>
+              </div>
             </div>
 
             <div class="stepper-controls final">
               <button type="button" mat-button color="warn" class="custom-button cancel-btn"
                 (click)="closeModal()">Cancelar</button>
-              <div class="modal-actions">
 
+              <div class="modal-actions">
                 <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
                   <mat-icon>arrow_back</mat-icon>
                   Anterior
                 </button>
+
                 <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
                   Siguiente
                   <mat-icon>arrow_forward</mat-icon>
+                </button>
+
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save"
+                  [disabled]="saving || form.invalid || !hasChanges">
+                  <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                  Guardar
                 </button>
               </div>
             </div>
@@ -506,10 +646,10 @@
         </mat-step>
 
         <mat-step>
-          <ng-template matStepLabel>Descuentos y contactos</ng-template>
+          <ng-template matStepLabel>Descuentos</ng-template>
           <div class="step-content">
             <div>
-              <h3>Descuentos</h3>
+              <h3 class="step-header-h3">Descuentos</h3>
               <div class="form-flex" formGroupName="discounts">
                 <mat-form-field appearance="outline">
                   <mat-label>Mensualidad</mat-label>
@@ -529,9 +669,37 @@
                   <input matInput type="number" min="0" formControlName="accessories" (focus)="selectInput($event)" />
                 </mat-form-field>
               </div>
+            </div>
 
+            <div class="stepper-controls final">
+              <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+                (click)="closeModal()">Cancelar</button>
+
+              <div class="modal-actions">
+                <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Anterior
+                </button>
+
+                <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
+                  Siguiente
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save"
+                  [disabled]="saving || form.invalid || !hasChanges">
+                  <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-step>
+        <mat-step>
+          <ng-template matStepLabel>Contactos</ng-template>
+          <div class="step-content">
+            <div>
               <div class="contacts-header">
-                <h3>Contactos de pago</h3>
+                <h3 class="step-header-h3">Contactos de pago</h3>
                 <button type="button" mat-icon-button color="primary" class="add-contact" (click)="addPaymentContact()"
                   matTooltip="Agregar contacto">
                   <mat-icon>add</mat-icon>
@@ -541,6 +709,16 @@
               <div formArrayName="paymentContacts" class="contacts-list">
                 <div class="contact-form" *ngFor="let contact of paymentContacts.controls; let i = index"
                   [formGroupName]="i">
+
+                  <div class="address-title">
+                    <span>Contacto {{ i + 1 }}</span>
+
+                    <button type="button" mat-icon-button color="warn" (click)="removePaymentContact(i)"
+                      [disabled]="paymentContacts.length === 1" matTooltip="Eliminar contacto">
+                      <mat-icon>delete</mat-icon>
+                    </button>
+                  </div>
+
                   <mat-form-field appearance="outline">
                     <mat-label>Nombre</mat-label>
                     <input matInput formControlName="name" />
@@ -559,14 +737,25 @@
                   </mat-form-field>
 
                   <mat-form-field appearance="outline">
-                    <mat-label>Notas</mat-label>
-                    <input matInput formControlName="notes" />
+                    <mat-label>Tipo de contacto</mat-label>
+                    <mat-select formControlName="contactType">
+                      <mat-option value="titular">Titular</mat-option>
+                      <mat-option value="cobranza">Cobranza</mat-option>
+                      <mat-option value="soporte">Soporte</mat-option>
+                      <mat-option value="emergencia">Emergencia</mat-option>
+                    </mat-select>
                   </mat-form-field>
 
-                  <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
-                    (click)="removePaymentContact(i)" [disabled]="paymentContacts.length === 1" matTooltip="Eliminar contacto">
+                  <mat-form-field appearance="outline" class="payment-contact-notes">
+                    <mat-label>Notas</mat-label>
+                    <textarea matInput formControlName="notes"></textarea>
+                  </mat-form-field>
+
+                  <!-- <button type="button" mat-icon-button color="warn" style="align-self: flex-start; margin-top: 9px;"
+                    (click)="removePaymentContact(i)" [disabled]="paymentContacts.length === 1"
+                    matTooltip="Eliminar contacto">
                     <mat-icon>delete</mat-icon>
-                  </button>
+                  </button> -->
                 </div>
               </div>
             </div>
@@ -579,7 +768,159 @@
                   <mat-icon>arrow_back</mat-icon>
                   Anterior
                 </button>
-                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save" [disabled]="saving || form.invalid || !hasChanges">
+                <button type="button" mat-flat-button class="custom-button next-btn" matStepperNext>
+                  Siguiente
+                  <mat-icon>arrow_forward</mat-icon>
+                </button>
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save"
+                  [disabled]="saving || form.invalid || !hasChanges">
+                  <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
+                  Guardar
+                </button>
+              </div>
+            </div>
+          </div>
+        </mat-step>
+
+        <mat-step>
+          <ng-template matStepLabel>Comentarios</ng-template>
+          <div class="step-content">
+            <div class="form-flex">
+              <!-- <mat-form-field appearance="outline">
+                <mat-label>Etiquetas</mat-label>
+                <mat-select formControlName="labels" multiple>
+                  <mat-option *ngFor="let label of labels" [value]="label._id">
+                    {{ label.name }}
+                  </mat-option>
+                </mat-select>
+              </mat-form-field> -->
+
+              <div class="labels-editor">
+
+                <mat-form-field appearance="outline" class="labels-input-field" floatLabel="always">
+                  <mat-label>Etiquetas</mat-label>
+
+                  <div class="selected-labels">
+                    <span class="label-chip" *ngFor="let label of selectedLabels; let i = index"
+                      [style.--label-color]="label.color" [style.--label-bg]="getLabelLightColor(label.color)">
+                      <span>{{ label.name }}</span>
+
+                      <button type="button" class="label-chip-remove" (click)="removeLabel(i); $event.stopPropagation()"
+                        aria-label="Eliminar etiqueta">
+                        <mat-icon>close</mat-icon>
+                      </button>
+                    </span>
+
+                    <input #labelInputElement matInput [(ngModel)]="labelInput" [ngModelOptions]="{ standalone: true }"
+                      [matAutocomplete]="labelAutocomplete" (keydown)="onLabelInputKeydown($event)"
+                      placeholder="Escribe una etiqueta..." autocomplete="off" />
+                  </div>
+
+                  <mat-autocomplete #labelAutocomplete="matAutocomplete"
+                    (optionSelected)="onLabelSelected($event.option.value)">
+                    <mat-option *ngFor="let label of filteredLabelOptions" [value]="label.name">
+                      <span class="autocomplete-label-color" [style.backgroundColor]="label.color">
+                      </span>
+
+                      {{ label.name }}
+                    </mat-option>
+                  </mat-autocomplete>
+                </mat-form-field>
+
+                <div class="labels-hint" *ngIf="labelInput.trim()">
+                  Presiona <b>Enter</b> para agregar
+                  <b>{{ labelInput.trim() }}</b> como nueva etiqueta.
+                </div>
+
+                <div class="labels-color-list" *ngIf="selectedLabels.length">
+                  <div class="labels-color-title">
+                    <span>Etiquetas seleccionadas</span>
+                    <small>Haz clic en una etiqueta para cambiar su color</small>
+                  </div>
+
+                  <div class="labels-color-items">
+                    <label class="label-color-chip" *ngFor="let label of selectedLabels"
+                      [style.--label-color]="label.color" [style.--label-bg]="getLabelLightColor(label.color)">
+                      <span>{{ label.name }}</span>
+
+                      <input type="color" [value]="label.color" (change)="changeLabelColor(label, $event)"
+                        [title]="'Cambiar color de ' + label.name" />
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <mat-checkbox formControlName="blacklist" class="checkbox-field">
+                Lista negra
+              </mat-checkbox>
+
+              <mat-form-field appearance="outline" class="big-field">
+                <mat-label>Comentarios</mat-label>
+                <textarea matInput formControlName="comments"></textarea>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="medium-field" *ngIf="modalMode === 'edit'">
+                <mat-label>Registro de cambio</mat-label>
+
+                <textarea matInput rows="3" formControlName="changeLog"
+                  placeholder="Describe por qué se está realizando este cambio...">
+                </textarea>
+
+                <mat-hint *ngIf="modalMode === 'edit' && hasChanges">
+                  Debes indicar la razón del cambio.
+                </mat-hint>
+
+                <mat-error *ngIf="form.get('changeLog')?.hasError('required')">
+                  Debes indicar la razón del cambio.
+                </mat-error>
+              </mat-form-field>
+
+              <div class="change-history medium-field" *ngIf="modalMode === 'edit'">
+                <div class="change-history__header">
+                  <h3>Historial de cambios</h3>
+                  <span>{{ editingBillingClient?.changeLog?.length || 0 }} registro{{ (editingBillingClient?.changeLog?.length ?? 0) === 1 ? '' : 's' }}</span>
+                </div>
+
+                <div class="change-history__list" *ngIf="editingBillingClient?.changeLog?.length; else noChangeLogs">
+                  <div class="change-history__item"
+                    *ngFor="let change of editingBillingClient?.changeLog?.slice()?.reverse(); let i = index">
+
+                    <div class="change-history__meta">
+                      <span class="change-history__user">
+                        <mat-icon>person</mat-icon>
+                        {{ change.userName || 'Usuario desconocido' }}
+                      </span>
+
+                      <span class="change-history__date">
+                        <mat-icon>schedule</mat-icon>
+                        {{ change.date | date:'dd/MM/yyyy HH:mm' }}
+                      </span>
+                    </div>
+
+                    <div class="change-history__text">
+                      {{ change.log }}
+                    </div>
+                  </div>
+                </div>
+
+                <ng-template #noChangeLogs>
+                  <div class="change-history__empty">
+                    No hay registros de cambios anteriores.
+                  </div>
+                </ng-template>
+              </div>
+            </div>
+
+            <div class="stepper-controls final">
+              <button type="button" mat-button color="warn" class="custom-button cancel-btn"
+                (click)="closeModal()">Cancelar</button>
+              <div class="modal-actions">
+                <button type="button" mat-button class="custom-button prev-btn" matStepperPrevious>
+                  <mat-icon>arrow_back</mat-icon>
+                  Anterior
+                </button>
+                <button type="submit" mat-flat-button class="custom-button save-btn ang-btn btn-save"
+                  [disabled]="saving || form.invalid || !hasChanges">
                   <mat-icon>{{ saving ? 'hourglass_top' : 'save' }}</mat-icon>
                   Guardar
                 </button>

@@ -23,7 +23,7 @@
               <mat-error *ngIf="form.get('imei')?.hasError('required')">IMEI es requerido</mat-error>
               <mat-error *ngIf="form.get('imei')?.hasError('pattern')">Solo números</mat-error>
               <mat-error *ngIf="form.get('imei')?.hasError('minlength') || form.get('imei')?.hasError('maxlength')">
-                14–20 dígitos
+                14-20 dígitos
               </mat-error>
               <mat-error *ngIf="form.get('imei')?.hasError('duplicate')">
                 IMEI ya existe

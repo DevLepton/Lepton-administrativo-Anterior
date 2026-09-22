@@ -1,23 +1,21 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild } from '@angular/core';
 import { AbstractControl, FormArray, FormBuilder, FormGroup, ValidationErrors, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-import { catchError, forkJoin, of } from 'rxjs';
-import {
-  ApiService,
-  BillingClientItem,
-  BillingClientType,
-  ClientListItem,
-  CreateBillingClientPayload,
-  PaymentContactPayload,
-  BillingClientDiscounts,
-} from '../services/api.service';
+import { catchError, forkJoin, map, Observable, of } from 'rxjs';
+import { ApiService, BillingClientItem, BillingClientType, ClientListItem, CreateBillingClientPayload, PaymentContactPayload, BillingClientDiscounts, BillingClientAddress, LabelItem, BankAccountItem } from '../services/api.service';
+import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
 
 interface ClientOption {
   userId: number;
   fullName: string;
   email: string;
+}
+
+interface LabelEditorItem extends LabelItem {
+  isNew?: boolean;
+  originalColor: string;
 }
 
 type ModalMode = 'create' | 'edit';
@@ -28,12 +26,17 @@ interface BillingClientRow {
   isParent: boolean;
 }
 
+// Quiero cambiar el componente del selector de etiquetas en los modales de crear y actualizar clientes de cobranza por uno que me permita escribir nuevas etiquetas, que al terminar de escribirlas y darle enter, se vayan agregando en el mismo componente, así mismo, conforme se vaya escribiendo en el componente, se deben desplegar como opciones de autocompletado las etiquetas obtenidas desde la api, y si se selecciona una de ellas, que se agregue y se limpie el texto para poder ir agregando más etiquetas si así se desea. Además, dentro del componente deben poderse eliminar las etiquetas agregadas, y debajo del componente también deben aparecer, con la opción de que al darles clic, se les pueda cambiar el color. Una vez agregadas las etiquetas y darle clic en guardar, antes de cerrar el modal y ejecutar la función para registrar o actualizar el cliente, que se mande a llamar a la api para registrar las etiquetas y obtener sus _id, los cuales se deben mandar en el payload del cliente para la clave "labels"; en el caso de que no se registren correctamente las etiquetas, se debe mostrar un error y detener el proceso.
+
 @Component({
   selector: 'app-sub-clientes',
   templateUrl: './sub-clientes.component.html',
   styleUrl: './sub-clientes.component.scss'
 })
 export class SubClientesComponent implements OnInit {
+  @ViewChild(MatAutocompleteTrigger) labelAutocompleteTrigger?: MatAutocompleteTrigger;
+  @ViewChild('labelInputElement') labelInputElement?: ElementRef<HTMLInputElement>;
+
   billingClients: BillingClientItem[] = [];
   clients: ClientOption[] = [];
   clientByUserId = new Map<number, ClientOption>();
@@ -54,6 +57,7 @@ export class SubClientesComponent implements OnInit {
   selectedIds = new Set<string>();
   sidePanelOpen = false;
   selectedForSidebar: BillingClientItem | null = null;
+  nextBillingDates: { cutoff: string; payment: string } = { cutoff: '-', payment: '-' };
 
   modalOpen = false;
   modalMode: ModalMode = 'create';
@@ -61,8 +65,11 @@ export class SubClientesComponent implements OnInit {
   editingId: string | null = null;
   originalEditPayload: CreateBillingClientPayload | null = null;
   form: FormGroup;
-  colonias: string[] = [];
-  loadingColonias = false;
+
+  editingBillingClient: BillingClientItem | null = null;
+
+  nextCutoffDate = '';
+  nextPaymentDate = '';
 
   taxRegimes = [
     { codigo: '601', descripcion: 'General de Ley Personas Morales' },
@@ -103,6 +110,13 @@ export class SubClientesComponent implements OnInit {
     { codigo: 'S01', descripcion: 'Sin efectos fiscales' },
   ];
 
+  labels: LabelItem[] = [];
+  selectedLabels: LabelEditorItem[] = [];
+  labelInput = '';
+
+  bankAccounts: BankAccountItem[] = [];
+  bankAccountsLoading = false;
+
   constructor(
     private api: ApiService,
     private fb: FormBuilder,
@@ -113,36 +127,51 @@ export class SubClientesComponent implements OnInit {
       userId: [null],
       billingClientFather: [null],
       subBillingClients: [[]],
+
       billingName: ['', [Validators.required, Validators.maxLength(160)]],
+
       voucherType: ['Recibo', Validators.required],
+      issuer: [null],
       cutoffDay: [1, [Validators.required, Validators.min(1), Validators.max(31)]],
+
       companyName: ['', Validators.required],
       RFC: ['', [Validators.required, Validators.maxLength(13)]],
       useInvoice: ['', Validators.required],
       taxRegime: ['', Validators.required],
       email: ['', [Validators.email, Validators.required]],
-      cp: ['', [Validators.pattern(/^[0-9]{5}$/), Validators.required]],
-      street: [''],
-      streetNumber: [''],
-      suburb: [''],
-      locality: [''],
-      state: [''],
-      country: ['México'],
+
+      periodicity: ['monthly', Validators.required],
+      changeLog: [''],
+      comments: [''],
+      labels: [[]],
+      contractType: ['free', Validators.required],
+
+      addresses: this.fb.array([]),
+
       discounts: this.fb.group({
         monthly: [0, [Validators.min(0)]],
         devices: [0, [Validators.min(0)]],
         accessories: [0, [Validators.min(0)]]
       }),
+
       blacklist: [false],
+
       paymentContacts: this.fb.array([])
     });
   }
 
   ngOnInit(): void {
     this.loadInitialData();
-    this.onCodigoPostalChange();
     this.onBillingClientTypeChange();
     this.onVoucherTypeChange();
+    this.form.get('cutoffDay')?.valueChanges.subscribe(() => this.updateBillingDates());
+    this.form.get('periodicity')?.valueChanges.subscribe(() => this.updateBillingDates());
+    this.form.valueChanges.subscribe(() => {
+      if (this.modalMode === 'edit') {
+        this.updateChangeLogValidator();
+      }
+    });
+    this.updateBillingDates();
   }
 
   selectInput(event: FocusEvent): void {
@@ -150,8 +179,354 @@ export class SubClientesComponent implements OnInit {
     input.select();
   }
 
+  private updateChangeLogValidator(): void {
+    const changeLog = this.form.get('changeLog');
+
+    if (!changeLog) return;
+
+    if (this.modalMode === 'edit' && this.hasDataChanges()) {
+      changeLog.setValidators([Validators.required]);
+    } else {
+      changeLog.clearValidators();
+    }
+
+    changeLog.updateValueAndValidity({ emitEvent: false });
+  }
+
+  private hasDataChanges(): boolean {
+    if (this.modalMode !== 'edit' || !this.originalEditPayload) return false;
+
+    const currentPayload = this.buildPayload();
+
+    const currentLabels = this.selectedLabels
+      .map(label => {
+        if (label.isNew) {
+          return `new:${this.normalize(label.name)}:${label.color}`;
+        }
+
+        return `${String(label._id)}:${label.color}`;
+      })
+      .sort();
+
+    const originalLabels = (this.originalEditPayload.labels ?? [])
+      .map(id => {
+        const label = this.selectedLabels.find(item => String(item._id) === String(id));
+
+        if (!label) {
+          return `${String(id)}:removed`;
+        }
+
+        return `${String(id)}:${label.originalColor}`;
+      })
+      .sort();
+
+    currentPayload.labels = currentLabels;
+
+    const originalPayload = {
+      ...this.originalEditPayload,
+      labels: originalLabels
+    };
+
+    return JSON.stringify(currentPayload) !== JSON.stringify(originalPayload);
+  }
+
+  private setupAddressCpListener(addressGroup: FormGroup): void {
+    addressGroup.get('cp')?.valueChanges.subscribe((codigoPostal) => {
+      const cp = String(codigoPostal ?? '').trim();
+
+      if (cp && /^[0-9]{5}$/.test(cp)) {
+        addressGroup.get('loadingColonias')?.setValue(true, { emitEvent: false });
+
+        this.api.getColoniasByCodigoPostalFromGoogle(cp).subscribe({
+          next: (response) => {
+            let coloniasEncontradas = (response?.results ?? []).flatMap((result: any) => result.postcode_localities || result.address_components?.filter((component: any) => component.types.includes('neighborhood') || component.types.includes('sublocality')).map((component: any) => component.long_name) || []);
+
+            coloniasEncontradas = Array.from(new Set(coloniasEncontradas.map((colonia: unknown) => String(colonia ?? '').trim()).filter(Boolean)));
+
+            const colonias = coloniasEncontradas as string[];
+
+            const currentSuburb = String(addressGroup.get('suburb')?.value ?? '').trim();
+            const shouldKeepSuburb = currentSuburb && colonias.includes(currentSuburb);
+
+            addressGroup.get('colonias')?.setValue(colonias, { emitEvent: false });
+            addressGroup.get('state')?.setValue(response?.results?.[0]?.address_components?.find((component: any) => component.types.includes('administrative_area_level_1'))?.long_name || '', { emitEvent: false });
+            addressGroup.get('locality')?.setValue(response?.results?.[0]?.address_components?.find((component: any) => component.types.includes('locality') || component.types.includes('administrative_area_level_2'))?.long_name || '', { emitEvent: false });
+            addressGroup.get('suburb')?.setValue(shouldKeepSuburb ? currentSuburb : '', { emitEvent: false });
+            addressGroup.get('loadingColonias')?.setValue(false, { emitEvent: false });
+          },
+          error: (error) => {
+            console.error('Error al obtener colonias:', error);
+            addressGroup.get('colonias')?.setValue([], { emitEvent: false });
+            addressGroup.get('state')?.setValue('', { emitEvent: false });
+            addressGroup.get('locality')?.setValue('', { emitEvent: false });
+            addressGroup.get('suburb')?.setValue('', { emitEvent: false });
+            addressGroup.get('loadingColonias')?.setValue(false, { emitEvent: false });
+
+            this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar las colonias. Intente más tarde.', duration: 5000 });
+          }
+        });
+      } else {
+        addressGroup.get('colonias')?.setValue([], { emitEvent: false });
+        addressGroup.get('state')?.setValue('', { emitEvent: false });
+        addressGroup.get('locality')?.setValue('', { emitEvent: false });
+        addressGroup.get('suburb')?.setValue('', { emitEvent: false });
+        addressGroup.get('loadingColonias')?.setValue(false, { emitEvent: false });
+      }
+    });
+  }
+
+  get addresses(): FormArray<FormGroup> {
+    return this.form.get('addresses') as FormArray<FormGroup>;
+  }
+
+  get addressControls(): FormGroup[] {
+    return this.addresses.controls as FormGroup[];
+  }
+
   get paymentContacts(): FormArray {
     return this.form.get('paymentContacts') as FormArray;
+  }
+
+  getBankAccount(issuer: string | null | undefined): BankAccountItem | null {
+    if (!issuer) return null;
+    return this.bankAccounts.find(account => account._id === issuer) ?? null;
+  }
+
+  getPeriodicityLabel(value: string | undefined | null): string {
+    const map: Record<string, string> = { annual: 'Anual', monthly: 'Mensual' };
+    return map[value ?? ''] ?? value ?? '-';
+  }
+
+  getContractTypeLabel(value: string | undefined | null): string {
+    const map: Record<string, string> = { free: 'Libre', commodity: 'Comodato', leased: 'Arrendado' };
+    return map[value ?? ''] ?? value ?? '-';
+  }
+
+  getAddressTypeLabel(value: string | undefined | null): string {
+    const map: Record<string, string> = { fiscal: 'Fiscal', soporte: 'Soporte', cobranza: 'Cobranza', titular: 'Titular' };
+    return map[value ?? ''] ?? value ?? '-';
+  }
+
+  getLabelName(id: string): string {
+    const selected = this.selectedLabels.find(label => String(label._id) === String(id));
+
+    if (selected) return selected.name;
+
+    const label = this.labels.find(label => String(label._id) === String(id));
+
+    return label?.name ?? id;
+  }
+
+  getLabelColor(labelId: string): string {
+    const label = this.labels.find(item => String(item._id) === String(labelId));
+    return label?.color || '#757575';
+  }
+
+  get filteredLabelOptions(): LabelItem[] {
+    const query = this.normalize(this.labelInput);
+
+    return this.labels
+      .filter((label: LabelItem) => !this.selectedLabels.some((selected: LabelEditorItem) => String(selected._id) === String(label._id)))
+      .filter((label: LabelItem) => !query || this.normalize(label.name).includes(query))
+      .sort((a: LabelItem, b: LabelItem) => a.name.localeCompare(b.name));
+  }
+
+  private syncSelectedLabels(): void {
+    const value = this.form.get('labels')?.value;
+    const selectedIds: string[] = Array.isArray(value) ? value.map((id: unknown) => String(id)) : [];
+
+    this.selectedLabels = [];
+
+    selectedIds.forEach((id: string) => {
+      const label = this.labels.find((item: LabelItem) => String(item._id) === id);
+
+      if (label) {
+        this.selectedLabels.push({
+          ...label,
+          originalColor: label.color
+        });
+      }
+    });
+  }
+
+  private generateRandomLabelColor(): string {
+    const hue = Math.floor(Math.random() * 360);
+    const saturation = 70 + Math.floor(Math.random() * 15);
+    const lightness = 45 + Math.floor(Math.random() * 10);
+
+    const hslToHex = (h: number, s: number, l: number): string => {
+      s /= 100;
+      l /= 100;
+
+      const k = (n: number) => (n + h / 30) % 12;
+      const a = s * Math.min(l, 1 - l);
+      const f = (n: number) => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+
+      return `#${[f(0), f(8), f(4)].map(x => Math.round(255 * x).toString(16).padStart(2, '0')).join('')}`;
+    };
+
+    return hslToHex(hue, saturation, lightness);
+  }
+
+  private prepareLabels(): Observable<string[]> {
+    const newLabels = this.selectedLabels.filter(label => label.isNew);
+    const existingLabels = this.selectedLabels.filter(label => !label.isNew);
+
+    const labelsToCreate = newLabels.map(label => ({
+      name: label.name.trim(),
+      color: label.color
+    }));
+
+    const labelsToUpdate = existingLabels.filter(label =>
+      label.originalColor &&
+      label.originalColor !== label.color
+    );
+
+    const create$ = labelsToCreate.length
+      ? this.api.createLabel(labelsToCreate)
+      : of(null);
+
+    const update$ = labelsToUpdate.length
+      ? forkJoin(labelsToUpdate.map(label =>
+        this.api.updateLabel(String(label._id), { color: label.color })
+      ))
+      : of([]);
+
+    return forkJoin({ created: create$, updated: update$ }).pipe(
+      map(({ created }) => {
+        const responseLabels = Array.isArray(created?.data)
+          ? created.data
+          : Array.isArray(created)
+            ? created
+            : [];
+
+        const createdIds = responseLabels
+          .map((label: any) => label?._id)
+          .filter((id: any): id is string => !!id)
+          .map((id: string) => String(id));
+
+        if (newLabels.length !== createdIds.length) {
+          throw new Error('No se pudieron obtener los IDs de todas las etiquetas nuevas.');
+        }
+
+        const existingIds = existingLabels
+          .map(label => String(label._id))
+          .filter(Boolean);
+
+        return [...existingIds, ...createdIds];
+      })
+    );
+  }
+
+  changeLabelColor(label: LabelEditorItem, event: Event): void {
+    const input = event.target as HTMLInputElement;
+
+    if (!input.value) return;
+
+    label.color = input.value;
+    this.updateLabelsFormValue();
+  }
+
+  addLabel(label?: LabelItem): void {
+    const name = String(label?.name ?? this.labelInput ?? '').trim();
+
+    if (!name) return;
+
+    const normalizedName = this.normalize(name);
+
+    const alreadySelected = this.selectedLabels.some(item => this.normalize(item.name) === normalizedName);
+
+    if (alreadySelected) {
+      this.labelInput = '';
+      return;
+    }
+
+    const existingLabel = this.labels.find(item => this.normalize(item.name) === normalizedName);
+
+    if (existingLabel) {
+      this.selectedLabels.push({
+        ...existingLabel,
+        originalColor: existingLabel.color
+      });
+    } else {
+      const color = this.generateRandomLabelColor();
+
+      this.selectedLabels.push({
+        _id: '',
+        name,
+        color,
+        originalColor: color,
+        isNew: true
+      });
+    }
+
+    this.updateLabelsFormValue();
+    this.labelInput = '';
+  }
+
+  onLabelInputKeydown(event: KeyboardEvent): void {
+    if (event.key !== 'Enter') return;
+
+    event.preventDefault();
+
+    const value = String(this.labelInput ?? '').trim();
+
+    if (!value) return;
+
+    const existingLabel = this.filteredLabelOptions.find(
+      label => this.normalize(label.name) === this.normalize(value)
+    );
+
+    this.addLabel(existingLabel);
+  }
+
+  onLabelSelected(name: string): void {
+    const label = this.labels.find(
+      (item: LabelItem) => this.normalize(item.name) === this.normalize(name)
+    );
+
+    if (label) {
+      this.addLabel(label);
+    }
+
+    setTimeout(() => {
+      this.labelInput = '';
+
+      if (this.labelInputElement) {
+        this.labelInputElement.nativeElement.value = '';
+      }
+
+      this.labelAutocompleteTrigger?.closePanel();
+      this.labelInputElement?.nativeElement.focus();
+    });
+  }
+
+  getLabelLightColor(color: string): string {
+    if (!color) return '#f5f5f5';
+
+    const hex = color.replace('#', '');
+
+    if (hex.length !== 6) return '#f5f5f5';
+
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+
+    const lighten = (value: number) => Math.round(value + (255 - value) * 0.82);
+
+    return `rgb(${lighten(r)}, ${lighten(g)}, ${lighten(b)})`;
+  }
+
+  removeLabel(index: number): void {
+    this.selectedLabels.splice(index, 1);
+    this.updateLabelsFormValue();
+  }
+
+  private updateLabelsFormValue(): void {
+    this.form.get('labels')?.setValue(
+      this.selectedLabels.map(label => label.isNew ? `new:${this.normalize(label.name)}` : String(label._id))
+    );
+    this.form.get('labels')?.markAsDirty();
   }
 
   get title(): string {
@@ -177,9 +552,8 @@ export class SubClientesComponent implements OnInit {
 
   get hasChanges(): boolean {
     if (this.modalMode === 'create') return true;
-    if (!this.originalEditPayload) return false;
 
-    return JSON.stringify(this.buildPayload()) !== JSON.stringify(this.originalEditPayload);
+    return this.hasDataChanges();
   }
 
   get linkedClientOptions(): ClientOption[] {
@@ -205,9 +579,7 @@ export class SubClientesComponent implements OnInit {
 
   get filteredLinkedClientOptions(): ClientOption[] {
     const value = this.form.get('userId')?.value;
-    const q = typeof value === 'number'
-      ? ''
-      : this.normalize(value);
+    const q = typeof value === 'number' ? '' : this.normalize(value);
 
     if (!q) return this.linkedClientOptions;
 
@@ -261,15 +633,25 @@ export class SubClientesComponent implements OnInit {
     });
   }
 
+  private searchExpandedParents = new Set<string>();
+
   get displayedBillingClients(): BillingClientRow[] {
     const filtered = this.filteredBillingClients;
+    const filteredIds = new Set(filtered.map(item => item._id));
 
-    const parents = filtered.filter(x => x.type === 'client');
+    const parents = this.billingClients
+      .filter(item =>
+        item.type === 'client' &&
+        (filteredIds.has(item._id) || filtered.some(child =>
+          child.type === 'subClient' &&
+          child.billingClientFather === item._id
+        ))
+      )
+      .sort((a, b) => this.getCreatedTime(b) - this.getCreatedTime(a));
 
     const rows: BillingClientRow[] = [];
 
     for (const parent of parents) {
-
       rows.push({
         item: parent,
         level: 0,
@@ -280,12 +662,21 @@ export class SubClientesComponent implements OnInit {
         continue;
       }
 
-      const children = filtered
-        .filter(x =>
-          x.type === 'subClient' &&
-          x.billingClientFather === parent._id
-        )
-        .sort((a, b) => a.billingName.localeCompare(b.billingName));
+      const parentMatchesSearch = filteredIds.has(parent._id);
+
+      const children = parentMatchesSearch
+        ? this.billingClients
+          .filter(item =>
+            item.type === 'subClient' &&
+            item.billingClientFather === parent._id
+          )
+          .sort((a, b) => a.billingName.localeCompare(b.billingName))
+        : filtered
+          .filter(item =>
+            item.type === 'subClient' &&
+            item.billingClientFather === parent._id
+          )
+          .sort((a, b) => a.billingName.localeCompare(b.billingName));
 
       for (const child of children) {
         rows.push({
@@ -311,6 +702,24 @@ export class SubClientesComponent implements OnInit {
   get someVisibleSelected(): boolean {
     const visible = this.displayedBillingClients;
     return visible.some(item => this.selectedIds.has(item.item._id)) && !this.allVisibleSelected;
+  }
+
+  private extractList(response: any): any[] {
+    if (Array.isArray(response?.data)) return response.data;
+    if (Array.isArray(response?.bankAccounts)) return response.bankAccounts;
+    if (Array.isArray(response)) return response;
+    return [];
+  }
+
+  private mapBankAccount(item: any): BankAccountItem {
+    return {
+      _id: String(item?._id ?? item?.id ?? ''),
+      holder: String(item?.holder ?? ''),
+      bankName: String(item?.bankName ?? ''),
+      accountNumber: String(item?.accountNumber ?? ''),
+      CLABE: String(item?.CLABE ?? ''),
+      rfc: String(item?.rfc ?? ''),
+    };
   }
 
   loadInitialData(forceRefresh = false): void {
@@ -351,11 +760,44 @@ export class SubClientesComponent implements OnInit {
       });
 
     forkJoin({
+      labels: this.api.getLabels(forceRefresh).pipe(catchError(error => of({ __error: error }))),
+      bankAccounts: this.api.getBankAccountsCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
       clients: this.api.getClientsListCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
       activeConfig: this.api.getActiveClientsConfigCached(forceRefresh).pipe(catchError(error => of({ __error: error }))),
       excludedConfig: this.api.getExcludedAccountsConfigCached(forceRefresh).pipe(catchError(error => of({ __error: error })))
     }).subscribe({
-      next: ({ clients, activeConfig, excludedConfig }) => {
+      next: ({ labels, bankAccounts, clients, activeConfig, excludedConfig }) => {
+        if (!Array.isArray(labels) && labels && '__error' in labels) {
+          console.error('Error al cargar etiquetas:', labels.__error);
+          this.labels = [];
+          this.toast.error({
+            detail: 'Error',
+            summary: 'No se pudieron cargar las etiquetas',
+            duration: 5000
+          });
+        } else {
+          this.labels = Array.isArray(labels) ? labels : [];
+          this.syncSelectedLabels();
+        }
+
+        if (bankAccounts?.__error) {
+          console.error('Error al cargar cuentas bancarias:', bankAccounts.__error);
+          this.bankAccounts = [];
+          this.toast.error({
+            detail: 'Error',
+            summary: 'No se pudieron cargar las cuentas bancarias',
+            duration: 5000
+          });
+        } else {
+          const list = Array.isArray(bankAccounts?.data)
+            ? bankAccounts.data
+            : (Array.isArray(bankAccounts) ? bankAccounts : []);
+
+          this.bankAccounts = list
+            .map((account: any) => this.mapBankAccount(account))
+            .sort((a: BankAccountItem, b: BankAccountItem) => a.holder.localeCompare(b.holder, 'es'));
+        }
+
         if (clients?.__error) {
           console.error('Error al cargar clientes:', clients.__error);
           this.toast.error({
@@ -394,34 +836,92 @@ export class SubClientesComponent implements OnInit {
     });
   }
 
-  // loadSubClients(forceRefresh = false): void {
-  //   this.loading = true;
+  loadBillingClients(forceRefresh = false): void {
+    this.loading = true;
 
-  //   this.api.getBillingClientsCached(forceRefresh).subscribe({
-  //     next: (response) => {
-  //       const list = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    this.api.getBillingClientsCached(forceRefresh)
+      .pipe(
+        catchError(error => of({ __error: error }))
+      )
+      .subscribe({
+        next: (billingClients: any) => {
+          if (billingClients?.__error) {
+            console.error('Error al cargar clientes de cobranza:', billingClients.__error);
 
-  //       this.billingClients = list
-  //         .map((item: any) => this.mapBillingClient(item))
-  //         .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
+            this.toast.error({
+              detail: 'Error',
+              summary: 'No se pudieron cargar los clientes de cobranza',
+              duration: 5000
+            });
 
-  //       // this.updateUniqueLinkedClients();
+            return;
+          }
 
-  //       this.currentPage = 1;
-  //       this.clearSelection();
-  //     },
-  //     complete: () => this.loading = false
-  //   });
-  // }
+          const list = Array.isArray(billingClients?.data)
+            ? billingClients.data
+            : (Array.isArray(billingClients) ? billingClients : []);
 
-  refresh(): void {
-    this.closeSidebar();
-    this.loadInitialData(true);
+          this.billingClients = list
+            .map((item: any) => this.mapBillingClient(item))
+            .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
+
+          this.currentPage = 1;
+          this.clearSelection();
+          this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
+        },
+        complete: () => {
+          this.loading = false;
+        }
+      });
   }
 
-  //   trackByUserId(_index: number, item: ClientOption): number {
-  //   return item.userId;
-  // }
+  refresh(all = true): void {
+    this.closeSidebar();
+
+    if (all) {
+      this.loadInitialData(true);
+    } else {
+      this.loadBillingClients(true);
+      this.loadLabels(true);
+    }
+  }
+
+  private loadLabels(forceRefresh = false): void {
+    this.api.getLabels(forceRefresh).subscribe({
+      next: labels => {
+        this.labels = Array.isArray(labels) ? labels : [];
+        this.syncSelectedLabels();
+      },
+      error: error => {
+        console.error('Error al cargar etiquetas:', error);
+        this.labels = [];
+        this.toast.error({
+          detail: 'Error',
+          summary: 'No se pudieron cargar las etiquetas',
+          duration: 5000
+        });
+      }
+    });
+  }
+
+  loadBankAccounts(): void {
+    this.bankAccountsLoading = true;
+
+    this.api.getBankAccounts().subscribe({
+      next: response => {
+        this.bankAccounts = this.extractList(response)
+          .map(item => this.mapBankAccount(item))
+          .sort((a, b) => a.holder.localeCompare(b.holder, 'es'));
+      },
+      error: error => {
+        console.error('Error al cargar cuentas bancarias:', error);
+        this.toast.error({ detail: 'Error', summary: 'No se pudieron cargar las cuentas bancarias', duration: 5000 });
+      },
+      complete: () => {
+        this.bankAccountsLoading = false;
+      }
+    });
+  }
 
   expandedClients = new Set<string>();
 
@@ -440,6 +940,16 @@ export class SubClientesComponent implements OnInit {
   updateSearch(value: string): void {
     this.search = (value ?? '').trim();
     this.currentPage = 1;
+
+    if (!this.search) return;
+
+    const filtered = this.filteredBillingClients;
+
+    filtered
+      .filter(item => item.type === 'subClient' && item.billingClientFather)
+      .forEach(item => {
+        this.expandedClients.add(item.billingClientFather as string);
+      });
   }
 
   onFilterChange(): void {
@@ -495,6 +1005,7 @@ export class SubClientesComponent implements OnInit {
   openEditModal(item: BillingClientItem): void {
     this.modalMode = 'edit';
     this.editingId = item._id;
+    this.editingBillingClient = item;
     this.resetForm(item);
     this.modalOpen = true;
     document.body.style.overflow = 'hidden';
@@ -505,6 +1016,7 @@ export class SubClientesComponent implements OnInit {
     this.saving = false;
     this.editingId = null;
     this.originalEditPayload = null;
+    this.editingBillingClient = null;
     document.body.style.overflow = '';
   }
 
@@ -520,19 +1032,21 @@ export class SubClientesComponent implements OnInit {
     }
 
     this.selectedForSidebar = item;
+    this.nextBillingDates = this.getNextBillingDates(item);
     this.sidePanelOpen = true;
   }
 
   closeSidebar(): void {
     this.sidePanelOpen = false;
     this.selectedForSidebar = null;
+    this.nextBillingDates = { cutoff: '-', payment: '-' };
   }
 
-  onCpInput(event: Event): void {
+  onCpInput(event: Event, addressGroup: AbstractControl): void {
     const input = event.target as HTMLInputElement;
     const value = input.value.replace(/\D/g, '').slice(0, 5);
     input.value = value;
-    this.form.get('cp')?.setValue(value, { emitEvent: true });
+    addressGroup.get('cp')?.setValue(value, { emitEvent: true });
   }
 
   onTypeSelect(): void {
@@ -553,90 +1067,28 @@ export class SubClientesComponent implements OnInit {
     ])
   );
 
-  onCodigoPostalChange(): void {
-    const cpControl = this.form.get('cp');
-
-    cpControl?.valueChanges.subscribe((codigoPostal) => {
-      const cp = String(codigoPostal ?? '').trim();
-
-      if (cp && /^[0-9]{5}$/.test(cp)) {
-        this.loadingColonias = true;
-
-        this.api.getColoniasByCodigoPostalFromGoogle(cp).subscribe({
-          next: (response) => {
-            let coloniasEncontradas = (response?.results ?? []).flatMap((result: any) =>
-              result.postcode_localities ||
-              result.address_components
-                .filter((component: any) =>
-                  component.types.includes('neighborhood') || component.types.includes('sublocality')
-                )
-                .map((component: any) => component.long_name)
-            );
-
-            coloniasEncontradas = Array.from(new Set(
-              coloniasEncontradas
-                .map((colonia: unknown) => String(colonia ?? '').trim())
-                .filter(Boolean)
-            ));
-
-            this.colonias = coloniasEncontradas as string[];
-
-            if (this.colonias.length === 0) {
-              this.toast.warning({
-                detail: 'Advertencia',
-                summary: 'No se encontraron colonias para este código postal.',
-                duration: 5000
-              });
-            }
-
-            const components = response?.results?.[0]?.address_components ?? [];
-
-            const estadoComponent = components.find((component: any) =>
-              component.types.includes('administrative_area_level_1')
-            );
-
-            const municipioComponent = components.find((component: any) =>
-              component.types.includes('locality') ||
-              component.types.includes('administrative_area_level_2')
-            );
-
-            const currentSuburb = String(this.form.get('suburb')?.value ?? '').trim();
-            const shouldKeepSuburb = currentSuburb && this.colonias.includes(currentSuburb);
-
-            this.form.patchValue({
-              state: estadoComponent?.long_name || '',
-              locality: municipioComponent?.long_name || '',
-              suburb: shouldKeepSuburb ? currentSuburb : ''
-            }, { emitEvent: false });
-          },
-          error: (error) => {
-            console.error('Error al obtener colonias:', error);
-            this.colonias = [];
-            this.form.patchValue({
-              state: '',
-              locality: '',
-              suburb: ''
-            }, { emitEvent: false });
-            this.toast.error({
-              detail: 'Error',
-              summary: 'No se pudieron cargar las colonias. Intente más tarde.',
-              duration: 5000
-            });
-          },
-          complete: () => {
-            this.loadingColonias = false;
-          }
-        });
-      } else {
-        this.loadingColonias = false;
-        this.colonias = [];
-        this.form.patchValue({
-          state: '',
-          locality: '',
-          suburb: ''
-        }, { emitEvent: false });
-      }
+  addAddress(address?: BillingClientAddress): void {
+    const group = this.fb.group({
+      type: [address?.type ?? 'fiscal', Validators.required],
+      cp: [address?.cp ? String(address.cp) : '', [Validators.required, Validators.pattern(/^[0-9]{5}$/)]],
+      suburb: [address?.suburb ?? ''],
+      street: [address?.street ?? ''],
+      streetNumber: [address?.streetNumber ?? ''],
+      locality: [address?.locality ?? ''],
+      state: [address?.state ?? ''],
+      country: [address?.country ?? 'México'],
+      comments: [address?.comments ?? ''],
+      colonias: [[]],
+      loadingColonias: [false]
     });
+
+    this.addresses.push(group);
+    this.setupAddressCpListener(group);
+  }
+
+  removeAddress(index: number): void {
+    if (this.addresses.length === 1) return;
+    this.addresses.removeAt(index);
   }
 
   addPaymentContact(contact?: PaymentContactPayload): void {
@@ -644,12 +1096,116 @@ export class SubClientesComponent implements OnInit {
       name: [contact?.name ?? '', Validators.required],
       email: [contact?.email ?? '', Validators.email],
       cel: [contact?.cel ?? ''],
-      notes: [contact?.notes ?? '']
+      notes: [contact?.notes ?? ''],
+      contactType: [contact?.type ?? 'titular']
     }));
   }
 
   removePaymentContact(index: number): void {
     this.paymentContacts.removeAt(index);
+  }
+
+  private formatBillingDate(date: Date): string {
+    return date.toLocaleDateString('es-MX', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private updateBillingDates(): void {
+    const cutoffDay = Number(this.form.get('cutoffDay')?.value);
+    const periodicity = this.form.get('periodicity')?.value;
+
+    if (!cutoffDay || cutoffDay < 1 || cutoffDay > 31) {
+      this.nextCutoffDate = '-';
+      this.nextPaymentDate = '-';
+      return;
+    }
+
+    const today = new Date();
+    let cutoffDate: Date;
+
+    if (periodicity === 'annual') {
+      cutoffDate = new Date(today.getFullYear() + 1, today.getMonth(), cutoffDay);
+
+      if (cutoffDate.getMonth() !== today.getMonth()) {
+        cutoffDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
+      }
+
+      const paymentDate = new Date(cutoffDate);
+      paymentDate.setMonth(paymentDate.getMonth() - 1);
+
+      this.nextCutoffDate = this.formatBillingDate(cutoffDate);
+      this.nextPaymentDate = this.formatBillingDate(paymentDate);
+      return;
+    }
+
+    let year = today.getFullYear();
+    let month = today.getMonth();
+
+    cutoffDate = new Date(year, month, cutoffDay);
+
+    if (cutoffDate.getMonth() !== month || cutoffDate < today) {
+      month++;
+
+      if (month > 11) {
+        month = 0;
+        year++;
+      }
+
+      cutoffDate = new Date(year, month, cutoffDay);
+
+      if (cutoffDate.getMonth() !== month) {
+        cutoffDate = new Date(year, month + 1, 0);
+      }
+    }
+
+    const paymentDate = new Date(cutoffDate);
+    paymentDate.setDate(paymentDate.getDate() + 9);
+
+    this.nextCutoffDate = this.formatBillingDate(cutoffDate);
+    this.nextPaymentDate = this.formatBillingDate(paymentDate);
+  }
+
+  getNextBillingDates(item: BillingClientItem): { cutoff: string; payment: string } {
+    const cutoffDay = Number(item?.cutoffDay);
+    const periodicity = item?.periodicity;
+
+    if (!cutoffDay || cutoffDay < 1 || cutoffDay > 31) return { cutoff: '-', payment: '-' };
+
+    const today = new Date();
+    let cutoffDate: Date;
+
+    if (periodicity === 'annual') {
+      cutoffDate = new Date(today.getFullYear() + 1, today.getMonth(), cutoffDay);
+
+      if (cutoffDate.getMonth() !== today.getMonth()) cutoffDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
+
+      const paymentDate = new Date(cutoffDate);
+      paymentDate.setMonth(paymentDate.getMonth() - 1);
+
+      return { cutoff: this.formatBillingDate(cutoffDate), payment: this.formatBillingDate(paymentDate) };
+    }
+
+    let year = today.getFullYear();
+    let month = today.getMonth();
+
+    cutoffDate = new Date(year, month, cutoffDay);
+
+    if (cutoffDate.getMonth() !== month || cutoffDate < today) {
+      month++;
+
+      if (month > 11) {
+        month = 0;
+        year++;
+      }
+
+      cutoffDate = new Date(year, month, cutoffDay);
+
+      if (cutoffDate.getMonth() !== month) cutoffDate = new Date(year, month + 1, 0);
+    }
+
+    const paymentDate = new Date(cutoffDate);
+    paymentDate.setDate(paymentDate.getDate() + 9);
+
+    return { cutoff: this.formatBillingDate(cutoffDate), payment: this.formatBillingDate(paymentDate) };
   }
 
   submit(): void {
@@ -659,27 +1215,71 @@ export class SubClientesComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildPayload();
+    if (this.modalMode === 'edit' && this.hasDataChanges()) {
+      const changeLog = String(this.form.get('changeLog')?.value ?? '').trim();
+
+      if (!changeLog) {
+        this.form.get('changeLog')?.markAsTouched();
+        this.toast.warning({ detail: 'Registro de cambios requerido', summary: 'Debes indicar la razón del cambio', duration: 5000 });
+        return;
+      }
+    }
+
     this.saving = true;
 
-    const request$ = this.modalMode === 'create'
-      ? this.api.createBillingClient(payload)
-      : this.api.updateBillingClient(this.editingId!, payload);
+    this.prepareLabels().subscribe({
+      next: labelIds => {
+        this.form.get('labels')?.setValue(labelIds, { emitEvent: false });
 
-    request$.subscribe({
-      next: () => {
-        this.toast.success({
-          detail: 'Éxito',
-          summary: this.modalMode === 'create' ? 'Cliente de cobranza creado' : 'Cliente de cobranza actualizado',
-          duration: 3500
+        const payload = this.modalMode === 'edit'
+          ? { ...this.buildPayload(), changeLog: String(this.form.get('changeLog')?.value ?? '').trim() }
+          : this.buildPayload();
+
+        const request$ = this.modalMode === 'create'
+          ? this.api.createBillingClient(payload)
+          : this.api.updateBillingClient(this.editingId!, payload);
+
+        request$.subscribe({
+          next: () => {
+            this.toast.success({
+              detail: 'Éxito',
+              summary: this.modalMode === 'create' ? 'Cliente de cobranza creado' : 'Cliente de cobranza actualizado',
+              duration: 3500
+            });
+
+            this.closeModal();
+            this.refresh(false);
+          },
+          error: err => {
+            console.error(err);
+
+            const msg = err?.error?.error ||
+              err?.error?.message ||
+              'No se pudo guardar el cliente de cobranza';
+
+            this.toast.error({
+              detail: 'Error',
+              summary: msg,
+              duration: 6000
+            });
+
+            this.saving = false;
+          }
         });
-        this.closeModal();
-        this.refresh();
       },
-      error: (err) => {
-        console.error(err);
-        const msg = err?.error?.error || err?.error?.message || 'No se pudo guardar el cliente de cobranza';
-        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+      error: error => {
+        console.error('Error al registrar etiquetas:', error);
+
+        const msg = error?.message ||
+          error?.error?.message ||
+          'No se pudieron registrar las etiquetas. El cliente no fue guardado.';
+
+        this.toast.error({
+          detail: 'Error',
+          summary: msg,
+          duration: 6000
+        });
+
         this.saving = false;
       }
     });
@@ -807,7 +1407,7 @@ export class SubClientesComponent implements OnInit {
               : `Se eliminaron ${success} cliente(s) de cobranza`,
             duration: 4000
           });
-          this.refresh();
+          this.refresh(false);
         }
 
         if (failures) {
@@ -857,6 +1457,7 @@ export class SubClientesComponent implements OnInit {
   }
 
   private resetForm(item?: BillingClientItem): void {
+    this.addresses.clear();
     this.paymentContacts.clear();
 
     this.form.reset({
@@ -864,38 +1465,46 @@ export class SubClientesComponent implements OnInit {
       userId: item?.type === 'client' ? item?.userId ?? null : null,
       billingClientFather: item?.type === 'subClient' ? item?.billingClientFather ?? null : null,
       subBillingClients: item?.type === 'client' ? item?.subBillingClients ?? [] : [],
+
       billingName: item?.billingName ?? '',
       voucherType: item?.voucherType ?? 'Recibo',
+      issuer: item?.issuer ?? null,
       cutoffDay: item?.cutoffDay ?? 1,
+
       companyName: item?.companyName ?? '',
       RFC: item?.RFC ?? '',
       useInvoice: item?.useInvoice ?? '',
       taxRegime: item?.taxRegime ?? '',
       email: item?.email ?? '',
-      cp: item?.cp ? String(item.cp) : '',
-      street: item?.street ?? '',
-      streetNumber: item?.streetNumber ?? '',
-      suburb: item?.suburb ?? '',
-      locality: item?.locality ?? '',
-      state: item?.state ?? '',
-      country: item?.country ?? 'México',
+
+      periodicity: item?.periodicity ?? 'monthly',
+      comments: item?.comments ?? '',
+      changeLog: '',
+      labels: item?.labels ?? [],
+      contractType: item?.contractType ?? 'free',
+
       discounts: {
         monthly: item?.discounts?.monthly ?? 0,
         devices: item?.discounts?.devices ?? 0,
         accessories: item?.discounts?.accessories ?? 0
       },
+
       blacklist: item?.blacklist ?? false
     }, { emitEvent: false });
 
     this.applyTypeRules(item?.type ?? 'client');
     this.applyVoucherTypeRules(item?.voucherType ?? 'Recibo');
-    this.colonias = item?.suburb ? [item.suburb] : [];
 
-    if (item?.cp && /^[0-9]{5}$/.test(String(item.cp))) {
-      this.form.get('cp')?.setValue(String(item.cp), { emitEvent: true });
+    const addresses = Array.isArray(item?.addresses) ? item.addresses : [];
+
+    if (addresses.length > 0) {
+      addresses.forEach(address => this.addAddress(address));
+    } else {
+      this.addAddress();
     }
 
-    const contacts = item?.paymentContacts?.length ? item.paymentContacts : [{ name: '', email: '', cel: '', notes: '' }];
+    const contacts = item?.paymentContacts?.length ? item.paymentContacts : [{ name: '', email: '', cel: '', notes: '', type: 'titular' }];
+
     contacts.forEach(contact => this.addPaymentContact(contact));
 
     if (item) {
@@ -903,17 +1512,20 @@ export class SubClientesComponent implements OnInit {
     } else {
       this.originalEditPayload = null;
     }
+
+    this.syncSelectedLabels();
+    this.labelInput = '';
   }
 
   private buildPayload(): CreateBillingClientPayload {
     const value = this.form.value as any;
     const discounts = value.discounts as BillingClientDiscounts;
     const type = value.type as BillingClientType;
-    const subBillingClients = Array.isArray(value.subBillingClients)
-      ? value.subBillingClients.map((id: unknown) => String(id)).filter(Boolean)
-      : [];
+
+    const subBillingClients = Array.isArray(value.subBillingClients) ? value.subBillingClients.map((id: unknown) => String(id)).filter(Boolean) : [];
 
     const isInvoice = value.voucherType === 'Factura';
+    const address = value.address;
 
     const payload: CreateBillingClientPayload = {
       type,
@@ -921,35 +1533,37 @@ export class SubClientesComponent implements OnInit {
       billingClientFather: type === 'subClient' ? String(value.billingClientFather ?? '') || null : null,
       subBillingClients: type === 'client' ? subBillingClients : [],
       billingName: String(value.billingName ?? '').trim(),
+
       paymentContacts: (value.paymentContacts ?? [])
         .map((contact: PaymentContactPayload) => ({
           name: String(contact.name ?? '').trim(),
           email: String(contact.email ?? '').trim(),
           cel: String(contact.cel ?? '').trim(),
-          notes: String(contact.notes ?? '').trim()
+          notes: String(contact.notes ?? '').trim(),
+          type: String(contact.type ?? 'titular').trim()
         }))
         .filter((contact: PaymentContactPayload) => contact.name),
+
       voucherType: value.voucherType,
+      issuer: String(value.issuer ?? '') || null,
       cutoffDay: Number(value.cutoffDay ?? 1),
       companyName: String(value.companyName ?? '').trim(),
-
       RFC: isInvoice ? String(value.RFC ?? '').trim() : '',
       useInvoice: isInvoice ? String(value.useInvoice ?? '').trim() : '',
       taxRegime: isInvoice ? String(value.taxRegime ?? '').trim() : '',
-
       email: String(value.email ?? '').trim(),
-      cp: value.cp === null || value.cp === '' ? null : Number(value.cp),
-      street: String(value.street ?? '').trim(),
-      streetNumber: String(value.streetNumber ?? '').trim(),
-      suburb: String(value.suburb ?? '').trim(),
-      locality: String(value.locality ?? '').trim(),
-      state: String(value.state ?? '').trim(),
-      country: String(value.country ?? 'México').trim(),
+      periodicity: value.periodicity ?? 'monthly',
+      comments: String(value.comments ?? '').trim(),
+      labels: Array.isArray(value.labels) ? value.labels.map((id: unknown) => String(id)).filter((id: string) => id && !id.startsWith('new:')) : [],
+      contractType: value.contractType ?? 'free',
+      addresses: this.addresses.controls.map(address => ({ type: address.get('type')?.value, cp: address.get('cp')?.value ? Number(address.get('cp')?.value) : null, suburb: String(address.get('suburb')?.value ?? '').trim(), street: String(address.get('street')?.value ?? '').trim(), streetNumber: String(address.get('streetNumber')?.value ?? '').trim(), locality: String(address.get('locality')?.value ?? '').trim(), state: String(address.get('state')?.value ?? '').trim(), country: String(address.get('country')?.value ?? 'México').trim(), comments: String(address.get('comments')?.value ?? '').trim() })),
+
       discounts: {
         monthly: Number(discounts?.monthly ?? 0),
         devices: Number(discounts?.devices ?? 0),
         accessories: Number(discounts?.accessories ?? 0)
       },
+
       blacklist: !!value.blacklist
     };
 
@@ -992,36 +1606,47 @@ export class SubClientesComponent implements OnInit {
   private mapBillingClient(item: any): BillingClientItem {
     const type: BillingClientType = item?.type === 'subClient' ? 'subClient' : 'client';
 
+    const addresses: BillingClientAddress[] = Array.isArray(item?.addresses) ? item.addresses.map((address: any) => ({
+      _id: address?._id ? String(address._id) : undefined,
+      type: address?.type ?? 'fiscal',
+      cp: address?.cp === undefined || address?.cp === null ? null : Number(address.cp),
+      suburb: String(address?.suburb ?? ''),
+      street: String(address?.street ?? ''),
+      streetNumber: String(address?.streetNumber ?? ''),
+      locality: String(address?.locality ?? ''),
+      state: String(address?.state ?? ''),
+      country: String(address?.country ?? 'México'),
+      comments: String(address?.comments ?? '')
+    })) : [];
+
     return {
       _id: String(item?._id ?? ''),
       type,
       userId: item?.userId === null || item?.userId === undefined ? null : Number(item.userId),
       billingClientFather: this.normalizeObjectId(item?.billingClientFather),
-      subBillingClients: Array.isArray(item?.subBillingClients)
-        ? item.subBillingClients.map((id: unknown) => this.normalizeObjectId(id)).filter((id: string | null): id is string => !!id)
-        : [],
+      subBillingClients: Array.isArray(item?.subBillingClients) ? item.subBillingClients.map((id: unknown) => this.normalizeObjectId(id)).filter((id: string | null): id is string => !!id) : [],
       billingName: String(item?.billingName ?? ''),
       paymentContacts: Array.isArray(item?.paymentContacts) ? item.paymentContacts : [],
       voucherType: item?.voucherType === 'Factura' ? 'Factura' : 'Recibo',
+      issuer: String(item?.issuer ?? '') || null,
       cutoffDay: Number(item?.cutoffDay ?? 1),
       companyName: String(item?.companyName ?? ''),
       RFC: String(item?.RFC ?? ''),
       useInvoice: String(item?.useInvoice ?? '').trim(),
       taxRegime: String(item?.taxRegime ?? ''),
       email: String(item?.email ?? ''),
-      cp: item?.cp === undefined ? null : item.cp,
-      street: String(item?.street ?? ''),
-      streetNumber: String(item?.streetNumber ?? ''),
-      suburb: String(item?.suburb ?? ''),
-      locality: String(item?.locality ?? ''),
-      state: String(item?.state ?? ''),
-      country: String(item?.country ?? 'México'),
       discounts: {
         monthly: Number(item?.discounts?.monthly ?? 0),
         devices: Number(item?.discounts?.devices ?? 0),
         accessories: Number(item?.discounts?.accessories ?? 0)
       },
       blacklist: !!item?.blacklist,
+      periodicity: item?.periodicity === 'annual' ? 'annual' : 'monthly',
+      comments: String(item?.comments ?? ''),
+      labels: Array.isArray(item?.labels) ? item.labels.map((id: any) => this.normalizeObjectId(id)).filter((id: string | null): id is string => !!id) : [],
+      contractType: ['free', 'comodato', 'lease'].includes(item?.contractType) ? item.contractType : 'free',
+      addresses,
+      changeLog: Array.isArray(item?.changeLog) ? item.changeLog : [],
       createdAt: item?.createdAt ?? undefined
     };
   }

@@ -6,10 +6,11 @@
       {{ confirm.options?.title || 'Confirmación' }}
     </h2>
 
-    <p [innerHTML]="confirm.options?.message"></p>
+    <!-- <p [innerHTML]="confirm.options?.message"></p> -->
+    <div class="message" [innerHTML]="confirm.options?.message"></div>
 
     <div class="actions">
-      <button *ngIf="confirm.options?.cancelText" mat-flat-button class="custom-button" color="warn"
+      <button *ngIf="confirm.options?.cancelText" mat-button class="custom-button" color="warn"
         (click)="confirm.cancel()">
 
         {{ confirm.options?.cancelText }}

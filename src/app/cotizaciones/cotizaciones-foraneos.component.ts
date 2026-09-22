@@ -49,6 +49,7 @@ export class CotizacionesForaneosComponent implements OnInit {
 
   extraForm: FormGroup;
   extraSaving = false;
+  private extraOriginalValues: Record<string, number> = {};
 
   currencyOptions: Partial<NgxCurrencyConfig> = {
     align: 'left',
@@ -101,12 +102,19 @@ export class CotizacionesForaneosComponent implements OnInit {
       lodging: [0, [Validators.required, Validators.min(0)]],
       breakfast: [0, [Validators.required, Validators.min(0)]],
       lunch: [0, [Validators.required, Validators.min(0)]],
-      dinner: [0, [Validators.required, Validators.min(0)]]
+      dinner: [0, [Validators.required, Validators.min(0)]],
+      changeLog: ['']
     });
   }
 
   ngOnInit(): void {
     this.loadCatalog();
+
+    ['kmRate', 'lodging', 'breakfast', 'lunch', 'dinner'].forEach(field => {
+      this.extraForm.get(field)?.valueChanges.subscribe(() => {
+        this.updateExtraChangeLogValidator();
+      });
+    });
   }
 
   get filteredTechnicians(): ForeignTechnicianItem[] {
@@ -156,6 +164,25 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.normalize(booth.cost).includes(q)
       )
     );
+  }
+
+  get extraFieldsChanged(): boolean {
+    return ['kmRate', 'lodging', 'breakfast', 'lunch', 'dinner']
+      .some(field => this.isExtraFieldModified(field));
+  }
+
+  private updateExtraChangeLogValidator(): void {
+    const changeLog = this.extraForm.get('changeLog');
+
+    if (!changeLog) return;
+
+    if (this.extraFieldsChanged) {
+      changeLog.setValidators([Validators.required]);
+    } else {
+      changeLog.clearValidators();
+    }
+
+    changeLog.updateValueAndValidity({ emitEvent: false });
   }
 
   get displayedTravelExpenses(): TravelExpenseItem[] {
@@ -220,6 +247,26 @@ export class CotizacionesForaneosComponent implements OnInit {
     return Number(value.breakfast ?? 0) + Number(value.lunch ?? 0) + Number(value.dinner ?? 0);
   }
 
+  isExtraFieldModified(field: string): boolean {
+    const control = this.extraForm.get(field);
+
+    if (!control) return false;
+
+    return Number(control.value ?? 0) !== Number(this.extraOriginalValues[field] ?? 0);
+  }
+
+  restoreExtraField(field: string): void {
+    const control = this.extraForm.get(field);
+
+    if (!control || !(field in this.extraOriginalValues)) return;
+
+    control.setValue(this.extraOriginalValues[field]);
+
+    if (Number(control.value ?? 0) === Number(this.extraOriginalValues[field] ?? 0)) {
+      control.markAsPristine();
+    }
+  }
+
   selectInput(event: FocusEvent): void {
     const input = event.target as HTMLInputElement;
     input.select();
@@ -254,6 +301,7 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   refresh(): void {
+    this.closeSidebar();
     this.loadCatalog(true);
     this.currentPage = 1;
     this.selectedIds.clear();
@@ -579,9 +627,26 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   saveExtras(): void {
+    this.updateExtraChangeLogValidator();
+
+    if (!this.extraFieldsChanged) {
+      this.toast.warning({
+        detail: 'Sin cambios',
+        summary: 'No se detectaron cambios en los extras',
+        duration: 3500
+      });
+      return;
+    }
+
     if (this.extraForm.invalid) {
       this.extraForm.markAllAsTouched();
-      this.toast.warning({ detail: 'Campos incompletos', summary: 'Revisa la informacion de extras', duration: 3500 });
+
+      this.toast.warning({
+        detail: 'Registro requerido',
+        summary: 'Debes indicar el motivo del cambio realizado',
+        duration: 5000
+      });
+
       return;
     }
 
@@ -594,6 +659,7 @@ export class CotizacionesForaneosComponent implements OnInit {
         summary: 'No se encontró el registro de extras para actualizar',
         duration: 6000
       });
+
       this.loadTravelExpenseExtras(true);
       return;
     }
@@ -602,13 +668,27 @@ export class CotizacionesForaneosComponent implements OnInit {
 
     this.api.updateTravelExpenseExtra(current._id, payload).subscribe({
       next: () => {
-        this.toast.success({ detail: 'Exito', summary: 'Extras actualizados', duration: 3500 });
+        this.toast.success({
+          detail: 'Éxito',
+          summary: 'Extras actualizados',
+          duration: 3500
+        });
+
         this.loadTravelExpenseExtras(true);
       },
       error: err => {
         console.error(err);
-        const msg = err?.error?.error || err?.error?.message || 'No se pudieron guardar los extras';
-        this.toast.error({ detail: 'Error', summary: msg, duration: 6000 });
+
+        const msg =
+          err?.error?.error ||
+          err?.error?.message ||
+          'No se pudieron guardar los extras';
+
+        this.toast.error({
+          detail: 'Error',
+          summary: msg,
+          duration: 6000
+        });
       },
       complete: () => {
         this.extraSaving = false;
@@ -735,16 +815,25 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   private resetExtraForm(item?: TravelExpenseExtraItem): void {
+    const values = {
+      kmRate: Number(item?.kmRate ?? 0),
+      lodging: Number(item?.lodging ?? 0),
+      breakfast: Number(item?.breakfast ?? 0),
+      lunch: Number(item?.lunch ?? 0),
+      dinner: Number(item?.dinner ?? 0)
+    };
+
+    this.extraOriginalValues = { ...values };
+
     this.extraForm.reset({
-      kmRate: item?.kmRate ?? 0,
-      lodging: item?.lodging ?? 0,
-      breakfast: item?.breakfast ?? 0,
-      lunch: item?.lunch ?? 0,
-      dinner: item?.dinner ?? 0
+      ...values,
+      changeLog: ''
     }, { emitEvent: false });
 
     this.extraForm.markAsPristine();
     this.extraForm.markAsUntouched();
+
+    this.updateExtraChangeLogValidator();
   }
 
   private buildPayload(): Omit<ForeignTechnicianItem, '_id'> {
@@ -788,7 +877,7 @@ export class CotizacionesForaneosComponent implements OnInit {
     };
   }
 
-  private buildExtraPayload(): Omit<TravelExpenseExtraItem, '_id' | 'createdAt'> {
+  private buildExtraPayload(): any {
     const value = this.extraForm.getRawValue();
 
     return {
@@ -796,7 +885,8 @@ export class CotizacionesForaneosComponent implements OnInit {
       lodging: Number(value.lodging ?? 0),
       breakfast: Number(value.breakfast ?? 0),
       lunch: Number(value.lunch ?? 0),
-      dinner: Number(value.dinner ?? 0)
+      dinner: Number(value.dinner ?? 0),
+      changeLog: String(value.changeLog ?? '').trim()
     };
   }
 

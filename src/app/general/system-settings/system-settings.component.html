@@ -10,6 +10,87 @@
     </button>
   </div>
 
+  <section class="card labels-card">
+    <div class="card-header labels-header">
+      <div class="card-header-title">
+        <span class="material-icons">label</span>
+        <h3>Etiquetas</h3>
+      </div>
+      <button mat-icon-button matTooltip="Recargar" (click)="reloadLabels()" [disabled]="labelsLoading">
+        <span class="material-icons">
+          {{ labelsLoading ? 'hourglass_top' : 'refresh' }}
+        </span>
+      </button>
+    </div>
+
+    <div class="labels-toolbar">
+      <mat-form-field appearance="outline" class="label-search" subscriptSizing="dynamic">
+        <mat-label>Buscar</mat-label>
+        <input matInput [value]="labelSearch" (input)="updateLabelSearch($any($event.target).value)"
+          placeholder="Nombre o color..." autocomplete="off" />
+        <button *ngIf="labelSearch" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar"
+          (click)="updateLabelSearch('')">
+          <mat-icon>close</mat-icon>
+        </button>
+        <mat-hint *ngIf="labelSearch">{{ filteredLabels.length }} resultado{{ filteredLabels.length === 1 ? '' : 's'
+          }}</mat-hint>
+      </mat-form-field>
+
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <button mat-icon-button matTooltip="Agregar etiqueta" (click)="openCreateLabelModal()">
+          <span class="material-icons">add</span>
+        </button>
+        <span class="tooltip-wrap"
+          [matTooltip]="selectedLabelCount > 0 ? 'Eliminar seleccionadas' : 'Selecciona al menos 1 etiqueta'">
+          <button class="icon-button delete-button" (click)="deleteSelectedLabels()"
+            [disabled]="selectedLabelCount === 0 || labelDeleting">
+            <span class="material-icons">
+              {{ labelDeleting ? 'hourglass_top' : 'delete' }}
+            </span>
+          </button>
+        </span>
+      </div>
+    </div>
+
+    <div class="labels-table">
+      <div class="label-row label-head">
+        <span class="label-check"><input type="checkbox" [checked]="allLabelsSelected"
+            [indeterminate]="someLabelsSelected" (change)="toggleAllLabels($any($event.target).checked)"
+            aria-label="Seleccionar todas" /></span>
+        <span>Color</span>
+        <span>Nombre</span>
+        <span></span>
+      </div>
+
+      <div class="label-row" *ngFor="let label of filteredLabels; trackBy: trackByLabelId"
+        [class.selected]="isLabelSelected(label._id)"
+        (click)="toggleLabelSelection(label._id, !isLabelSelected(label._id))">
+
+        <span class="label-check">
+          <input type="checkbox" [checked]="isLabelSelected(label._id)" (click)="$event.stopPropagation()"
+            (change)="toggleLabelSelection(label._id, $any($event.target).checked)" aria-label="Seleccionar etiqueta" />
+        </span>
+
+        <span>
+          <span class="color-preview" [style.background-color]="label.color"></span>
+          <span class="color-value">{{ label.color }}</span>
+        </span>
+
+        <span class="label-name">{{ label.name }}</span>
+
+        <span class="row-actions">
+          <button class="icon-button edit-button" matTooltip="Editar"
+            (click)="$event.stopPropagation(); openEditLabelModal(label)">
+            <span class="material-icons">edit</span>
+          </button>
+        </span>
+      </div>
+
+      <div class="labels-empty" *ngIf="!labelsLoading && filteredLabels.length === 0">Sin etiquetas para mostrar.</div>
+      <div class="labels-empty" *ngIf="labelsLoading">Cargando etiquetas...</div>
+    </div>
+  </section>
+
   <div class="settings-layout">
     <section class="card version-card">
       <div class="card-header">
@@ -45,5 +126,50 @@
         </div>
       </div>
     </section>
+  </div>
+</div>
+<div class="modal-backdrop" *ngIf="labelModalOpen" (click)="closeLabelModal()">
+  <div class="modal-content label-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div>
+        <h3>{{ labelModalMode === 'create' ? 'Nueva etiqueta' : 'Editar etiqueta' }}</h3>
+        <p>Define el nombre y el color de la etiqueta.</p>
+      </div>
+      <button class="icon-button" (click)="closeLabelModal()"><span class="material-icons">close</span></button>
+    </div>
+
+    <form class="label-form" [formGroup]="form">
+      <mat-form-field appearance="outline">
+        <mat-label>Nombre</mat-label>
+
+        <input matInput formControlName="name" maxlength="80" autocomplete="off"
+          (keyup.enter)="form.valid && saveLabel()" />
+
+        <mat-error *ngIf="form.get('name')?.hasError('required')">
+          El nombre es obligatorio
+        </mat-error>
+
+        <mat-error *ngIf="form.get('name')?.hasError('duplicate')">
+          Ya existe una etiqueta con este nombre
+        </mat-error>
+      </mat-form-field>
+
+      <div class="color-field">
+        <label for="label-color" style="pointer-events: none;">Color</label>
+        <div class="color-input-row">
+          <input id="label-color" type="color" formControlName="color" />
+          <span>{{ form.get('color')?.value }}</span>
+        </div>
+      </div>
+    </form>
+
+    <div class="modal-actions">
+      <button mat-button class="custom-button" color="warn" (click)="closeLabelModal()"
+        [disabled]="labelSaving">Cancelar</button>
+      <button mat-flat-button class="custom-button ang-btn btn-save" (click)="saveLabel()"
+        [disabled]="labelSaving || form.invalid || (labelModalMode === 'edit' && !labelHasChanges)">
+        {{ labelSaving ? 'Guardando...' : 'Guardar' }}
+      </button>
+    </div>
   </div>
 </div>

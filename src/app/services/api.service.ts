@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable, shareReplay, map, switchMap, timeout, retry, forkJoin } from 'rxjs';
+import { Observable, shareReplay, map, switchMap, timeout, retry, forkJoin, tap, of } from 'rxjs';
 
 /* ====================== Tipos comunes ====================== */
 export type EventOperation = 'Creación' | 'Actualización' | 'Eliminación';
@@ -243,6 +243,7 @@ export interface PaymentContactPayload {
   email?: string;
   cel?: string;
   notes?: string;
+  type?: string;
 }
 
 export interface BillingClientDiscounts {
@@ -252,6 +253,22 @@ export interface BillingClientDiscounts {
 }
 
 export type BillingClientType = 'client' | 'subClient';
+export type BillingClientPeriodicity = 'annual' | 'monthly';
+export type BillingClientContractType = 'free' | 'comodato' | 'lease';
+export type BillingClientAddressType = 'fiscal' | 'soporte' | 'cobranza' | 'titular';
+
+export interface BillingClientAddress {
+  _id?: string;
+  type: BillingClientAddressType;
+  cp?: number | null;
+  suburb: string;
+  street: string;
+  streetNumber: string;
+  locality: string;
+  state: string;
+  country: string;
+  comments: string;
+}
 
 export interface BillingClientItem {
   _id: string;
@@ -260,28 +277,39 @@ export interface BillingClientItem {
   billingClientFather?: string | null;
   subBillingClients?: string[];
   billingName: string;
+
   paymentContacts: PaymentContactPayload[];
+
   voucherType: 'Recibo' | 'Factura';
+  issuer: string | null;
   cutoffDay: number;
+
   companyName: string;
   RFC: string;
   useInvoice: string;
   taxRegime: string;
   email: string;
-  cp?: number | null;
-  street: string;
-  streetNumber: string;
-  suburb: string;
-  locality: string;
-  state: string;
-  country: string;
+
   discounts: BillingClientDiscounts;
   blacklist: boolean;
+
+  periodicity: BillingClientPeriodicity;
+  comments: string;
+
+  labels: string[];
+
+  contractType: BillingClientContractType;
+
+  addresses: BillingClientAddress[];
+
+  changeLog: ChangeLog[];
+
   createdAt?: string | Date;
 }
 
-export type CreateBillingClientPayload = Omit<BillingClientItem, '_id' | 'createdAt'> & {
+export type CreateBillingClientPayload = Omit<BillingClientItem, '_id' | 'createdAt' | 'changeLog'> & {
   createdAt?: string | Date;
+  changeLog?: string;
 };
 
 export type UpdateBillingClientPayload = Partial<CreateBillingClientPayload>;
@@ -296,6 +324,7 @@ export interface BillingClientsQuery {
 export interface BankAccountItem {
   _id: string;
   holder: string;
+  rfc: string
   bankName: string;
   accountNumber: string;
   CLABE: string;
@@ -305,6 +334,12 @@ export type CreateBankAccountPayload = Omit<BankAccountItem, '_id'>;
 export type UpdateBankAccountPayload = Partial<CreateBankAccountPayload>;
 
 /* ====================== Cotizaciones ====================== */
+export interface ChangeLog {
+  log: string;
+  date: string | Date;
+  userName: string;
+}
+
 export interface QuoteProduct {
   name: string;
   concept: string;
@@ -343,6 +378,7 @@ export interface QuoteItem {
 
   billable: boolean;
   bankName?: string;
+  rfc?: string;
   paymentMethodHolder?: string;
   accountNumber?: string;
   CLABE?: string;
@@ -365,6 +401,7 @@ export interface QuoteProductItem {
   discount?: number;
   duration?: '1 mes' | '3 meses' | '6 meses' | '1 año';
   comments?: string;
+  changeLog?: ChangeLog[];
   createdAt?: string | Date;
 }
 
@@ -417,6 +454,7 @@ export interface TravelExpenseExtraItem {
   breakfast: number;
   lunch: number;
   dinner: number;
+  changeLog?: ChangeLog[];
   createdAt?: string | Date;
 }
 
@@ -448,8 +486,14 @@ export interface SuggestionItem {
   createdAt?: string | Date;
 }
 
-// export const apiUrl = 'http://localhost:3103';
-export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
+export interface LabelItem {
+  _id: string;
+  name: string;
+  color: string;
+}
+
+export const apiUrl = 'http://localhost:3103';
+// export const apiUrl = 'https://leptoncore-api.lepton-seguridad.com';
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -843,9 +887,7 @@ export class ApiService {
 
   getBillingClientsCached(forceRefresh = false): Observable<any> {
     if (!this.billingClientsCache$ || forceRefresh) {
-      this.billingClientsCache$ = this.http.get(`${apiUrl}/billingClients`).pipe(
-        shareReplay(1)
-      );
+      this.billingClientsCache$ = this.http.get(`${apiUrl}/billingClients`).pipe(shareReplay(1));
     }
 
     return this.billingClientsCache$;
@@ -856,14 +898,7 @@ export class ApiService {
   }
 
   createBillingClient(payload: CreateBillingClientPayload): Observable<any> {
-    const body: any = {
-      ...payload,
-      userId: payload.userId ?? null,
-      cp: payload.cp ?? null,
-      discounts: payload.discounts ?? { monthly: 0, devices: 0, accessories: 0 },
-      paymentContacts: payload.paymentContacts ?? []
-    };
-
+    const body: any = { ...payload, userId: payload.userId ?? null, discounts: payload.discounts ?? { monthly: 0, devices: 0, accessories: 0 }, paymentContacts: payload.paymentContacts ?? [], addresses: payload.addresses ?? [] };
     return this.http.post(`${apiUrl}/billingClients`, body);
   }
 
@@ -890,6 +925,18 @@ export class ApiService {
 
   getBankAccounts(): Observable<any> {
     return this.http.get(`${apiUrl}/bankAccounts`);
+  }
+
+  private bankAccountsCache$: Observable<any> | null = null;
+
+  getBankAccountsCached(forceRefresh = false): Observable<any> {
+    if (!this.bankAccountsCache$ || forceRefresh) {
+      this.bankAccountsCache$ = this.http.get(`${apiUrl}/bankAccounts`).pipe(
+        shareReplay(1)
+      );
+    }
+
+    return this.bankAccountsCache$;
   }
 
   getBankAccountById(id: string): Observable<any> {
@@ -1071,34 +1118,6 @@ export class ApiService {
 
   private clientsCache = new Map<string, Observable<FullClientsResponse>>();
 
-  // getFullClientsData(
-  //   includeSensors: boolean,
-  //   includeLogin: boolean,
-  //   forceRefresh = false
-  // ): Observable<FullClientsResponse> {
-
-  //   const key = `full-data-${includeSensors}-${includeLogin}`;
-
-  //   if (!this.clientsCache.has(key) || forceRefresh) {
-
-  //     const params = this.buildHttpParams({
-  //       includeSensors,
-  //       includeLogin
-  //     });
-
-  //     const request$ = this.http
-  //       .get<FullClientsResponse>(`${apiUrl}/clients/full-data`, { params })
-  //       .pipe(
-  //         retry(2),
-  //         shareReplay(1)
-  //       );
-
-  //     this.clientsCache.set(key, request$);
-  //   }
-
-  //   return this.clientsCache.get(key)!;
-  // }
-
   getFullClientsDataStream(
     includeSensors: boolean,
     includeLogin: boolean,
@@ -1188,5 +1207,51 @@ export class ApiService {
     return this.http.get(`${apiUrl}/clients/navixy-trackers/${userId}`);
   }
 
+  // ========================== Labels ==========================
+  private labelsCache: any[] | null = null;
+  private labelsCache$?: Observable<any[]>;
+
+  private clearLabelsCache(): void {
+    this.labelsCache = null;
+    this.labelsCache$ = undefined;
+  }
+
+  getLabels(forceRefresh = false): Observable<LabelItem[]> {
+    if (!forceRefresh && this.labelsCache) return of(this.labelsCache);
+
+    if (!forceRefresh && this.labelsCache$) return this.labelsCache$;
+
+    this.labelsCache$ = this.http.get<any>(`${apiUrl}/labels`).pipe(
+      map(response => response.data ?? []),
+      tap(labels => this.labelsCache = labels),
+      shareReplay(1)
+    );
+
+    return this.labelsCache$;
+  }
+
+  createLabel(payload: { name: string; color: string }[]): Observable<any> {
+    return this.http.post(`${apiUrl}/labels`, payload).pipe(
+      tap(() => this.clearLabelsCache())
+    );
+  }
+
+  updateLabel(id: string, payload: Partial<{ name: string; color: string }>): Observable<any> {
+    return this.http.put(`${apiUrl}/labels/${id}`, payload).pipe(
+      tap(() => this.clearLabelsCache())
+    );
+  }
+
+  deleteLabel(id: string): Observable<any> {
+    return this.http.delete(`${apiUrl}/labels/${id}`).pipe(
+      tap(() => this.clearLabelsCache())
+    );
+  }
+
+  deleteLabels(ids: string[]): Observable<any> {
+    return this.http.delete(`${apiUrl}/labels`, { body: { ids } }).pipe(
+      tap(() => this.clearLabelsCache())
+    );
+  }
 }
 

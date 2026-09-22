@@ -21,6 +21,7 @@ interface RequestedItemUI {
   styleUrl: './almacen.component.scss'
 })
 export class AlmacenComponent implements OnInit {
+  isAdminUser = false;
   isInventoryUser = false;
   isSupportUser = false;
 
@@ -41,6 +42,7 @@ export class AlmacenComponent implements OnInit {
   ngOnInit(): void {
     const role = this.authService.getUserRole();
 
+    this.isAdminUser = role === 'admin';
     this.isInventoryUser = role === 'inventario';
     this.isSupportUser = role === 'soporte';
 

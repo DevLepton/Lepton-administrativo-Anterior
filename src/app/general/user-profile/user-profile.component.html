@@ -105,7 +105,7 @@
                             <input matInput [type]="hideCurrentPassword ? 'password' : 'text'"
                                 formControlName="currentPassword" />
 
-                            <button mat-icon-button matSuffix (click)="hideCurrentPassword = !hideCurrentPassword"
+                            <button mat-icon-button matSuffix class="btn-suffix" (click)="hideCurrentPassword = !hideCurrentPassword"
                                 type="button">
 
                                 <mat-icon>
@@ -123,7 +123,7 @@
                             <input matInput [type]="hideNewPassword ? 'password' : 'text'"
                                 formControlName="newPassword" />
 
-                            <button mat-icon-button matSuffix (click)="hideNewPassword = !hideNewPassword"
+                            <button mat-icon-button matSuffix class="btn-suffix" (click)="hideNewPassword = !hideNewPassword"
                                 type="button">
 
                                 <mat-icon>
@@ -145,7 +145,7 @@
                             <input matInput [type]="hideConfirmPassword ? 'password' : 'text'"
                                 formControlName="confirmPassword" [errorStateMatcher]="matcher" />
 
-                            <button mat-icon-button matSuffix (click)="hideConfirmPassword = !hideConfirmPassword"
+                            <button mat-icon-button matSuffix class="btn-suffix" (click)="hideConfirmPassword = !hideConfirmPassword"
                                 type="button">
 
                                 <mat-icon>

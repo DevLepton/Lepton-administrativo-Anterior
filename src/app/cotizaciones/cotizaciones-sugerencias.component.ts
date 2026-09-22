@@ -375,6 +375,7 @@ export class CotizacionesSugerenciasComponent {
   }
 
   refresh(): void {
+    this.closeSidebar();
     this.loadSuggestions(true);
     this.currentPage = 1;
     this.selectedIds.clear();

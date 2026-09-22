@@ -263,14 +263,13 @@ mat-paginator {
   padding: 24px;
   box-shadow: 0 18px 48px rgba(0, 0, 0, 0.25);
 
-  h2 {
-    margin: 0 0 18px;
+  .step-header-h2 {
     font-size: 1.5rem;
     font-weight: 800;
     color: #333;
   }
 
-  h3 {
+  .step-header-h3 {
     margin: 18px 0 10px;
     font-size: 1rem;
     font-weight: 800;
@@ -284,38 +283,11 @@ mat-paginator {
   right: 12px;
 }
 
-.form-flex {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: flex-start;
-
-  > mat-form-field {
-    flex: 1 1 300px;
-  }
-
-  .tiny-field {
-    flex: 1 1 80px;
-  }
-
-  .small-field {
-    flex: 1 1 200px;
-  }
-
-  .medium-field {
-    flex: 1 1 calc(50% - 15px);
-  }
-
-  .big-field {
-    flex: 1 1 100%;
-  }
-
-  .checkbox-field {
-    flex: 1 1 200px;
-    min-height: 56px;
-    display: flex;
-    align-items: center;
-  }
+.info-icon {
+    font-size: 20px;
+    color: #888;
+    text-align: center;
+    align-content: center;
 }
 
 .subclient-stepper {
@@ -377,17 +349,40 @@ mat-paginator {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
+}
+
+.addresses-list {
+  max-height: 380px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 6px;
 }
 
 .contact-form {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) 42px;
-  gap: 10px;
-  align-items: center;
-  padding: 10px;
+  // display: grid;
+  // grid-template-columns: repeat(4, minmax(0, 1fr)) 42px;
+  // gap: 10px;
+  // align-items: center;
+  // padding: 10px;
   background: #f9fafb;
   border: 1px solid #e5e7eb;
   border-radius: 8px;
+
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: start;
+  position: relative;
+  padding: 8px 14px;
+
+  mat-form-field {
+    flex: 1 0 200px;
+    min-width: 0;
+  }
 }
 
 .modal-actions {
@@ -427,22 +422,250 @@ mat-paginator {
     border-top: 1px solid rgba(0, 0, 0, .10);
     box-shadow: 0 -10px 30px rgba(0, 0, 0, .08);
   }
-
-  .form-flex {
-    > mat-form-field {
-      flex: 1 1 100%;
-    }
-  }
-
-  .contact-form {
-    grid-template-columns: 1fr;
-  }
 }
 
 .child-row {
-    background: #fafafa;
+  background: #fafafa;
 }
 
 .btn-save:not(:disabled) {
   background-color: var(--color-success);
 }
+
+.address-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: start;
+  position: relative;
+  padding: 8px 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+
+  mat-form-field {
+    flex: 1 0 200px;
+    min-width: 0;
+  }
+}
+
+
+.address-title {
+  flex: 1 1 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.address-title button {
+  margin-top: -6px;
+}
+
+.address-comments,
+.payment-contact-notes {
+  flex: 1 1 100%;
+}
+
+.address-card {
+  padding: 12px;
+  margin-bottom: 10px;
+  border: 1px solid #e1e5ea;
+  border-radius: 8px;
+  background: #fafbfc;
+}
+
+.address-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.address-type {
+  padding: 3px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  background: #e8f1ff;
+  color: #1261b5;
+}
+
+.address-card__content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+}
+
+.side-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.side-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 9px;
+  margin: 2px 4px 2px 0;
+  border: 1.5px solid var(--label-color);
+  border-radius: 999px;
+  background-color: var(--label-bg);
+  color: var(--label-color);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+.billing-dates {
+  display: flex;
+  gap: 12px;
+  margin: 4px 0 16px;
+}
+
+.billing-date {
+  padding: 10px 12px;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.billing-date span {
+  font-size: 12px;
+  color: #777;
+}
+
+.billing-date strong {
+  font-size: 14px;
+}
+
+.labels-editor {
+  width: 100%;
+}
+
+.labels-input-field {
+  width: 100%;
+}
+
+.selected-labels {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 28px;
+}
+
+.selected-labels input {
+  flex: 1;
+  min-width: 120px;
+}
+
+.label-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 7px 4px 9px;
+  border: 1.5px solid var(--label-color);
+  border-radius: 999px;
+  background-color: var(--label-bg);
+  color: var(--label-color);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.label-chip-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--label-color);
+  cursor: pointer;
+}
+
+.label-chip-remove mat-icon {
+  width: 16px;
+  height: 16px;
+  font-size: 16px;
+  line-height: 16px;
+}
+
+.label-chip-remove:hover {
+  background-color: color-mix(in srgb, var(--label-color) 12%, transparent);
+}
+
+.labels-hint {
+  margin-top: -14px;
+  margin-bottom: 12px;
+  font-size: 12px;
+  color: #666;
+}
+
+.labels-color-title {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-bottom: 8px;
+}
+
+.labels-color-title span {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.labels-color-title small {
+  font-size: 12px;
+  color: #777;
+}
+
+.labels-color-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.label-color-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px 5px 10px;
+  border: 1.5px solid var(--label-color);
+  border-radius: 999px;
+  background-color: var(--label-bg);
+  color: var(--label-color);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.label-color-chip input[type="color"] {
+  width: 17px;
+  height: 17px;
+  padding: 0;
+  border: 1px solid var(--label-color);
+  border-radius: 50%;
+  overflow: hidden;
+  cursor: pointer;
+}
+
+.autocomplete-label-color {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  margin-right: 8px;
+  border-radius: 50%;
+  vertical-align: middle;
+}
+

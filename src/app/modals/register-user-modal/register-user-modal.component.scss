@@ -21,6 +21,7 @@
 
 .actions {
   display: flex;
+  flex: 1;
   justify-content: flex-end;
   gap: .5rem;
   padding-top: 1rem;
@@ -28,38 +29,4 @@
 
 .mr-1 {
   margin-right: .25rem;
-}
-
-.form-flex {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  align-items: flex-start;
-
-  > mat-form-field {
-    flex: 1 1 300px;
-  }
-
-  .tiny-field {
-    flex: 1 1 80px;
-  }
-
-  .small-field {
-    flex: 1 1 200px;
-  }
-
-  .medium-field {
-    flex: 1 1 calc(50% - 15px);
-  }
-
-  .big-field {
-    flex: 1 1 100%;
-  }
-
-  .checkbox-field {
-    flex: 1 1 200px;
-    min-height: 56px;
-    display: flex;
-    align-items: center;
-  }
 }

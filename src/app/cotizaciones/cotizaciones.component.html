@@ -15,7 +15,8 @@
             <mat-label>Buscar</mat-label>
             <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
               placeholder="ID, cliente, empresa o lugar..." autocomplete="off" />
-            <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+            <button *ngIf="search" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar"
+              (click)="updateSearch('')">
               <mat-icon>close</mat-icon>
             </button>
             <mat-hint *ngIf="search">
@@ -158,7 +159,7 @@
 
     <div class="header-bar">
       <h2>Cotizador</h2>
-      <button mat-icon-button class="refresh-btn" (click)="loadBuilderCatalogs()" matTooltip="Recargar catálogos">
+      <button mat-icon-button class="refresh-btn" (click)="loadBuilderCatalogs(true)" matTooltip="Recargar catálogos">
         <mat-icon>refresh</mat-icon>
       </button>
     </div>
@@ -377,7 +378,7 @@
               <mat-label>Cantidad</mat-label>
               <input matInput type="number" min="1" [ngModel]="item.amount"
                 (ngModelChange)="updateProductAmount(item, $event)" (focus)="selectInput($event)"
-                [disabled]="!!item.lockedAmount">
+                [disabled]="!!item.lockedAmount" [ngModelOptions]="{ standalone: true }">
               <mat-error *ngIf="item.amount == null || item.amount < 1">
                 Mínimo 1
               </mat-error>
@@ -474,8 +475,7 @@
             <mat-form-field appearance="outline" class="field" subscriptSizing="dynamic">
               <mat-label>Titular</mat-label>
 
-              <mat-select formControlName="bankAccountId" (selectionChange)="onBankAccountSelected($event.value)"
-                [disabled]="bankAccountsLoading">
+              <mat-select formControlName="bankAccountId" (selectionChange)="onBankAccountSelected($event.value)">
 
                 <mat-option *ngFor="let account of bankAccounts" [value]="account._id">
                   {{ account.holder }}
@@ -515,8 +515,9 @@
             </div>
           </div>
           <div class="bank-details">
-            <div><span>Banco</span><b>{{ paymentForm.get('bankName')?.value || '-' }}</b></div>
             <div><span>Titular</span><b>{{ paymentForm.get('paymentMethodHolder')?.value || '-' }}</b></div>
+            <div><span>RFC</span><b>{{ paymentForm.get('rfc')?.value || '-' }}</b></div>
+            <div><span>Banco</span><b>{{ paymentForm.get('bankName')?.value || '-' }}</b></div>
             <div><span>Cuenta</span><b>{{ paymentForm.get('accountNumber')?.value || '-' }}</b></div>
             <div><span>CLABE</span><b>{{ paymentForm.get('CLABE')?.value || '-' }}</b></div>
           </div>
@@ -577,7 +578,8 @@
       <div class="suggestion-response">
         <h4>Acciones sugeridas</h4>
         <div class="suggestion-response-row" *ngFor="let response of suggestion.response">
-          <mat-icon [style.color]="response.action === 'add' ? null : 'var(--color-danger)'">{{ response.action === 'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
+          <mat-icon [style.color]="response.action === 'add' ? null : 'var(--color-danger)'">{{ response.action ===
+            'add' ? 'add_circle' : 'remove_circle' }}</mat-icon>
           <span>{{ response.action === 'add' ? 'Agregar' : 'Quitar' }}</span>
           <b>{{ getProductName(response.productId) }}</b>
         </div>
@@ -840,13 +842,23 @@
     </div>
 
     <form [formGroup]="bankAccountForm" (ngSubmit)="submitBankAccount()">
-      <div class="bank-account-form">
+      <div class="form-flex">
         <mat-form-field appearance="outline">
           <mat-label>Titular</mat-label>
 
           <input matInput formControlName="holder" autocomplete="off">
 
           <mat-error *ngIf="bankAccountForm.get('holder')?.hasError('required')">
+            Campo obligatorio
+          </mat-error>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline">
+          <mat-label>RFC</mat-label>
+
+          <input matInput formControlName="rfc" autocomplete="off">
+
+          <mat-error *ngIf="bankAccountForm.get('rfc')?.hasError('required')">
             Campo obligatorio
           </mat-error>
         </mat-form-field>

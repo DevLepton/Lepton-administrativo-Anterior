@@ -15,7 +15,7 @@
                     <mat-label>Buscar por identificador</mat-label>
                     <input matInput [(ngModel)]="search" (ngModelChange)="onSearchChange($event)"
                         placeholder="Introduce el texto" autocomplete="off" />
-                    <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="onSearchChange('')">
+                    <button *ngIf="search" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar" (click)="onSearchChange('')">
                         <mat-icon>close</mat-icon>
                     </button>
                     <mat-hint *ngIf="search">
@@ -92,7 +92,7 @@
                                 {{ ev.operation }}
                             </span>
                         </td>
-                        <td>{{ ev.identifier }}</td>
+                        <td class="compact-cell">{{ ev.identifier }}</td>
                         <td>{{ ev.collectionName }}</td>
                         <td>{{ displayUser(ev) }}</td>
                         <td>{{ ev.createdAt | date:'dd MMM yyyy, HH:mm' }}</td>

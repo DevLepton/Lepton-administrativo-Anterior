@@ -20,10 +20,10 @@
                 <input matInput [(ngModel)]="search" (ngModelChange)="updateFilteredClients()">
 
                 <!-- 🔍 icono normal -->
-                <mat-icon matSuffix *ngIf="!search">search</mat-icon>
+                <mat-icon matSuffix class="btn-suffix" *ngIf="!search">search</mat-icon>
 
                 <!-- ❌ icono limpiar -->
-                <mat-icon matSuffix *ngIf="search" class="clear-icon" (click)="clearSearch()">
+                <mat-icon matSuffix class="btn-suffix" *ngIf="search" class="clear-icon" (click)="clearSearch()">
                     close
                 </mat-icon>
 

@@ -1,4 +1,5 @@
 ﻿import { Component, ElementRef, ViewChild } from '@angular/core';
+import { isDateKey, mapKeyToLabel } from '../../admin/events/events.component';
 
 export interface EventDetailsData {
   _id: string;
@@ -78,38 +79,7 @@ export class EventHistoryModalComponent {
       }
     }
     this.dynamicKeys = Array.from(set);
-    this.dynamicLabels = this.dynamicKeys.map(k => this.mapKeyToLabel(k));
-  }
-
-  /** Etiquetas en español para claves comunes */
-  private mapKeyToLabel(key: string): string {
-    const dict: Record<string, string> = {
-      type: 'Tipo',
-      name: 'Nombre',
-      brand: 'Marca',
-      model: 'Modelo',
-      imei: 'IMEI',
-      sn: 'Número de serie',
-      id: 'Identificador',
-      iccid: 'ICCID',
-      company: 'Compañía',
-      status: 'Estatus',
-      purchaseDate: 'Fecha de compra',
-      entryDate: 'Fecha de ingreso',
-      installationDate: 'Fecha de instalación',
-      client: 'Cliente',
-      comments: 'Comentarios',
-      price: 'Precio',
-      priceIVA: 'Precio con IVA',
-      concept: 'Concepto',
-      description: 'Descripción',
-    };
-    return dict[key] ?? key;
-  }
-
-  /** Claves que deben mostrarse como fecha sin hora */
-  private isDateKey(key: string): boolean {
-    return ['purchaseDate', 'entryDate', 'installationDate'].includes(key);
+    this.dynamicLabels = this.dynamicKeys.map(k => mapKeyToLabel(k));
   }
 
   /** Valor (ya normalizado) de finalValues para una fila y una clave dinámica */
@@ -142,9 +112,9 @@ export class EventHistoryModalComponent {
     return ev?.user?.userName || ev?.user?.email || ev?.user?._id || '—';
   }
 
-  /** True si la clave debe renderizarse como fecha sin hora */
+  /** True si la clave debe renderizarse como fecha */
   asDateOnly(key: string): boolean {
-    return this.isDateKey(key);
+    return isDateKey(key);
   }
 
   isCellChanged(index: number, key: string): boolean {

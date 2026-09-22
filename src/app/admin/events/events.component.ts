@@ -7,6 +7,37 @@ import Swal from 'sweetalert2';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import { AuthService } from '../../services/auth.service';
+/** Etiquetas en español para claves comunes */
+export function mapKeyToLabel(key: string): string {
+  const dict: Record<string, string> = {
+    type: 'Tipo',
+    name: 'Nombre',
+    brand: 'Marca',
+    model: 'Modelo',
+    imei: 'IMEI',
+    sn: 'Número de serie',
+    id: 'Identificador',
+    iccid: 'ICCID',
+    company: 'Compañía',
+    status: 'Estatus',
+    purchaseDate: 'Fecha de compra',
+    entryDate: 'Fecha de ingreso',
+    installationDate: 'Fecha de instalación',
+    client: 'Cliente',
+    comments: 'Comentarios',
+    price: 'Precio',
+    priceIVA: 'Precio con IVA',
+    concept: 'Concepto',
+    description: 'Descripción',
+    createdAt: 'Fecha de creación',
+  };
+  return dict[key] ?? key;
+}
+
+/** Claves que deben mostrarse como fecha */
+export function isDateKey(key: string): boolean {
+  return ['purchaseDate', 'entryDate', 'installationDate', 'responseDate', 'requestDate', 'createdAt'].includes(key);
+}
 
 @Component({
   selector: 'app-events',

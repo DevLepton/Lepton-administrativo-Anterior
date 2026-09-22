@@ -33,6 +33,7 @@ export interface SimItem {
 })
 export class SimsTabComponent implements OnChanges {
   @Input() simsData: any[] = [];
+  @Input() isAdminUser = false;
   @Input() isInventoryUser = false;
 
   @Output() refreshRequested = new EventEmitter<void>();
@@ -337,7 +338,7 @@ export class SimsTabComponent implements OnChanges {
   }
 
   onSimCreated(evt: any) {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     this.apiService.createSim(evt).subscribe({
       next: () => {
         this.toast.success({ detail: 'Éxito', summary: 'SIM registrado con éxito', duration: 4000 });
@@ -351,7 +352,7 @@ export class SimsTabComponent implements OnChanges {
   }
 
   onSimsBulkCreated(list: any[]) {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     if (!Array.isArray(list) || list.length === 0) {
       this.toast.warning({ detail: 'Aviso', summary: 'No hay SIMs para registrar.', duration: 3000 });
       return;
@@ -471,7 +472,7 @@ export class SimsTabComponent implements OnChanges {
   }
 
   deleteSelected() {
-    if (!this.isInventoryUser) return;
+    if (!this.isInventoryUser && !this.isAdminUser) return;
     if (this.selectedCount === 0) return;
 
     const selected = this.selectedSims;

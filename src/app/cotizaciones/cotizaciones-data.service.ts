@@ -186,6 +186,7 @@ export class CotizacionesDataService {
       paymentNextMonthly: item?.paymentNextMonthly != null ? Number(item.paymentNextMonthly) : undefined,
       billable: Boolean(item?.billable),
       bankName: String(item?.bankName ?? ''),
+      rfc: String(item?.rfc ?? ''),
       paymentMethodHolder: String(item?.paymentMethodHolder ?? ''),
       accountNumber: String(item?.accountNumber ?? ''),
       CLABE: String(item?.CLABE ?? ''),
@@ -206,6 +207,13 @@ export class CotizacionesDataService {
       discount: Number(item?.discount ?? 0),
       duration: item?.duration ?? undefined,
       comments: String(item?.comments ?? ''),
+      changeLog: Array.isArray(item?.changeLog)
+      ? item.changeLog.map((log: any) => ({
+          log: String(log?.log ?? ''),
+          date: log?.date,
+          userName: String(log?.userName ?? '')
+        }))
+      : [],
       createdAt: item?.createdAt ?? undefined
     };
   }
@@ -262,6 +270,13 @@ export class CotizacionesDataService {
       breakfast: Number(item?.breakfast ?? 0),
       lunch: Number(item?.lunch ?? 0),
       dinner: Number(item?.dinner ?? 0),
+      changeLog: Array.isArray(item?.changeLog)
+      ? item.changeLog.map((log: any) => ({
+          log: String(log?.log ?? ''),
+          date: log?.date,
+          userName: String(log?.userName ?? '')
+        }))
+      : [],
       createdAt: item?.createdAt ?? undefined
     };
   }

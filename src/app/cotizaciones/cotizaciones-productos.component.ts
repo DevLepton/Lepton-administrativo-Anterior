@@ -63,6 +63,8 @@ export class CotizacionesProductosComponent implements OnInit {
   sidePanelOpen = false;
   selectedForSidebar: QuoteProductItem | null = null;
 
+  editingProduct: QuoteProductItem | null = null;
+
   constructor(private api: ApiService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
     this.form = this.fb.group({
       type: ['GPS', Validators.required],
@@ -74,14 +76,16 @@ export class CotizacionesProductosComponent implements OnInit {
       discount: [0, [Validators.min(0), Validators.max(100)]],
       discountPrice: [0, [Validators.min(0)]],
       duration: [''],
-      comments: ['']
+      comments: [''],
+      changeLog: ['', [this.changeLogValidator]]
     });
   }
 
   ngOnInit(): void {
     this.setupPriceSync();
     this.setupDiscountSync();
-    this.setupPriceDiscountCommentValidation();
+    this.setupPriceDiscountChangeLogValidation();
+    // this.setupChangeLogValidation();
     this.loadProducts();
 
     this.form.get('type')?.valueChanges.subscribe(type => {
@@ -171,41 +175,62 @@ export class CotizacionesProductosComponent implements OnInit {
     const current = this.normalizeFormValue(this.buildPayload());
     const original = this.normalizeFormValue(this.originalFormValue);
 
-    return JSON.stringify(current) !== JSON.stringify(original);
+    const productChanged = JSON.stringify(current) !== JSON.stringify(original);
+
+    const changeLog = String(this.form.get('changeLog')?.value ?? '').trim();
+
+    return productChanged || !!changeLog;
   }
 
-  private updateCommentsValidator(): void {
-    const comments = this.form.get('comments');
+  private updateChangeLogValidator(): void {
+    const changeLog = this.form.get('changeLog');
 
-    if (!comments) return;
+    if (!changeLog) return;
+
+    if (this.modalMode === 'edit' && this.priceDiscountChanged) {
+      changeLog.setValidators([Validators.required]);
+    } else {
+      changeLog.clearValidators();
+    }
+
+    changeLog.updateValueAndValidity({ emitEvent: false });
 
     if (this.priceDiscountChanged) {
-      comments.setValidators([this.commentsChangeValidator]);
-      comments.updateValueAndValidity({ emitEvent: false });
-      comments.markAsTouched();
-    } else {
-      comments.clearValidators();
-      comments.updateValueAndValidity({ emitEvent: false });
-      comments.markAsUntouched();
+      changeLog.markAsTouched();
     }
   }
 
-  private commentsChangeValidator = () => {
+  private changeLogValidator = () => {
     if (!this.priceDiscountChanged) return null;
 
-    const currentComments = String(this.form.get('comments')?.value ?? '').trim();
-    const originalComments = String(this.originalFormValue?.comments ?? '').trim();
+    const currentChangeLog = String(this.form.get('changeLog')?.value ?? '').trim();
+    const originalChangeLog = String(this.originalFormValue?.changeLog ?? '').trim();
 
-    if (!currentComments) {
+    if (!currentChangeLog) {
       return { required: true };
     }
 
-    if (currentComments === originalComments) {
+    if (currentChangeLog === originalChangeLog) {
       return { unchanged: true };
     }
 
     return null;
   };
+
+  private setupPriceDiscountChangeLogValidation(): void {
+    ['price', 'priceIVA', 'discount', 'discountPrice'].forEach(field => {
+      this.form.get(field)?.valueChanges.subscribe(() => {
+        this.updatePriceDiscountChanged();
+        this.updateChangeLogValidator();
+      });
+    });
+
+    this.form.get('changeLog')?.valueChanges.subscribe(() => {
+      if (this.priceDiscountChanged) {
+        this.form.get('changeLog')?.updateValueAndValidity({ emitEvent: false });
+      }
+    });
+  }
 
   get canSave(): boolean {
     if (this.saving || this.form.invalid) return false;
@@ -220,18 +245,21 @@ export class CotizacionesProductosComponent implements OnInit {
     }
 
     if (this.modalMode === 'edit') {
-      const comments = String(this.form.get('comments')?.value ?? '').trim();
-      const originalComments = String(this.originalFormValue?.comments ?? '').trim();
+      const changeLog = String(this.form.get('changeLog')?.value ?? '').trim();
 
-      if (this.priceDiscountChanged && (!comments || comments === originalComments)) {
+      // Si cambió precio/descuento, changeLog es obligatorio.
+      if (this.priceDiscountChanged && !changeLog) {
         return false;
       }
 
+      // Permite guardar si cambió algún dato O si solamente
+      // se agregó un nuevo registro de cambio.
       return this.hasFormChanges();
     }
 
     return true;
   }
+
   selectInput(event: FocusEvent): void {
     const input = event.target as HTMLInputElement;
     input.select();
@@ -261,6 +289,7 @@ export class CotizacionesProductosComponent implements OnInit {
   }
 
   refresh(): void {
+    this.closeSidebar();
     this.loadProducts(true);
     this.currentPage = 1;
     this.selectedIds.clear();
@@ -310,7 +339,7 @@ export class CotizacionesProductosComponent implements OnInit {
 
     this.resetForm();
 
-    this.updateCommentsValidator();
+    this.updateChangeLogValidator();
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -347,6 +376,7 @@ export class CotizacionesProductosComponent implements OnInit {
   openEditModal(item: QuoteProductItem): void {
     this.modalMode = 'edit';
     this.editingId = item._id;
+    this.editingProduct = item;
 
     this.resetForm(item);
     this.form.enable({ emitEvent: false });
@@ -354,7 +384,7 @@ export class CotizacionesProductosComponent implements OnInit {
     this.originalFormValue = this.normalizeFormValue(this.buildPayload());
 
     this.priceDiscountChanged = false;
-    this.updateCommentsValidator();
+    this.updateChangeLogValidator();
 
     this.form.markAsPristine();
     this.form.markAsUntouched();
@@ -367,18 +397,20 @@ export class CotizacionesProductosComponent implements OnInit {
     this.modalOpen = false;
     this.saving = false;
     this.editingId = null;
+    this.editingProduct = null;
+
     this.form.enable({ emitEvent: false });
     document.body.style.overflow = '';
   }
 
   submit(): void {
     if (this.modalMode === 'edit' && this.priceDiscountChanged) {
-      const comments = String(this.form.get('comments')?.value ?? '').trim();
-      const originalComments = String(this.originalFormValue?.comments ?? '').trim();
+      const changeLog = String(this.form.get('changeLog')?.value ?? '').trim();
+      const originalChangeLog = String(this.originalFormValue?.changeLog ?? '').trim();
 
-      if (!comments || comments === originalComments) {
-        this.form.get('comments')?.markAsTouched();
-        this.toast.warning({ detail: 'Comentario requerido', summary: 'Debes indicar la razón del cambio de dichos valores', duration: 5000 });
+      if (!changeLog || changeLog === originalChangeLog) {
+        this.form.get('changeLog')?.markAsTouched();
+        this.toast.warning({ detail: 'Registro de cambios requerido', summary: 'Debes indicar la razón del cambio de dichos valores', duration: 5000 });
 
         return;
       }
@@ -391,7 +423,7 @@ export class CotizacionesProductosComponent implements OnInit {
       return;
     }
 
-    const payload = this.buildPayload();
+    const payload = this.modalMode === 'edit' ? this.buildUpdatePayload() : this.buildPayload();
 
     this.saving = true;
     const request$ = this.modalMode === 'create' ? this.api.createQuoteProduct(payload) : this.api.updateQuoteProduct(this.editingId!, payload);
@@ -491,13 +523,14 @@ export class CotizacionesProductosComponent implements OnInit {
       discount,
       discountPrice: +(priceIVA * discount / 100).toFixed(2),
       duration: item?.duration ?? '',
-      comments: item?.comments ?? ''
+      comments: item?.comments ?? '',
+      changeLog: ''
     });
 
     this.updateDiscountDisplay();
   }
 
-  private buildPayload(): Omit<QuoteProductItem, '_id' | 'createdAt'> {
+  private buildPayload(): Omit<QuoteProductItem, '_id' | 'createdAt' | 'changeLog'> {
     const value = this.form.getRawValue();
 
     return {
@@ -510,6 +543,15 @@ export class CotizacionesProductosComponent implements OnInit {
       discount: Number(value.discount ?? 0),
       duration: value.type === 'Plan' ? value.duration : undefined,
       comments: String(value.comments ?? '').trim()
+    };
+  }
+
+  private buildUpdatePayload(): any {
+    const payload = this.buildPayload();
+
+    return {
+      ...payload,
+      changeLog: String(this.form.get('changeLog')?.value ?? '').trim()
     };
   }
 
@@ -639,18 +681,5 @@ export class CotizacionesProductosComponent implements OnInit {
     });
   }
 
-  private setupPriceDiscountCommentValidation(): void {
-    ['price', 'priceIVA', 'discount', 'discountPrice'].forEach(field => {
-      this.form.get(field)?.valueChanges.subscribe(() => {
-        this.updatePriceDiscountChanged();
-        this.updateCommentsValidator();
-      });
-    });
 
-    this.form.get('comments')?.valueChanges.subscribe(() => {
-      if (this.priceDiscountChanged) {
-        this.form.get('comments')?.updateValueAndValidity({ emitEvent: false });
-      }
-    });
-  }
 }

@@ -82,7 +82,7 @@
             <div class="filter-container" style="display: flex; flex: 1; justify-content: flex-end;">
                 <!-- ✅ Barra de acciones -->
                 <div class="actions-top">
-                    <button *ngIf="isInventoryUser" class="new-button" (click)="nuevoGps()">
+                    <button *ngIf="isInventoryUser || isAdminUser" class="new-button" (click)="nuevoGps()">
                         <span class="material-icons">gps_fixed</span> Nuevo GPS
                     </button>
 
@@ -103,15 +103,14 @@
                         </button>
                     </span>
 
-                    <span *ngIf="isSupportUser" class="tooltip-wrap" matTooltip="Sincronizar con la API">
-                        <button class="icon-button view-button" matTooltip="Sincronizar con la API"
-                            (click)="syncGpsWithApi()">
+                    <span *ngIf="isSupportUser || isAdminUser" class="tooltip-wrap" matTooltip="Sincronizar con la API">
+                        <button class="icon-button view-button" (click)="syncGpsWithApi()">
 
                             <span class="material-icons">sync</span>
                         </button>
                     </span>
 
-                    <span *ngIf="isInventoryUser" class="tooltip-wrap"
+                    <span *ngIf="isInventoryUser || isAdminUser" class="tooltip-wrap"
                         [matTooltip]="gpsSelectedCount > 0 ? '' : 'Selecciona al menos 1 GPS para eliminar'"
                         [matTooltipDisabled]="gpsSelectedCount > 0">
                         <button class="icon-button delete-button" matTooltip="Eliminar" (click)="deleteSelectedGps()"
@@ -210,7 +209,7 @@
 
                             <td>{{ g.entryDate | date:'dd MMM yyyy':'UTC' }}</td>
                             <td>{{ g.client || 'Sin asignar' }}</td>
-                            <td class="comments-cell">
+                            <td class="compact-cell">
                                 {{ g.comments || '-' }}
                             </td>
                         </tr>
@@ -267,7 +266,7 @@
         </aside>
     </div>
     <!-- Modales GPS -->
-    <app-new-gps-modal *ngIf="isInventoryUser" (gpsCreated)="onGpsCreated($event)"
+    <app-new-gps-modal *ngIf="isInventoryUser || isAdminUser" (gpsCreated)="onGpsCreated($event)"
         (gpsBulkCreated)="onGpsBulkCreated($event)" [modelOptions]="gpsModelOptions" [brandOptions]="gpsBrandOptions"
         [existingDevices]="gps">
     </app-new-gps-modal>

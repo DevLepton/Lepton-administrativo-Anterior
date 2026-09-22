@@ -9,7 +9,7 @@
                 <mat-label>Buscar</mat-label>
                 <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
                   placeholder="Nombre, descripción o comentarios..." autocomplete="off" />
-                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                <button *ngIf="search" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
                   <mat-icon>close</mat-icon>
                 </button>
                 <mat-hint *ngIf="search">
@@ -90,14 +90,14 @@
                           (click)="$event.stopPropagation()" aria-label="Seleccionar producto" />
                       </td>
                       <td>{{ ((currentPage - 1) * perPage + idx + 1) }}</td>
-                      <td class="comments-cell"><b>{{ item.name || '-' }}</b></td>
-                      <td class="comments-cell"><b>{{ item.concept || '-' }}</b></td>
-                      <td class="comments-cell">{{ item.description || '-' }}</td>
+                      <td class="compact-cell"><b>{{ item.name || '-' }}</b></td>
+                      <td class="compact-cell"><b>{{ item.concept || '-' }}</b></td>
+                      <td class="compact-cell">{{ item.description || '-' }}</td>
                       <td>{{ item.price | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ item.priceIVA | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ (item.discount || 0) | number:'1.2-2':'en-US' }}%</td>
                       <td *ngIf="tab.type === 'Plan'">{{ item.duration || '-' }}</td>
-                      <td class="comments-cell">{{ item.comments || '-' }}</td>
+                      <td class="compact-cell">{{ item.comments || '-' }}</td>
                       <td>{{ item.createdAt ? (item.createdAt | date:'dd MMM yyyy') : '-' }}</td>
                       <td class="row-actions">
                         <button class="icon-button view-button" matTooltip="Ver"
@@ -216,6 +216,42 @@
                   {{ item.createdAt | date:'fullDate' }}
                 </div>
               </div>
+
+              <div class="side-section">
+                <h4>Historial de cambios</h4>
+
+                <div class="change-history" *ngIf="item.changeLog?.length; else noChangeLogs">
+                  <div class="change-history__list">
+
+                    <div class="change-history__item" *ngFor="let change of item.changeLog?.slice()?.reverse()">
+
+                      <div class="change-history__meta">
+                        <span class="change-history__user">
+                          <mat-icon>person</mat-icon>
+                          {{ change.userName || 'Usuario desconocido' }}
+                        </span>
+
+                        <span class="change-history__date">
+                          <mat-icon>schedule</mat-icon>
+                          {{ change.date | date:'dd/MM/yyyy HH:mm' }}
+                        </span>
+                      </div>
+
+                      <div class="change-history__text">
+                        {{ change.log }}
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <ng-template #noChangeLogs>
+                  <div class="change-history__empty">
+                    No hay registros de cambios.
+                  </div>
+                </ng-template>
+              </div>
             </div>
           </aside>
         </div>
@@ -314,20 +350,64 @@
           <textarea matInput rows="3" formControlName="description"></textarea>
         </mat-form-field>
 
-        <mat-form-field appearance="outline" class="big-field">
+        <mat-form-field appearance="outline" class="medium-field">
           <mat-label>Comentarios</mat-label>
 
           <textarea matInput rows="3" formControlName="comments">
+          </textarea>
+        </mat-form-field>
+
+        <mat-form-field appearance="outline" class="medium-field" *ngIf="modalMode === 'edit'">
+          <mat-label>Registro de cambio</mat-label>
+
+          <textarea matInput rows="3" formControlName="changeLog"
+            placeholder="Describe por qué se está realizando este cambio...">
           </textarea>
 
           <mat-hint *ngIf="modalMode === 'edit' && priceDiscountChanged">
             Debes indicar la razón del cambio de dichos valores.
           </mat-hint>
 
-          <mat-error *ngIf="form.get('comments')?.hasError('required') || form.get('comments')?.hasError('unchanged')">
+          <mat-error
+            *ngIf="form.get('changeLog')?.hasError('required') || form.get('changeLog')?.hasError('unchanged')">
             Debes indicar la razón del cambio de dichos valores.
           </mat-error>
         </mat-form-field>
+
+        <div class="change-history" *ngIf="modalMode === 'edit'">
+          <div class="change-history__header">
+            <h3>Historial de cambios</h3>
+            <span>{{ editingProduct?.changeLog?.length ?? 0 }} registro{{ (editingProduct?.changeLog?.length ?? 0) === 1 ? '' : 's' }}</span>
+          </div>
+
+          <div class="change-history__list" *ngIf="editingProduct?.changeLog?.length; else noChangeLogs">
+            <div class="change-history__item"
+              *ngFor="let change of editingProduct?.changeLog?.slice()?.reverse(); let i = index">
+
+              <div class="change-history__meta">
+                <span class="change-history__user">
+                  <mat-icon>person</mat-icon>
+                  {{ change.userName || 'Usuario desconocido' }}
+                </span>
+
+                <span class="change-history__date">
+                  <mat-icon>schedule</mat-icon>
+                  {{ change.date | date:'dd/MM/yyyy HH:mm' }}
+                </span>
+              </div>
+
+              <div class="change-history__text">
+                {{ change.log }}
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noChangeLogs>
+            <div class="change-history__empty">
+              No hay registros de cambios anteriores.
+            </div>
+          </ng-template>
+        </div>
       </div>
 
       <div class="modal-actions">

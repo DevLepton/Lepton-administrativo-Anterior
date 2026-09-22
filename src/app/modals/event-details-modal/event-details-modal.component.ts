@@ -1,4 +1,5 @@
 ﻿import { Component, ElementRef, ViewChild } from '@angular/core';
+import { isDateKey, mapKeyToLabel } from '../../admin/events/events.component';
 
 export interface EventDetailsData {
   _id: string;
@@ -43,33 +44,6 @@ export class EventDetailsModalComponent {
   close() { this.visible = false; this.unlockBodyScroll(); }
   stop(e: Event) { e.stopPropagation(); }
 
-  /** Mapea claves a etiquetas en español */
-  mapKeyToLabel(key: string): string {
-    const dict: Record<string, string> = {
-      type: 'Tipo',
-      name: 'Nombre',
-      brand: 'Marca',
-      model: 'Modelo',
-      imei: 'IMEI',
-      sn: 'Número de serie',
-      id: 'Identificador',
-      iccid: 'ICCID',
-      company: 'Compañía',
-      status: 'Estatus',
-      purchaseDate: 'Fecha de compra',
-      entryDate: 'Fecha de ingreso',
-      installationDate: 'Fecha de instalación',
-      client: 'Cliente',
-      comments: 'Comentarios',
-    };
-    return dict[key] ?? key;
-  }
-
-  /** Claves que son fechas (se muestran sin hora) */
-  isDateKey(key: string): boolean {
-    return key === 'purchaseDate' || key === 'entryDate' || key === 'installationDate' || key === 'createdAt';
-  }
-
   /** Entradas (clave/valor) de finalValues sin _id */
   get finalValuesRows(): Array<{ key: string; value: any }> {
     const fv = this.data?.finalValues ?? {};
@@ -81,6 +55,14 @@ export class EventDetailsModalComponent {
   /** ¿Es objeto/array? para decidir si usar <pre> */
   isObject(v: any): boolean {
     return v !== null && typeof v === 'object';
+  }
+
+  mapKeyToLabel(key: string): string {
+    return mapKeyToLabel(key);
+  }
+
+  isDateKey(key: string): boolean {
+    return isDateKey(key);
   }
 
   /** Render amigable de valores que NO son fecha */

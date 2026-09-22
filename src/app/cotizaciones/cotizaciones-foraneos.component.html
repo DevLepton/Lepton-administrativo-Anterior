@@ -9,7 +9,8 @@
                 <mat-label>Buscar</mat-label>
                 <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
                   placeholder="Nombre, ciudad, teléfono o dirección..." autocomplete="off" />
-                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                <button *ngIf="search" matSuffix class="btn-suffix" mat-icon-button aria-label="Limpiar"
+                  (click)="updateSearch('')">
                   <mat-icon>close</mat-icon>
                 </button>
                 <mat-hint *ngIf="search">
@@ -124,7 +125,7 @@
                       <td>{{ item.priceFalseReversal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ item.travelExpensesPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
                       <td>{{ item.transferPrice | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
-                      <td class="comments-cell">{{ item.comments || '-' }}</td>
+                      <td class="compact-cell">{{ item.comments || '-' }}</td>
                       <td class="row-actions">
                         <button class="icon-button view-button" matTooltip="Ver"
                           (click)="openSidebar(item); $event.stopPropagation()">
@@ -295,7 +296,8 @@
                 <mat-label>Buscar</mat-label>
                 <input matInput [(ngModel)]="search" (ngModelChange)="updateSearch($event)"
                   placeholder="Lugar, km o caseta..." autocomplete="off" />
-                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')">
+                <button *ngIf="search" matSuffix mat-icon-button aria-label="Limpiar" (click)="updateSearch('')"
+                  class="btn-suffix">
                   <mat-icon>close</mat-icon>
                 </button>
                 <mat-hint *ngIf="search">
@@ -463,7 +465,7 @@
         <form [formGroup]="extraForm" class="extras-panel" (ngSubmit)="saveExtras()">
           <div class="extras-actions">
             <button type="submit" mat-flat-button class="custom-button save-btn"
-              [disabled]="extraSaving || extraForm.pristine || extraForm.invalid">
+              [disabled]="extraSaving || !extraFieldsChanged || extraForm.invalid">
               <mat-icon>{{ extraSaving ? 'hourglass_top' : 'save' }}</mat-icon>
               Guardar cambios
             </button>
@@ -476,8 +478,15 @@
                 <h3>Tarifa por kilómetro</h3>
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <mat-label>Tarifa por km</mat-label>
+
                   <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="kmRate"
                     (focus)="selectInput($event)" />
+
+                  <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                    class="btn-suffix" [disabled]="!isExtraFieldModified('kmRate')"
+                    (click)="restoreExtraField('kmRate')">
+                    <mat-icon>undo</mat-icon>
+                  </button>
                 </mat-form-field>
               </div>
             </section>
@@ -488,8 +497,15 @@
                 <h3>Hospedaje por noche</h3>
                 <mat-form-field appearance="outline" subscriptSizing="dynamic">
                   <mat-label>Precio por noche</mat-label>
+
                   <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lodging"
                     (focus)="selectInput($event)" />
+
+                  <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                    class="btn-suffix" [disabled]="!isExtraFieldModified('lodging')"
+                    (click)="restoreExtraField('lodging')">
+                    <mat-icon>undo</mat-icon>
+                  </button>
                 </mat-form-field>
               </div>
             </section>
@@ -503,26 +519,103 @@
                     <mat-label>Desayuno</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="breakfast"
                       (focus)="selectInput($event)" />
+                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                      class="btn-suffix" [disabled]="!isExtraFieldModified('breakfast')"
+                      (click)="restoreExtraField('breakfast')">
+                      <mat-icon>undo</mat-icon>
+                    </button>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
                     <mat-label>Comida</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lunch"
                       (focus)="selectInput($event)" />
+                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                      class="btn-suffix" [disabled]="!isExtraFieldModified('lunch')"
+                      (click)="restoreExtraField('lunch')">
+                      <mat-icon>undo</mat-icon>
+                    </button>
                   </mat-form-field>
 
                   <mat-form-field appearance="outline" subscriptSizing="dynamic">
                     <mat-label>Cena</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="dinner"
                       (focus)="selectInput($event)" />
+                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                      class="btn-suffix" [disabled]="!isExtraFieldModified('dinner')"
+                      (click)="restoreExtraField('dinner')">
+                      <mat-icon>undo</mat-icon>
+                    </button>
                   </mat-form-field>
                 </div>
 
                 <div class="extra-total">
-                  Total diario: <b>{{ mealsTotal | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
+                  Total diario: <b style="margin-left: 5px;">{{ mealsTotal |
+                    currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
                 </div>
               </div>
             </section>
+
+            <!-- Registro del cambio -->
+            <section class="extra-box">
+              <div class="extra-box__icon"><mat-icon>edit_note</mat-icon></div>
+              <div class="extra-box__content">
+                <h3>Registro del cambio</h3>
+                <mat-form-field appearance="outline" subscriptSizing="dynamic">
+                  <mat-label>Motivo del cambio</mat-label>
+
+                  <textarea matInput rows="5" formControlName="changeLog"
+                    placeholder="Describe el motivo del cambio..."></textarea>
+
+                  <mat-error *ngIf="extraForm.get('changeLog')?.hasError('required')">
+                    Debes indicar el motivo del cambio
+                  </mat-error>
+                </mat-form-field>
+              </div>
+            </section>
+            
+            <!-- Historial -->
+            <section class="extra-box">
+              <div class="extra-box__icon"><mat-icon>history</mat-icon></div>
+              <div class="extra-box__content">
+                <h3>Historial de cambios</h3>
+                <div class="change-history" *ngIf="currentExtra?.changeLog?.length; else noExtraChangeLogs">
+                  <div class="change-history__list">
+
+                    <div class="change-history__item"
+                      *ngFor="let change of currentExtra?.changeLog?.slice()?.reverse()">
+
+                      <div class="change-history__meta">
+
+                        <span class="change-history__user">
+                          <mat-icon>person</mat-icon>
+                          {{ change.userName || 'Usuario desconocido' }}
+                        </span>
+
+                        <span class="change-history__date">
+                          <mat-icon>schedule</mat-icon>
+                          {{ change.date | date:'dd/MM/yyyy HH:mm' }}
+                        </span>
+
+                      </div>
+
+                      <div class="change-history__text">
+                        {{ change.log }}
+                      </div>
+
+                    </div>
+
+                  </div>
+                </div>
+
+                <ng-template #noExtraChangeLogs>
+                  <div class="change-history__empty">
+                    No hay registros de cambios.
+                  </div>
+                </ng-template>
+              </div>
+            </section>
+
           </div>
         </form>
       </div>

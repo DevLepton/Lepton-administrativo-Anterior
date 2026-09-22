@@ -311,17 +311,17 @@
 
     <!-- ============= TABS COMPONENTIZADOS ============= -->
     <mat-tab label="GPS's">
-      <app-gps-tab [gpsData]="gpsFull" [isInventoryUser]="isInventoryUser" [isSupportUser]="isSupportUser"
+      <app-gps-tab [gpsData]="gpsFull" [isAdminUser]="isAdminUser" [isInventoryUser]="isInventoryUser" [isSupportUser]="isSupportUser"
         (refreshRequested)="loadResumen(true)"></app-gps-tab>
     </mat-tab>
 
     <mat-tab label="SIM's">
-      <app-sims-tab [simsData]="simsFull" [isInventoryUser]="isInventoryUser"
+      <app-sims-tab [simsData]="simsFull" [isAdminUser]="isAdminUser" [isInventoryUser]="isInventoryUser"
         (refreshRequested)="loadResumen(true)"></app-sims-tab>
     </mat-tab>
 
     <mat-tab label="Accesorios">
-      <app-accessories-tab [accessoriesData]="accessoriesFull" [isInventoryUser]="isInventoryUser"
+      <app-accessories-tab [accessoriesData]="accessoriesFull" [isAdminUser]="isAdminUser" [isInventoryUser]="isInventoryUser"
         (refreshRequested)="loadResumen(true)"></app-accessories-tab>
     </mat-tab>
 
