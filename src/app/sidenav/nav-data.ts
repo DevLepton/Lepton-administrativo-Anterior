@@ -79,28 +79,28 @@ export const navbarData: NavItem[] = [
     RouteLink: 'cotizaciones',
     icon: 'fal fa-file-invoice-dollar',
     label: 'Cotizaciones',
-    roles: ['admin', 'soporte'],
+    roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'],
     component: CotizacionesComponent,
     children: [
       {
         RouteLink: 'cotizaciones/productos',
         icon: 'fal fa-box-open',
         label: 'Productos',
-        roles: ['admin', 'soporte'],
+        roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'],
         component: CotizacionesProductosComponent,
       },
       {
         RouteLink: 'cotizaciones/foraneos',
         icon: 'fal fa-user-hard-hat',
         label: 'Foráneos',
-        roles: ['admin', 'soporte'],
+        roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'],
         component: CotizacionesForaneosComponent,
       },
       {
         RouteLink: 'cotizaciones/sugerencias',
         icon: 'fal fa-lightbulb',
         label: 'Sugerencias',
-        roles: ['admin', 'soporte'],
+        roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'],
         component: CotizacionesSugerenciasComponent,
       },
     ]

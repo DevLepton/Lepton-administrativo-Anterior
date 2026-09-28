@@ -6,6 +6,7 @@ import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, map, of } from 'rxjs';
+import { AuthService } from '../services/auth.service';
 
 type ModalMode = 'create' | 'edit';
 
@@ -23,6 +24,11 @@ export class CotizacionesSugerenciasComponent {
   selectedIds = new Set<string>();
   deletingId: string | null = null;
 
+  isAdminUser = false;
+  isSupportUser = false;
+  isInventoryUser = false;
+  isBillingUser = false;
+
   modalOpen = false;
   modalMode: ModalMode = 'create';
   saving = false;
@@ -37,7 +43,7 @@ export class CotizacionesSugerenciasComponent {
 
   actionFilter: '' | 'add' | 'remove' = '';
 
-  constructor(private api: ApiService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
+  constructor(private api: ApiService, private authService: AuthService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
     this.form = this.fb.group({
       productId: ['', Validators.required],
       action: ['add', Validators.required],
@@ -47,6 +53,12 @@ export class CotizacionesSugerenciasComponent {
   }
 
   ngOnInit(): void {
+    const role = this.authService.getUserRole();
+    this.isAdminUser = role === 'admin';
+    this.isSupportUser = role === 'soporte';
+    this.isInventoryUser = role === 'inventario';
+    this.isBillingUser = role === 'cobranza';
+
     this.loadSuggestions();
   }
 
@@ -142,7 +154,7 @@ export class CotizacionesSugerenciasComponent {
   }
 
   async deleteSelected(): Promise<void> {
-    if (this.selectedCount === 0) return;
+    if (this.selectedCount === 0 || !(this.isAdminUser || this.isSupportUser)) return;
 
     const selected = this.selectedItems;
     const html = selected
@@ -283,6 +295,10 @@ export class CotizacionesSugerenciasComponent {
   }
 
   submit(): void {
+    if (!(this.isAdminUser || this.isSupportUser)) {
+      return;
+    }
+    
     if (this.form.invalid) {
       this.form.markAllAsTouched();
       this.toast.warning({

@@ -20,7 +20,7 @@
             </div>
           </div>
 
-          <div class="filter-bar actions-row">
+          <div *ngIf="isAdminUser || isSupportUser" class="filter-bar actions-row">
             <div class="filter-container actions-container">
               <div class="actions-top">
                 <button class="new-button" matTooltip="Nuevo técnico" (click)="openCreateModal()">
@@ -131,7 +131,7 @@
                           (click)="openSidebar(item); $event.stopPropagation()">
                           <span class="material-icons">visibility</span>
                         </button>
-                        <button class="icon-button edit-button" matTooltip="Editar"
+                        <button *ngIf="isAdminUser || isSupportUser" class="icon-button edit-button" matTooltip="Editar"
                           (click)="openEditModal(item); $event.stopPropagation()">
                           <span class="material-icons">edit</span>
                         </button>
@@ -307,7 +307,7 @@
             </div>
           </div>
 
-          <div class="filter-bar actions-row">
+          <div *ngIf="isAdminUser || isSupportUser || isInventoryUser" class="filter-bar actions-row">
             <div class="filter-container actions-container">
               <div class="actions-top">
                 <button class="new-button" matTooltip="Nuevo viático" (click)="openTravelExpenseCreateModal()">
@@ -370,7 +370,7 @@
                           (click)="openTravelExpenseSidebar(item); $event.stopPropagation()">
                           <span class="material-icons">visibility</span>
                         </button>
-                        <button class="icon-button edit-button" matTooltip="Editar"
+                        <button *ngIf="isAdminUser || isSupportUser || isInventoryUser" class="icon-button edit-button" matTooltip="Editar"
                           (click)="openTravelExpenseEditModal(item); $event.stopPropagation()">
                           <span class="material-icons">edit</span>
                         </button>
@@ -463,7 +463,7 @@
     <mat-tab label="Extras">
       <div class="tab-pane">
         <form [formGroup]="extraForm" class="extras-panel" (ngSubmit)="saveExtras()">
-          <div class="extras-actions">
+          <div class="extras-actions" *ngIf="canEditExtras">
             <button type="submit" mat-flat-button class="custom-button save-btn"
               [disabled]="extraSaving || !extraFieldsChanged || extraForm.invalid">
               <mat-icon>{{ extraSaving ? 'hourglass_top' : 'save' }}</mat-icon>
@@ -482,7 +482,7 @@
                   <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="kmRate"
                     (focus)="selectInput($event)" />
 
-                  <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                  <button *ngIf="canEditExtras" type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
                     class="btn-suffix" [disabled]="!isExtraFieldModified('kmRate')"
                     (click)="restoreExtraField('kmRate')">
                     <mat-icon>undo</mat-icon>
@@ -501,7 +501,7 @@
                   <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lodging"
                     (focus)="selectInput($event)" />
 
-                  <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                  <button *ngIf="canEditExtras" type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
                     class="btn-suffix" [disabled]="!isExtraFieldModified('lodging')"
                     (click)="restoreExtraField('lodging')">
                     <mat-icon>undo</mat-icon>
@@ -519,7 +519,7 @@
                     <mat-label>Desayuno</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="breakfast"
                       (focus)="selectInput($event)" />
-                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                    <button *ngIf="canEditExtras" type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
                       class="btn-suffix" [disabled]="!isExtraFieldModified('breakfast')"
                       (click)="restoreExtraField('breakfast')">
                       <mat-icon>undo</mat-icon>
@@ -530,7 +530,7 @@
                     <mat-label>Comida</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="lunch"
                       (focus)="selectInput($event)" />
-                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                    <button *ngIf="canEditExtras" type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
                       class="btn-suffix" [disabled]="!isExtraFieldModified('lunch')"
                       (click)="restoreExtraField('lunch')">
                       <mat-icon>undo</mat-icon>
@@ -541,7 +541,7 @@
                     <mat-label>Cena</mat-label>
                     <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="dinner"
                       (focus)="selectInput($event)" />
-                    <button type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
+                    <button *ngIf="canEditExtras" type="button" mat-icon-button matSuffix matTooltip="Restaurar valor original"
                       class="btn-suffix" [disabled]="!isExtraFieldModified('dinner')"
                       (click)="restoreExtraField('dinner')">
                       <mat-icon>undo</mat-icon>
@@ -557,7 +557,7 @@
             </section>
 
             <!-- Registro del cambio -->
-            <section class="extra-box">
+            <section class="extra-box" *ngIf="canEditExtras">
               <div class="extra-box__icon"><mat-icon>edit_note</mat-icon></div>
               <div class="extra-box__content">
                 <h3>Registro del cambio</h3>
@@ -573,7 +573,7 @@
                 </mat-form-field>
               </div>
             </section>
-            
+
             <!-- Historial -->
             <section class="extra-box">
               <div class="extra-box__icon"><mat-icon>history</mat-icon></div>

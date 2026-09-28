@@ -360,6 +360,7 @@ export interface QuoteItem {
 
   clientName: string;
   companyName?: string;
+  prospect: boolean;
   place?: string;
 
   validity: string | Date;
@@ -399,6 +400,8 @@ export interface QuoteProductItem {
   price: number;
   priceIVA: number;
   discount?: number;
+  linkedProdModel?: string | null;
+  linkedProdType?: 'GPS' | 'Accesorio' | null;
   duration?: '1 mes' | '3 meses' | '6 meses' | '1 año';
   comments?: string;
   changeLog?: ChangeLog[];

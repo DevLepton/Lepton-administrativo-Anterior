@@ -640,13 +640,7 @@ export class SubClientesComponent implements OnInit {
     const filteredIds = new Set(filtered.map(item => item._id));
 
     const parents = this.billingClients
-      .filter(item =>
-        item.type === 'client' &&
-        (filteredIds.has(item._id) || filtered.some(child =>
-          child.type === 'subClient' &&
-          child.billingClientFather === item._id
-        ))
-      )
+      .filter(item => item.type === 'client' && (filteredIds.has(item._id) || filtered.some(child => child.type === 'subClient' && child.billingClientFather === item._id)))
       .sort((a, b) => this.getCreatedTime(b) - this.getCreatedTime(a));
 
     const rows: BillingClientRow[] = [];
@@ -664,18 +658,8 @@ export class SubClientesComponent implements OnInit {
 
       const parentMatchesSearch = filteredIds.has(parent._id);
 
-      const children = parentMatchesSearch
-        ? this.billingClients
-          .filter(item =>
-            item.type === 'subClient' &&
-            item.billingClientFather === parent._id
-          )
-          .sort((a, b) => a.billingName.localeCompare(b.billingName))
-        : filtered
-          .filter(item =>
-            item.type === 'subClient' &&
-            item.billingClientFather === parent._id
-          )
+      const children = parentMatchesSearch ? this.billingClients.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
+          .sort((a, b) => a.billingName.localeCompare(b.billingName)) : filtered.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
           .sort((a, b) => a.billingName.localeCompare(b.billingName));
 
       for (const child of children) {
@@ -945,11 +929,8 @@ export class SubClientesComponent implements OnInit {
 
     const filtered = this.filteredBillingClients;
 
-    filtered
-      .filter(item => item.type === 'subClient' && item.billingClientFather)
-      .forEach(item => {
-        this.expandedClients.add(item.billingClientFather as string);
-      });
+    filtered.filter(item => item.type === 'subClient' && item.billingClientFather)
+      .forEach(item => { this.expandedClients.add(item.billingClientFather as string); });
   }
 
   onFilterChange(): void {

@@ -35,7 +35,7 @@
         </div>
       </div>
 
-      <div class="filter-bar actions-row">
+      <div *ngIf="isAdminUser || isSupportUser" class="filter-bar actions-row">
         <div class="filter-container actions-container">
           <div class="actions-top">
             <button class="new-button" matTooltip="Nueva sugerencia" (click)="openCreateModal()">
@@ -114,7 +114,7 @@
                     (click)="openSidebar(item); $event.stopPropagation()">
                     <span class="material-icons">visibility</span>
                   </button>
-                  <button class="icon-button edit-button" matTooltip="Editar"
+                  <button *ngIf="isAdminUser || isSupportUser" class="icon-button edit-button" matTooltip="Editar"
                     (click)="openEditModal(item); $event.stopPropagation()">
                     <span class="material-icons">edit</span>
                   </button>

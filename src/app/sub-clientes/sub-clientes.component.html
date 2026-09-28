@@ -257,9 +257,7 @@
               <span class="side-label" *ngFor="let labelId of item.labels"
                 [style.--label-color]="getLabelColor(labelId)"
                 [style.--label-bg]="getLabelLightColor(getLabelColor(labelId))">
-
                 {{ getLabelName(labelId) }}
-
               </span>
             </div>
 
@@ -450,6 +448,14 @@
                 <input matInput formControlName="companyName" />
               </mat-form-field>
 
+              <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Periodicidad</mat-label>
+                <mat-select formControlName="periodicity">
+                  <mat-option value="monthly">Mensual</mat-option>
+                  <mat-option value="annual">Anual</mat-option>
+                </mat-select>
+              </mat-form-field>
+
               <mat-form-field appearance="outline" class="tiny-field">
                 <mat-label>Día de corte</mat-label>
                 <input matInput type="number" min="1" max="31" formControlName="cutoffDay"
@@ -465,14 +471,6 @@
                 <span>Próxima fecha de pago</span>
                 <strong>{{ nextPaymentDate }}</strong>
               </div>
-
-              <mat-form-field appearance="outline" class="small-field">
-                <mat-label>Periodicidad</mat-label>
-                <mat-select formControlName="periodicity">
-                  <mat-option value="monthly">Mensual</mat-option>
-                  <mat-option value="annual">Anual</mat-option>
-                </mat-select>
-              </mat-form-field>
 
               <mat-form-field appearance="outline" class="small-field">
                 <mat-label>Tipo de contrato</mat-label>

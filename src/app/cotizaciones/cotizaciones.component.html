@@ -44,6 +44,15 @@
               <mat-option value="nonBillable">No facturables</mat-option>
             </mat-select>
           </mat-form-field>
+
+          <mat-form-field appearance="outline" class="filter" subscriptSizing="dynamic">
+            <mat-label>Cliente</mat-label>
+            <mat-select [(ngModel)]="clientFilter" (ngModelChange)="updateClientFilter($event)">
+              <mat-option value="all">Todos</mat-option>
+              <mat-option value="prospect">Prospecto</mat-option>
+              <mat-option value="client">Cliente</mat-option>
+            </mat-select>
+          </mat-form-field>
         </div>
       </div>
 
@@ -87,6 +96,7 @@
             <th>Total</th>
             <th>Fecha</th>
             <th>Facturable</th>
+            <th>Tipo</th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -107,6 +117,7 @@
             <td>{{ item.total | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</td>
             <td>{{ item.createdAt| date:'dd/MM/yyyy' }}</td>
             <td>{{ item.billable ? 'Sí' : 'No' }}</td>
+            <td>{{ item.prospect ? 'Prospecto' : 'Cliente' }}</td>
 
             <td class="row-actions">
               <button class="icon-button view-button" matTooltip="Ver"
@@ -240,8 +251,8 @@
       </button>
 
       <div class="accordion-body" *ngIf="activeSection === 'client'">
-        <form [formGroup]="clientForm" class="form-grid">
-          <mat-form-field appearance="outline" class="field">
+        <form [formGroup]="clientForm" class="form-flex">
+          <mat-form-field appearance="outline" class="third-field">
             <mat-label>Nombre del cliente</mat-label>
             <input matInput formControlName="clientName" [matAutocomplete]="autoClient" autocomplete="off">
             <mat-autocomplete #autoClient="matAutocomplete" [displayWith]="displayBillingClient"
@@ -256,19 +267,21 @@
             <mat-error *ngIf="clientForm.get('clientName')?.hasError('required')">Campo obligatorio</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="field">
+          <mat-form-field appearance="outline" class="third-field">
             <mat-label>Nombre de la empresa</mat-label>
             <input matInput formControlName="companyName">
             <mat-error *ngIf="clientForm.get('companyName')?.hasError('required')">Campo obligatorio</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="field">
+          <mat-checkbox formControlName="prospect" style="margin-right: 10px;">Prospecto</mat-checkbox>
+
+          <mat-form-field appearance="outline" class="medium-field">
             <mat-label>Lugar</mat-label>
             <input matInput formControlName="place">
             <mat-error *ngIf="clientForm.get('place')?.hasError('required')">Campo obligatorio</mat-error>
           </mat-form-field>
 
-          <mat-form-field appearance="outline" class="field">
+          <mat-form-field appearance="outline" class="medium-field">
             <mat-label>Vigencia</mat-label>
             <input matInput [matDatepicker]="validityPicker" formControlName="validity">
             <mat-datepicker-toggle matIconSuffix [for]="validityPicker"></mat-datepicker-toggle>
@@ -359,6 +372,12 @@
                 <button *ngIf="hasIgnoredSuggestion(item.productId)" mat-icon-button class="suggestion-icon"
                   matTooltip="Ver sugerencia" (click)="openIgnoredSuggestion(item.productId); $event.stopPropagation()">
                   <mat-icon>tips_and_updates</mat-icon>
+                </button>
+                <button *ngIf="getLinkedInventoryCount(item) !== null" mat-icon-button class="inventory-icon"
+                  [class.inventory-icon--empty]="getLinkedInventoryCount(item) === 0"
+                  [matTooltip]="getLinkedInventoryTooltip(item)" aria-label="Disponibilidad en inventario"
+                  (click)="$event.stopPropagation()">
+                  <mat-icon>inventory_2</mat-icon>
                 </button>
               </div>
               <small>{{ item.type }} · {{ item.description || 'Sin descripción' }}</small>
@@ -495,7 +514,7 @@
               </mat-error>
             </mat-form-field>
 
-            <div class="payment-method-actions">
+            <div *ngIf="isAdminUser || isBillingUser || isSupportUser" class="payment-method-actions">
               <button mat-mini-fab type="button" class="ang-btn btn-add" (click)="openBankAccountCreateModal()"
                 matTooltip="Agregar método de pago">
                 <mat-icon>add</mat-icon>
@@ -818,9 +837,7 @@
 </div>
 
 <div class="modal-backdrop" *ngIf="bankAccountModalOpen" (click)="closeBankAccountModal()">
-
   <div class="modal-content bank-account-modal" (click)="$event.stopPropagation()">
-
     <div class="modal-header">
       <div>
         <h3>
@@ -900,7 +917,8 @@
           Cancelar
         </button>
 
-        <button mat-flat-button color="primary" class="custom-button" type="submit" [disabled]="savingBankAccount">
+        <button mat-flat-button color="primary" class="custom-button ang-btn btn-save" type="submit"
+          [disabled]="!canSaveBankAccount">
           <mat-icon>
             {{ savingBankAccount ? 'hourglass_empty' : 'save' }}
           </mat-icon>

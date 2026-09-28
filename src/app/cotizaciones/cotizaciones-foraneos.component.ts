@@ -12,6 +12,7 @@ import {
 } from '../services/api.service';
 import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgxCurrencyConfig } from 'ngx-currency';
+import { AuthService } from '../services/auth.service';
 
 type TechnicianModalMode = 'create' | 'edit';
 type TravelExpenseModalMode = 'create' | 'edit';
@@ -24,6 +25,11 @@ type TravelExpenseModalMode = 'create' | 'edit';
 export class CotizacionesForaneosComponent implements OnInit {
   activeTabIndex = 0;
   tabs = ['Técnicos foráneos', 'Viáticos', 'Extras'];
+
+  isAdminUser = false;
+  isSupportUser = false;
+  isInventoryUser = false;
+  isBillingUser = false;
 
   technicians: ForeignTechnicianItem[] = [];
   travelExpenses: TravelExpenseItem[] = [];
@@ -67,12 +73,7 @@ export class CotizacionesForaneosComponent implements OnInit {
   selectedForSidebar: ForeignTechnicianItem | null = null;
   selectedTravelExpenseForSidebar: TravelExpenseItem | null = null;
 
-  constructor(
-    private api: ApiService,
-    private quoteData: CotizacionesDataService,
-    private toast: NgToastService,
-    private fb: FormBuilder
-  ) {
+  constructor( private api: ApiService, private authService: AuthService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
     this.form = this.fb.group({
       type: ['Foráneo', Validators.required],
       name: ['', [Validators.required, Validators.maxLength(160)]],
@@ -108,6 +109,12 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const role = this.authService.getUserRole();
+    this.isAdminUser = role === 'admin';
+    this.isSupportUser = role === 'soporte';
+    this.isInventoryUser = role === 'inventario';
+    this.isBillingUser = role === 'cobranza';
+
     this.loadCatalog();
 
     ['kmRate', 'lodging', 'breakfast', 'lunch', 'dinner'].forEach(field => {
@@ -178,8 +185,10 @@ export class CotizacionesForaneosComponent implements OnInit {
 
     if (this.extraFieldsChanged) {
       changeLog.setValidators([Validators.required]);
+      changeLog.markAsTouched();
     } else {
       changeLog.clearValidators();
+      changeLog.markAsUntouched();
     }
 
     changeLog.updateValueAndValidity({ emitEvent: false });
@@ -240,6 +249,10 @@ export class CotizacionesForaneosComponent implements OnInit {
 
   get currentExtra(): TravelExpenseExtraItem | null {
     return this.travelExpenseExtras[0] ?? null;
+  }
+
+  get canEditExtras(): boolean {
+    return this.isAdminUser || this.isSupportUser;
   }
 
   get mealsTotal(): number {
@@ -627,6 +640,8 @@ export class CotizacionesForaneosComponent implements OnInit {
   }
 
   saveExtras(): void {
+    if (!this.canEditExtras) return;
+
     this.updateExtraChangeLogValidator();
 
     if (!this.extraFieldsChanged) {
@@ -834,6 +849,12 @@ export class CotizacionesForaneosComponent implements OnInit {
     this.extraForm.markAsUntouched();
 
     this.updateExtraChangeLogValidator();
+
+    if (this.canEditExtras) {
+      this.extraForm.enable({ emitEvent: false });
+    } else {
+      this.extraForm.disable({ emitEvent: false });
+    }
   }
 
   private buildPayload(): Omit<ForeignTechnicianItem, '_id'> {

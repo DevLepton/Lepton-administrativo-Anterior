@@ -783,7 +783,7 @@ tr.row-selected td {
   display: flex;
   flex-wrap: wrap;
   gap: 5px 14px;
-  align-items: flex-start;
+  align-items: baseline;
 
   > mat-form-field {
     flex: 1 1 300px;
@@ -795,6 +795,10 @@ tr.row-selected td {
 
   .small-field {
     flex: 1 1 200px;
+  }
+
+  .third-field {
+    flex: 1 1 calc(33% - 15px);
   }
 
   .medium-field {

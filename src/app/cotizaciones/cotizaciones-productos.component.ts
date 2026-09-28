@@ -3,10 +3,11 @@ import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
-import { catchError, forkJoin, map, of } from 'rxjs';
+import { forkJoin, map } from 'rxjs';
 import { ApiService, QuoteProductItem, QuoteProductType } from '../services/api.service';
 import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgxCurrencyConfig } from 'ngx-currency';
+import { AuthService } from '../services/auth.service';
 
 interface ProductTab {
   label: string;
@@ -14,6 +15,7 @@ interface ProductTab {
 }
 
 type ProductModalMode = 'create' | 'edit';
+type LinkedProductType = 'GPS' | 'Accesorio';
 
 @Component({
   selector: 'app-cotizaciones-productos',
@@ -27,6 +29,11 @@ export class CotizacionesProductosComponent implements OnInit {
     { label: 'Servicios', type: 'Servicio' },
     { label: 'Planes', type: 'Plan' }
   ];
+
+  isAdminUser = false;
+  isSupportUser = false;
+  isInventoryUser = false;
+  isBillingUser = false;
 
   activeTabIndex = 0;
   products: QuoteProductItem[] = [];
@@ -47,6 +54,7 @@ export class CotizacionesProductosComponent implements OnInit {
 
   private originalFormValue: any = null;
   priceDiscountChanged = false;
+  private resettingForm = false;
 
   currencyOptions: Partial<NgxCurrencyConfig> = {
     align: 'left',
@@ -64,8 +72,9 @@ export class CotizacionesProductosComponent implements OnInit {
   selectedForSidebar: QuoteProductItem | null = null;
 
   editingProduct: QuoteProductItem | null = null;
+  inventoryModels: Record<LinkedProductType, string[]> = { GPS: [], Accesorio: [] };
 
-  constructor(private api: ApiService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
+  constructor(private api: ApiService, private authService: AuthService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder) {
     this.form = this.fb.group({
       type: ['GPS', Validators.required],
       name: ['', [Validators.required, Validators.maxLength(160)]],
@@ -75,6 +84,8 @@ export class CotizacionesProductosComponent implements OnInit {
       priceIVA: [0, [Validators.required, Validators.min(0)]],
       discount: [0, [Validators.min(0), Validators.max(100)]],
       discountPrice: [0, [Validators.min(0)]],
+      linkedProdType: ['GPS'],
+      linkedProdModel: [''],
       duration: [''],
       comments: [''],
       changeLog: ['', [this.changeLogValidator]]
@@ -82,11 +93,18 @@ export class CotizacionesProductosComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    const role = this.authService.getUserRole();
+    this.isAdminUser = role === 'admin';
+    this.isSupportUser = role === 'soporte';
+    this.isInventoryUser = role === 'inventario';
+    this.isBillingUser = role === 'cobranza';
+
     this.setupPriceSync();
     this.setupDiscountSync();
     this.setupPriceDiscountChangeLogValidation();
     // this.setupChangeLogValidation();
     this.loadProducts();
+    this.loadInventoryModels();
 
     this.form.get('type')?.valueChanges.subscribe(type => {
       const duration = this.form.get('duration');
@@ -101,6 +119,11 @@ export class CotizacionesProductosComponent implements OnInit {
       }
 
       duration.updateValueAndValidity({ emitEvent: false });
+    });
+
+    this.form.get('linkedProdType')?.valueChanges.subscribe(() => {
+      if (this.resettingForm) return;
+      this.form.get('linkedProdModel')?.setValue('GPS', { emitEvent: false });
     });
   }
 
@@ -164,6 +187,8 @@ export class CotizacionesProductosComponent implements OnInit {
       price: Number(value.price ?? 0),
       priceIVA: Number(value.priceIVA ?? 0),
       discount: Number(value.discount ?? 0),
+      linkedProdModel: String(value.linkedProdModel ?? '').trim() || null,
+      linkedProdType: String(value.linkedProdModel ?? '').trim() ? (value.linkedProdType || 'GPS') : 'GPS',
       duration: value.type === 'Plan' ? String(value.duration ?? '').trim() : undefined,
       comments: String(value.comments ?? '').trim()
     };
@@ -404,6 +429,8 @@ export class CotizacionesProductosComponent implements OnInit {
   }
 
   submit(): void {
+    if(!(this.isAdminUser || this.isSupportUser || this.isInventoryUser)) return;
+
     if (this.modalMode === 'edit' && this.priceDiscountChanged) {
       const changeLog = String(this.form.get('changeLog')?.value ?? '').trim();
       const originalChangeLog = String(this.originalFormValue?.changeLog ?? '').trim();
@@ -443,7 +470,7 @@ export class CotizacionesProductosComponent implements OnInit {
   }
 
   async deleteSelected(): Promise<void> {
-    if (this.selectedCount === 0) return;
+    if (this.selectedCount === 0 || !(this.isAdminUser || this.isSupportUser || this.isInventoryUser)) return;
 
     const selected = this.selectedItems;
 
@@ -513,6 +540,7 @@ export class CotizacionesProductosComponent implements OnInit {
     const priceIVA = Number(item?.priceIVA ?? 0);
     const discount = Number(item?.discount ?? 0);
 
+    this.resettingForm = true;
     this.form.reset({
       type: item?.type ?? this.activeType,
       name: item?.name ?? '',
@@ -522,16 +550,20 @@ export class CotizacionesProductosComponent implements OnInit {
       priceIVA,
       discount,
       discountPrice: +(priceIVA * discount / 100).toFixed(2),
+      linkedProdType: item?.linkedProdType ?? 'GPS',
+      linkedProdModel: item?.linkedProdModel ?? '',
       duration: item?.duration ?? '',
       comments: item?.comments ?? '',
       changeLog: ''
     });
+    this.resettingForm = false;
 
     this.updateDiscountDisplay();
   }
 
   private buildPayload(): Omit<QuoteProductItem, '_id' | 'createdAt' | 'changeLog'> {
     const value = this.form.getRawValue();
+    const linkedProdModel = String(value.linkedProdModel ?? '').trim();
 
     return {
       type: value.type,
@@ -541,6 +573,8 @@ export class CotizacionesProductosComponent implements OnInit {
       price: Number(value.price ?? 0),
       priceIVA: Number(value.priceIVA ?? 0),
       discount: Number(value.discount ?? 0),
+      linkedProdModel: linkedProdModel || null,
+      linkedProdType: linkedProdModel ? (value.linkedProdType || 'GPS') : 'GPS',
       duration: value.type === 'Plan' ? value.duration : undefined,
       comments: String(value.comments ?? '').trim()
     };
@@ -562,6 +596,38 @@ export class CotizacionesProductosComponent implements OnInit {
 
   private normalize(value: unknown): string {
     return String(value ?? '').trim().toLowerCase();
+  }
+
+  get linkedModels(): string[] {
+    const type = this.form.get('linkedProdType')?.value as LinkedProductType | null;
+    return type ? this.inventoryModels[type] : [];
+  }
+
+  get filteredLinkedModels(): string[] {
+    const search = this.normalize(this.form.get('linkedProdModel')?.value);
+    return this.linkedModels.filter(model => !search || this.normalize(model).includes(search));
+  }
+
+  private loadInventoryModels(): void {
+    forkJoin({ gps: this.api.getGps(), accessories: this.api.getAccessories() }).subscribe({
+      next: ({ gps, accessories }) => {
+        this.inventoryModels = {
+          GPS: this.extractUniqueModels(gps),
+          Accesorio: this.extractUniqueModels(accessories)
+        };
+      },
+      error: error => console.error('Error al cargar modelos de inventario:', error)
+    });
+  }
+
+  private extractUniqueModels(response: any): string[] {
+    const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    const models = new Map<string, string>();
+    items.forEach((item: any) => {
+      const model = String(item?.model ?? '').trim();
+      if (model) models.set(this.normalize(model), model);
+    });
+    return Array.from(models.values()).sort((a, b) => a.localeCompare(b, 'es'));
   }
 
   private setupPriceSync(): void {

@@ -161,6 +161,7 @@ export class CotizacionesDataService {
       userName: String(item?.userName ?? ''),
       clientName: String(item?.clientName ?? ''),
       companyName: String(item?.companyName ?? ''),
+      prospect: Boolean(item?.prospect),
       place: String(item?.place ?? ''),
       validity: item?.validity,
       products: Array.isArray(item?.products)
@@ -205,6 +206,10 @@ export class CotizacionesDataService {
       price: Number(item?.price ?? 0),
       priceIVA: Number(item?.priceIVA ?? 0),
       discount: Number(item?.discount ?? 0),
+      linkedProdModel: String(item?.linkedProdModel ?? '').trim() || null,
+      linkedProdType: item?.linkedProdType === 'GPS' || item?.linkedProdType === 'Accesorio'
+        ? item.linkedProdType
+        : null,
       duration: item?.duration ?? undefined,
       comments: String(item?.comments ?? ''),
       changeLog: Array.isArray(item?.changeLog)

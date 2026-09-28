@@ -203,10 +203,6 @@
   }
 }
 
-.field {
-  width: 100%;
-}
-
 .option {
   display: flex;
   flex-direction: column;
@@ -287,6 +283,20 @@
     height: 20px;
     width: 20px;
   }
+}
+
+.inventory-icon {
+  color: #0f766e;
+
+  mat-icon {
+    font-size: 20px;
+    height: 20px;
+    width: 20px;
+  }
+}
+
+.inventory-icon--empty {
+  color: var(--color-danger, #dc2626);
 }
 
 .money {
@@ -873,4 +883,8 @@ mat-paginator {
 
 .disclaimer-popover p:last-child {
   margin-bottom: 0;
+}
+
+.btn-save:not(:disabled) {
+  background-color: var(--color-success);
 }

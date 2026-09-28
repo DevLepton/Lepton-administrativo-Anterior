@@ -20,7 +20,7 @@ import {
 import { CotizacionesDataService } from './cotizaciones-data.service';
 import { NgToastService } from 'ng-angular-popup';
 import { AuthService } from '../services/auth.service';
-import { map } from 'rxjs';
+import { forkJoin, map } from 'rxjs';
 
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import Swal from 'sweetalert2';
@@ -30,11 +30,14 @@ type QuoteView = 'list' | 'builder';
 type QuoteSection = 'client' | 'products' | 'payment';
 type DiscountType = '%' | '$';
 type BillableFilter = 'all' | 'billable' | 'nonBillable';
+type ClientFilter = 'all' | 'prospect' | 'client';
 
 interface QuoteBuilderProduct extends QuoteProduct {
   productId: string;
   type: QuoteProductType;
   lockedAmount?: boolean;
+  linkedProdModel?: string | null;
+  linkedProdType?: 'GPS' | 'Accesorio' | null;
 }
 
 interface QuoteDraft {
@@ -101,6 +104,9 @@ export class CotizacionesComponent implements OnInit {
   travelExpenseExtras: TravelExpenseExtraItem[] = [];
 
   isAdminUser = false;
+  isSupportUser = false;
+  isInventoryUser = false;
+  isBillingUser = false;
 
   loading = false;
   builderLoading = false;
@@ -112,6 +118,7 @@ export class CotizacionesComponent implements OnInit {
   quoteUsers: string[] = [];
   selectedQuoteUsers: string[] = [];
   billableFilter: BillableFilter = 'all';
+  clientFilter: ClientFilter = 'all';
   currentPage = 1;
   perPage = 25;
   selectedIds = new Set<string>();
@@ -133,6 +140,7 @@ export class CotizacionesComponent implements OnInit {
   bankAccountModalOpen = false;
   bankAccountModalMode: 'create' | 'edit' = 'create';
   bankAccountEditingId = '';
+  originalBankAccountValue: any = null;
   suggestionModalOpen = false;
   clientDiscountModalOpen = false;
   replicationNoticeModalOpen = false;
@@ -157,6 +165,10 @@ export class CotizacionesComponent implements OnInit {
   ];
 
   bankAccounts: BankAccountItem[] = [];
+  private inventoryStock: Record<'GPS' | 'Accesorio', Map<string, number>> = {
+    GPS: new Map(),
+    Accesorio: new Map()
+  };
 
   private discountAmounts: Record<string, number> = {};
 
@@ -164,6 +176,7 @@ export class CotizacionesComponent implements OnInit {
     this.clientForm = this.fb.group({
       clientName: ['', Validators.required],
       companyName: ['', Validators.required],
+      prospect: [false],
       place: ['', Validators.required],
       validity: [this.defaultValidityDate(), Validators.required]
     });
@@ -210,6 +223,9 @@ export class CotizacionesComponent implements OnInit {
   ngOnInit(): void {
     const role = this.authService.getUserRole();
     this.isAdminUser = role === 'admin';
+    this.isSupportUser = role === 'soporte';
+    this.isInventoryUser = role === 'inventario';
+    this.isBillingUser = role === 'cobranza';
 
     this.restoreDraft();
     this.loadQuotes();
@@ -279,6 +295,7 @@ export class CotizacionesComponent implements OnInit {
     this.quoteData.getCatalogData(forceRefresh).subscribe({
       next: data => {
         this.products = [...data.products].sort((a, b) => a.name.localeCompare(b.name, 'es'));
+        this.syncQuoteProductsWithCatalog();
         this.suggestions = data.suggestions;
         this.foreignTechnicians = [...data.foreignTechnicians].sort((a, b) => a.name.localeCompare(b.name, 'es'));
         this.travelExpenses = [...data.travelExpenses].sort((a, b) => a.place.localeCompare(b.place, 'es'));
@@ -292,6 +309,8 @@ export class CotizacionesComponent implements OnInit {
         this.builderLoading = false;
       }
     });
+
+    this.loadInventoryAvailability();
 
     this.api.getBillingClientsCached(forceRefresh).subscribe({
       next: response => {
@@ -323,6 +342,11 @@ export class CotizacionesComponent implements OnInit {
         this.billableFilter === 'all' ||
         (this.billableFilter === 'billable' && item.billable) ||
         (this.billableFilter === 'nonBillable' && !item.billable)
+      ) &&
+      (
+        this.clientFilter === 'all' ||
+        (this.clientFilter === 'prospect' && item.prospect) ||
+        (this.clientFilter === 'client' && !item.prospect)
       )
     );
   }
@@ -538,9 +562,32 @@ export class CotizacionesComponent implements OnInit {
     return this.clientComplete && this.productsComplete && this.paymentComplete;
   }
 
+  get bankAccountFormChanged(): boolean {
+    if (this.bankAccountModalMode === 'create') return true;
+
+    if (!this.originalBankAccountValue) return false;
+
+    const current = this.bankAccountForm.getRawValue();
+
+    return (
+      String(current.holder ?? '').trim() !== String(this.originalBankAccountValue.holder ?? '').trim() ||
+      String(current.bankName ?? '').trim() !== String(this.originalBankAccountValue.bankName ?? '').trim() ||
+      String(current.accountNumber ?? '').trim() !== String(this.originalBankAccountValue.accountNumber ?? '').trim() ||
+      String(current.CLABE ?? '').trim() !== String(this.originalBankAccountValue.CLABE ?? '').trim() ||
+      String(current.rfc ?? '').trim() !== String(this.originalBankAccountValue.rfc ?? '').trim()
+    );
+  }
+
+  get canSaveBankAccount(): boolean {
+    return this.bankAccountForm.valid &&
+      !this.savingBankAccount &&
+      this.bankAccountFormChanged;
+  }
+
   openBuilder(): void {
     this.activeView = 'builder';
     if (!this.activeSection) this.activeSection = 'client';
+    this.loadBuilderCatalogs(true);
     this.saveDraft();
   }
 
@@ -624,6 +671,8 @@ export class CotizacionesComponent implements OnInit {
   openBankAccountCreateModal(): void {
     this.bankAccountModalMode = 'create';
     this.bankAccountEditingId = '';
+    this.originalBankAccountValue = null;
+
     this.bankAccountForm.reset({
       holder: '',
       bankName: '',
@@ -631,6 +680,7 @@ export class CotizacionesComponent implements OnInit {
       CLABE: '',
       rfc: ''
     });
+
     this.bankAccountModalOpen = true;
     document.body.style.overflow = 'hidden';
   }
@@ -641,13 +691,23 @@ export class CotizacionesComponent implements OnInit {
 
     this.bankAccountModalMode = 'edit';
     this.bankAccountEditingId = account._id;
+
+    this.originalBankAccountValue = {
+      holder: account.holder,
+      bankName: account.bankName,
+      accountNumber: account.accountNumber,
+      CLABE: account.CLABE,
+      rfc: account.rfc
+    };
+
     this.bankAccountForm.reset({
       holder: account.holder,
       bankName: account.bankName,
       accountNumber: account.accountNumber,
       CLABE: account.CLABE,
-      rfc: account.rfc,
+      rfc: account.rfc
     });
+
     this.bankAccountModalOpen = true;
     document.body.style.overflow = 'hidden';
   }
@@ -659,7 +719,7 @@ export class CotizacionesComponent implements OnInit {
   }
 
   submitBankAccount(): void {
-    if (this.bankAccountForm.invalid || this.savingBankAccount) {
+    if (this.bankAccountForm.invalid || this.savingBankAccount || !(this.isAdminUser || this.isBillingUser || this.isSupportUser)) {
       this.bankAccountForm.markAllAsTouched();
       return;
     }
@@ -699,7 +759,7 @@ export class CotizacionesComponent implements OnInit {
 
   async deleteSelectedBankAccount(): Promise<void> {
     const account = this.selectedBankAccount;
-    if (!account || this.deletingBankAccount) return;
+    if (!account || this.deletingBankAccount || !(this.isAdminUser || this.isBillingUser || this.isSupportUser)) return;
 
     const result = await Swal.fire({
       title: 'Eliminar método de pago',
@@ -765,7 +825,7 @@ export class CotizacionesComponent implements OnInit {
       this.toast.warning({ detail: 'Cotizador', summary: 'Espera a que terminen de cargar los catálogos', duration: 3000 });
       return;
     }
-    
+
     this.clearDraft();
     this.activeView = 'builder';
     this.activeSection = 'products';
@@ -773,6 +833,7 @@ export class CotizacionesComponent implements OnInit {
     this.clientForm.patchValue({
       clientName: quote.clientName ?? '',
       companyName: quote.companyName ?? '',
+      prospect: Boolean(quote.prospect),
       place: quote.place ?? '',
       validity: quote.validity ? new Date(quote.validity) : this.defaultValidityDate()
     }, { emitEvent: false });
@@ -988,6 +1049,8 @@ export class CotizacionesComponent implements OnInit {
         price: Number(product.price ?? 0),
         priceIVA: Number(product.priceIVA ?? 0),
         discount: Number(product.discount ?? 0),
+        linkedProdModel: product.linkedProdModel ?? null,
+        linkedProdType: product.linkedProdType ?? null,
         discountType: '%',
         amount: 1,
         total: 0
@@ -1050,6 +1113,18 @@ export class CotizacionesComponent implements OnInit {
 
   getProductDiscountAmount(item: QuoteBuilderProduct): number {
     return this.discountAmounts[item.productId] ?? 0;
+  }
+
+  getLinkedInventoryCount(item: QuoteBuilderProduct): number | null {
+    if (!item.linkedProdModel || !item.linkedProdType) return null;
+    return this.inventoryStock[item.linkedProdType].get(this.normalize(item.linkedProdModel)) ?? 0;
+  }
+
+  getLinkedInventoryTooltip(item: QuoteBuilderProduct): string {
+    const count = this.getLinkedInventoryCount(item);
+    if (count === null) return '';
+    const label = count === 1 ? 'producto disponible' : 'productos disponibles';
+    return `${count} ${label} en inventario: ${item.linkedProdType} ${item.linkedProdModel}`;
   }
 
   updateProductDiscountPercent(item: QuoteBuilderProduct, value: number | null): void {
@@ -1147,6 +1222,11 @@ export class CotizacionesComponent implements OnInit {
 
   updateBillableFilter(value: BillableFilter): void {
     this.billableFilter = value;
+    this.currentPage = 1;
+  }
+
+  updateClientFilter(value: ClientFilter): void {
+    this.clientFilter = value;
     this.currentPage = 1;
   }
 
@@ -1306,6 +1386,7 @@ export class CotizacionesComponent implements OnInit {
     return {
       clientName: String(client.clientName ?? '').trim(),
       companyName: String(client.companyName ?? '').trim(),
+      prospect: Boolean(client.prospect),
       place: String(client.place ?? '').trim(),
       validity: this.toDateValue(client.validity),
       products: this.quoteProducts.map(item => ({
@@ -1469,6 +1550,8 @@ export class CotizacionesComponent implements OnInit {
       price: Number(product.price ?? 0),
       priceIVA: Number(product.priceIVA ?? 0),
       discount: Number(product.discount ?? 0),
+      linkedProdModel: product.linkedProdModel ?? null,
+      linkedProdType: product.linkedProdType ?? null,
       discountType: '%',
       amount: Math.max(1, Number(amount || 1)),
       total: 0
@@ -1476,6 +1559,64 @@ export class CotizacionesComponent implements OnInit {
 
     this.recalculateProduct(item);
     return item;
+  }
+
+  private syncQuoteProductsWithCatalog(): void {
+    let updated = false;
+
+    this.quoteProducts.forEach(item => {
+      const product = this.products.find(candidate => candidate._id === item.productId);
+      if (!product) return;
+
+      const catalogValues = {
+        type: product.type,
+        name: product.name,
+        concept: product.concept ?? '',
+        description: product.description ?? '',
+        price: Number(product.price ?? 0),
+        priceIVA: Number(product.priceIVA ?? 0),
+        discount: Number(product.discount ?? 0),
+        linkedProdModel: product.linkedProdModel ?? null,
+        linkedProdType: product.linkedProdType ?? null
+      };
+
+      const changed = Object.entries(catalogValues).some(([key, value]) =>
+        (item as any)[key] !== value
+      );
+
+      if (!changed) return;
+
+      Object.assign(item, catalogValues);
+      this.recalculateProduct(item);
+      updated = true;
+    });
+
+    if (updated) {
+      this.rebuildDiscountAmounts();
+      this.saveDraft();
+    }
+  }
+
+  private loadInventoryAvailability(): void {
+    forkJoin({ gps: this.api.getGps(), accessories: this.api.getAccessories() }).subscribe({
+      next: ({ gps, accessories }) => {
+        this.inventoryStock = {
+          GPS: this.countInventoryByModel(gps),
+          Accesorio: this.countInventoryByModel(accessories)
+        };
+      },
+      error: error => console.error('Error al cargar disponibilidad de inventario:', error)
+    });
+  }
+
+  private countInventoryByModel(response: any): Map<string, number> {
+    const items = Array.isArray(response?.data) ? response.data : (Array.isArray(response) ? response : []);
+    return items.reduce((counts: Map<string, number>, item: any) => {
+      if (this.normalize(item?.status) !== 'en inventario') return counts;
+      const model = this.normalize(item?.model);
+      if (model) counts.set(model, (counts.get(model) ?? 0) + 1);
+      return counts;
+    }, new Map<string, number>());
   }
 
   private buildReplicatedForeignService(source: QuoteProduct, index: number, notices: QuoteReplicationNotice[]): QuoteBuilderProduct | null {
@@ -1765,6 +1906,7 @@ export class CotizacionesComponent implements OnInit {
     this.clientForm.reset({
       clientName: '',
       companyName: '',
+      prospect: false,
       place: '',
       validity: this.defaultValidityDate()
     }, { emitEvent: false });
