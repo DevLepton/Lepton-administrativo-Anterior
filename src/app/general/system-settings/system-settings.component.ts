@@ -20,7 +20,7 @@ interface SectionVersion {
   type: 'Sistema' | 'Sección' | 'Subsección';
 }
 
-const SYSTEM_VERSION = '3.0.2';
+const SYSTEM_VERSION = '3.0.4';
 
 @Component({
   selector: 'app-system-settings',
@@ -54,8 +54,8 @@ export class SystemSettingsComponent {
     '/peticiones': '1.3.2',
     '/clientes': '9.3.1',
     '/inventario': '1.5.1',
-    '/clientes-cobranza': '1.2.0',
-    '/cotizaciones': '1.1.1',
+    '/clientes-cobranza': '1.2.1',
+    '/cotizaciones': '1.1.2',
     '/cotizaciones/productos': '1.3.0',
     '/cotizaciones/foraneos': '1.1.1',
     '/cotizaciones/sugerencias': '1.0.1',

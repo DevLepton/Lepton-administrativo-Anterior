@@ -311,6 +311,7 @@ export class CotizacionesComponent implements OnInit {
     });
 
     this.loadInventoryAvailability();
+    if (forceRefresh) this.loadBankAccounts();
 
     this.api.getBillingClientsCached(forceRefresh).subscribe({
       next: response => {
@@ -909,7 +910,7 @@ export class CotizacionesComponent implements OnInit {
 
     for (const quote of selected) {
       const pdf = await this.pdfService.createQuotePdf(quote);
-      const fileName = `Cotización-${this.sanitizeFileName(quote.quoteNum || quote._id)}.pdf`;
+      const fileName = `${this.sanitizeFileName(quote.quoteNum || quote._id)}_${quote.companyName}.pdf`;
       pdf.save(fileName);
     }
   }
@@ -2067,7 +2068,9 @@ export class CotizacionesComponent implements OnInit {
       paymentContacts: Array.isArray(item?.paymentContacts) ? item.paymentContacts : [],
       voucherType: item?.voucherType ?? 'Recibo',
       issuer: String(item?.issuer ?? '') || null,
+      hireDate: item?.hireDate ?? null,
       cutoffDay: Number(item?.cutoffDay ?? 1),
+      cutoffMonth: item?.periodicity === 'annual' && item?.cutoffMonth != null ? Number(item.cutoffMonth) : null,
       companyName: String(item?.companyName ?? ''),
       RFC: String(item?.RFC ?? ''),
       useInvoice: String(item?.useInvoice ?? ''),

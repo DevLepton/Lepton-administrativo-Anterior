@@ -97,14 +97,14 @@
                 </th>
                 <th>No.</th>
                 <!-- <th>Tipo</th> -->
-                <th>Nombre cobranza</th>
-                <th>Relación</th>
-                <th>Comprobante</th>
-                <th>Día de corte</th>
-                <th>RFC</th>
-                <th>Correo</th>
-                <th>Contactos</th>
-                <th>Lista negra</th>
+                <th (click)="sortBillingClientsBy('billingName')" class="th-sort">Nombre cobranza <span class="arrow material-icons">{{ billingClientSortArrow('billingName') }}</span></th>
+                <th (click)="sortBillingClientsBy('relationship')" class="th-sort">Relación <span class="arrow material-icons">{{ billingClientSortArrow('relationship') }}</span></th>
+                <th (click)="sortBillingClientsBy('voucherType')" class="th-sort">Comprobante <span class="arrow material-icons">{{ billingClientSortArrow('voucherType') }}</span></th>
+                <th (click)="sortBillingClientsBy('cutoffDay')" class="th-sort">Día de corte <span class="arrow material-icons">{{ billingClientSortArrow('cutoffDay') }}</span></th>
+                <th (click)="sortBillingClientsBy('RFC')" class="th-sort">RFC <span class="arrow material-icons">{{ billingClientSortArrow('RFC') }}</span></th>
+                <th (click)="sortBillingClientsBy('email')" class="th-sort">Correo <span class="arrow material-icons">{{ billingClientSortArrow('email') }}</span></th>
+                <th (click)="sortBillingClientsBy('contactCount')" class="th-sort">Contactos <span class="arrow material-icons">{{ billingClientSortArrow('contactCount') }}</span></th>
+                <th (click)="sortBillingClientsBy('blacklist')" class="th-sort">Lista negra <span class="arrow material-icons">{{ billingClientSortArrow('blacklist') }}</span></th>
                 <th></th>
               </tr>
             </thead>
@@ -141,7 +141,7 @@
                         || 0) === 1 ? '' : 's' }}
                       </div>
                     </div>
-                    <button *ngIf="row.isParent" mat-icon-button
+                    <button *ngIf="row.isParent && (row.item.subBillingClients?.length ?? 0) > 0" mat-icon-button
                       (click)="toggleExpanded(row.item._id); $event.stopPropagation()">
 
                       <mat-icon>{{ isExpanded(row.item._id) ? 'keyboard_arrow_down' : 'keyboard_arrow_right'
@@ -150,7 +150,7 @@
                   </div>
                 </td>
                 <td>
-                  <span class="status-badge" [class.invoice]="row.item.voucherType === 'Factura'">
+                  <span class="status-badge" [style]="{ 'background-color': row.item.voucherType === 'Factura' ? 'var(--color-success)' : 'var(--color-primary)' }">
                     {{ row.item.voucherType }}
                   </span>
                 </td>
@@ -240,7 +240,9 @@
             <div *ngIf="item.voucherType === 'Factura'"><b>Uso de la factura:</b> {{ invoiceUseMap.get(item.useInvoice)
               || '-' }}</div>
             <div><b>Correo:</b> {{ item.email || '-' }}</div>
+            <div><b>Fecha de contratación:</b> {{ getHireDateLabel(item.hireDate) }}</div>
             <div><b>Día de corte:</b> {{ item.cutoffDay || '-' }}</div>
+            <div *ngIf="item.periodicity === 'annual'"><b>Mes de corte:</b> {{ getCutoffMonthLabel(item.cutoffMonth) }}</div>
             <div><b>Próxima fecha de corte:</b> {{ nextBillingDates.cutoff }}</div>
             <div><b>Próxima fecha de pago:</b> {{ nextBillingDates.payment }}</div>
           </div>
@@ -449,6 +451,13 @@
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="small-field">
+                <mat-label>Fecha de contratación</mat-label>
+                <input matInput [matDatepicker]="hireDatePicker" formControlName="hireDate" (click)="hireDatePicker.open()" />
+                <mat-datepicker-toggle matSuffix [for]="hireDatePicker"></mat-datepicker-toggle>
+                <mat-datepicker #hireDatePicker></mat-datepicker>
+              </mat-form-field>
+
+              <mat-form-field appearance="outline" class="small-field">
                 <mat-label>Periodicidad</mat-label>
                 <mat-select formControlName="periodicity">
                   <mat-option value="monthly">Mensual</mat-option>
@@ -458,8 +467,19 @@
 
               <mat-form-field appearance="outline" class="tiny-field">
                 <mat-label>Día de corte</mat-label>
-                <input matInput type="number" min="1" max="31" formControlName="cutoffDay"
+                <input matInput type="number" min="1" [attr.max]="getMaxCutoffDay()" formControlName="cutoffDay"
                   (focus)="selectInput($event)" />
+                <mat-error *ngIf="form.get('cutoffDay')?.hasError('invalidCutoffDayForMonth')">
+                  El día no existe en el mes seleccionado
+                </mat-error>
+              </mat-form-field>
+
+              <mat-form-field *ngIf="form.get('periodicity')?.value === 'annual'" appearance="outline" class="small-field">
+                <mat-label>Mes de corte</mat-label>
+                <mat-select formControlName="cutoffMonth">
+                  <mat-option *ngFor="let month of cutoffMonths" [value]="month.value">{{ month.label }}</mat-option>
+                </mat-select>
+                <mat-error *ngIf="form.get('cutoffMonth')?.hasError('required')">El mes de corte es obligatorio</mat-error>
               </mat-form-field>
 
               <div class="billing-date small-field">

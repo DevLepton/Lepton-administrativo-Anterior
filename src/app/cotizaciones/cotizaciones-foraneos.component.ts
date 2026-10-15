@@ -40,6 +40,10 @@ export class CotizacionesForaneosComponent implements OnInit {
   perPage = 25;
   selectedIds = new Set<string>();
   deletingId: string | null = null;
+  technicianSortKey: keyof ForeignTechnicianItem | null = null;
+  technicianSortDir: 'asc' | 'desc' = 'asc';
+  travelExpenseSortKey: 'place' | 'km' | 'boothCount' | 'boothTotal' | 'estimatedTotal' | 'createdAt' | null = null;
+  travelExpenseSortDir: 'asc' | 'desc' = 'asc';
 
   modalOpen = false;
   modalMode: TechnicianModalMode = 'create';
@@ -127,7 +131,7 @@ export class CotizacionesForaneosComponent implements OnInit {
   get filteredTechnicians(): ForeignTechnicianItem[] {
     const q = this.normalize(this.search);
 
-    return this.technicians
+    const technicians = this.technicians
       .filter(item => this.normalize(item.type).startsWith('for'))
       .filter(item => !q ||
         this.normalize(item.name).includes(q) ||
@@ -136,6 +140,8 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.normalize(item.address).includes(q) ||
         this.normalize(item.comments).includes(q)
       );
+
+    return this.sortTechnicians(technicians);
   }
 
   get displayedTechnicians(): ForeignTechnicianItem[] {
@@ -163,7 +169,7 @@ export class CotizacionesForaneosComponent implements OnInit {
   get filteredTravelExpenses(): TravelExpenseItem[] {
     const q = this.normalize(this.search);
 
-    return this.travelExpenses.filter(item => !q ||
+    const travelExpenses = this.travelExpenses.filter(item => !q ||
       this.normalize(item.place).includes(q) ||
       this.normalize(item.km).includes(q) ||
       item.booths.some(booth =>
@@ -171,6 +177,8 @@ export class CotizacionesForaneosComponent implements OnInit {
         this.normalize(booth.cost).includes(q)
       )
     );
+
+    return this.sortTravelExpenses(travelExpenses);
   }
 
   get extraFieldsChanged(): boolean {
@@ -197,6 +205,60 @@ export class CotizacionesForaneosComponent implements OnInit {
   get displayedTravelExpenses(): TravelExpenseItem[] {
     const start = (this.currentPage - 1) * this.perPage;
     return this.filteredTravelExpenses.slice(start, start + this.perPage);
+  }
+
+  sortTechniciansBy(key: keyof ForeignTechnicianItem): void {
+    if (this.technicianSortKey === key) {
+      if (this.technicianSortDir === 'asc') this.technicianSortDir = 'desc';
+      else { this.technicianSortKey = null; this.currentPage = 1; return; }
+    } else { this.technicianSortKey = key; this.technicianSortDir = 'asc'; }
+    this.currentPage = 1;
+  }
+
+  technicianSortArrow(key: keyof ForeignTechnicianItem): string {
+    return this.technicianSortKey === key ? (this.technicianSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : '';
+  }
+
+  sortTravelExpensesBy(key: NonNullable<CotizacionesForaneosComponent['travelExpenseSortKey']>): void {
+    if (this.travelExpenseSortKey === key) {
+      if (this.travelExpenseSortDir === 'asc') this.travelExpenseSortDir = 'desc';
+      else { this.travelExpenseSortKey = null; this.currentPage = 1; return; }
+    } else { this.travelExpenseSortKey = key; this.travelExpenseSortDir = 'asc'; }
+    this.currentPage = 1;
+  }
+
+  travelExpenseSortArrow(key: NonNullable<CotizacionesForaneosComponent['travelExpenseSortKey']>): string {
+    return this.travelExpenseSortKey === key ? (this.travelExpenseSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : '';
+  }
+
+  private sortTechnicians(items: ForeignTechnicianItem[]): ForeignTechnicianItem[] {
+    if (!this.technicianSortKey) return items;
+    const key = this.technicianSortKey;
+    const dir = this.technicianSortDir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => this.compareSortValues(a[key], b[key]) * dir);
+  }
+
+  private sortTravelExpenses(items: TravelExpenseItem[]): TravelExpenseItem[] {
+    if (!this.travelExpenseSortKey) return items;
+    const dir = this.travelExpenseSortDir === 'asc' ? 1 : -1;
+    const value = (item: TravelExpenseItem): unknown => {
+      switch (this.travelExpenseSortKey) {
+        case 'boothCount': return item.booths.length;
+        case 'boothTotal': return this.boothTotal(item);
+        case 'estimatedTotal': return this.travelExpenseTotal(item);
+        default: return item[this.travelExpenseSortKey as keyof TravelExpenseItem];
+      }
+    };
+    return [...items].sort((a, b) => this.compareSortValues(value(a), value(b)) * dir);
+  }
+
+  private compareSortValues(a: unknown, b: unknown): number {
+    if (a == null || a === '') return b == null || b === '' ? 0 : -1;
+    if (b == null || b === '') return 1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    const aDate = new Date(a as string).getTime(), bDate = new Date(b as string).getTime();
+    if (!Number.isNaN(aDate) && !Number.isNaN(bDate) && /\d{4}-\d{2}-\d{2}/.test(String(a))) return aDate - bDate;
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
   }
 
   get selectedCount(): number {

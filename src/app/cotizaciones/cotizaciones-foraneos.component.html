@@ -88,18 +88,18 @@
                           aria-label="Seleccionar todos" />
                       </th>
                       <th>No.</th>
-                      <th>Nombre</th>
-                      <th>Celular</th>
-                      <th>Ciudad</th>
-                      <th>Factura</th>
-                      <th>Local propio</th>
-                      <th>Precio de instalación</th>
-                      <th>Precio de revisión</th>
-                      <th>Precio de retiro</th>
-                      <th>Precio de vuelta en falso</th>
-                      <th>Precio de viáticos</th>
-                      <th>Precio de traslado</th>
-                      <th>Comentarios</th>
+                      <th (click)="sortTechniciansBy('name')" class="th-sort">Nombre <span class="arrow material-icons">{{ technicianSortArrow('name') }}</span></th>
+                      <th (click)="sortTechniciansBy('cel')" class="th-sort">Celular <span class="arrow material-icons">{{ technicianSortArrow('cel') }}</span></th>
+                      <th (click)="sortTechniciansBy('city')" class="th-sort">Ciudad <span class="arrow material-icons">{{ technicianSortArrow('city') }}</span></th>
+                      <th (click)="sortTechniciansBy('bill')" class="th-sort">Factura <span class="arrow material-icons">{{ technicianSortArrow('bill') }}</span></th>
+                      <th (click)="sortTechniciansBy('ownLocal')" class="th-sort">Local propio <span class="arrow material-icons">{{ technicianSortArrow('ownLocal') }}</span></th>
+                      <th (click)="sortTechniciansBy('installationPrice')" class="th-sort">Precio de instalación <span class="arrow material-icons">{{ technicianSortArrow('installationPrice') }}</span></th>
+                      <th (click)="sortTechniciansBy('inspectionFee')" class="th-sort">Precio de revisión <span class="arrow material-icons">{{ technicianSortArrow('inspectionFee') }}</span></th>
+                      <th (click)="sortTechniciansBy('withdrawalPrice')" class="th-sort">Precio de retiro <span class="arrow material-icons">{{ technicianSortArrow('withdrawalPrice') }}</span></th>
+                      <th (click)="sortTechniciansBy('priceFalseReversal')" class="th-sort">Precio de vuelta en falso <span class="arrow material-icons">{{ technicianSortArrow('priceFalseReversal') }}</span></th>
+                      <th (click)="sortTechniciansBy('travelExpensesPrice')" class="th-sort">Precio de viáticos <span class="arrow material-icons">{{ technicianSortArrow('travelExpensesPrice') }}</span></th>
+                      <th (click)="sortTechniciansBy('transferPrice')" class="th-sort">Precio de traslado <span class="arrow material-icons">{{ technicianSortArrow('transferPrice') }}</span></th>
+                      <th (click)="sortTechniciansBy('comments')" class="th-sort">Comentarios <span class="arrow material-icons">{{ technicianSortArrow('comments') }}</span></th>
                       <th></th>
                     </tr>
                   </thead>
@@ -339,12 +339,12 @@
                           aria-label="Seleccionar todos" />
                       </th>
                       <th>No.</th>
-                      <th>Lugar</th>
-                      <th>Kilómetros</th>
-                      <th>Casetas</th>
-                      <th>Total casetas</th>
-                      <th>Estimado con tarifa/km</th>
-                      <th>Creado</th>
+                      <th (click)="sortTravelExpensesBy('place')" class="th-sort">Lugar <span class="arrow material-icons">{{ travelExpenseSortArrow('place') }}</span></th>
+                      <th (click)="sortTravelExpensesBy('km')" class="th-sort">Kilómetros <span class="arrow material-icons">{{ travelExpenseSortArrow('km') }}</span></th>
+                      <th (click)="sortTravelExpensesBy('boothCount')" class="th-sort">Casetas <span class="arrow material-icons">{{ travelExpenseSortArrow('boothCount') }}</span></th>
+                      <th (click)="sortTravelExpensesBy('boothTotal')" class="th-sort">Total casetas <span class="arrow material-icons">{{ travelExpenseSortArrow('boothTotal') }}</span></th>
+                      <th (click)="sortTravelExpensesBy('estimatedTotal')" class="th-sort">Estimado con tarifa/km <span class="arrow material-icons">{{ travelExpenseSortArrow('estimatedTotal') }}</span></th>
+                      <th (click)="sortTravelExpensesBy('createdAt')" class="th-sort">Creado <span class="arrow material-icons">{{ travelExpenseSortArrow('createdAt') }}</span></th>
                       <th></th>
                     </tr>
                   </thead>

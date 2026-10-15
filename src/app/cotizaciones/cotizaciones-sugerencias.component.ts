@@ -23,6 +23,8 @@ export class CotizacionesSugerenciasComponent {
   perPage = 25;
   selectedIds = new Set<string>();
   deletingId: string | null = null;
+  suggestionSortKey: 'description' | 'productName' | 'price' | 'priceIVA' | 'action' | 'responseCount' | null = null;
+  suggestionSortDir: 'asc' | 'desc' = 'asc';
 
   isAdminUser = false;
   isSupportUser = false;
@@ -349,18 +351,56 @@ export class CotizacionesSugerenciasComponent {
   get filteredSuggestions(): SuggestionItem[] {
     const q = this.normalize(this.search);
 
-    return this.suggestions.filter(item => {
+    const suggestions = this.suggestions.filter(item => {
       const productName = this.getProduct(item.productId)?.name ?? '';
       const matchesSearch = !q || this.normalize(item.description).includes(q) || this.normalize(productName).includes(q);
       const matchesAction = !this.actionFilter || item.action === this.actionFilter;
 
       return matchesSearch && matchesAction;
     });
+
+    return this.sortSuggestions(suggestions);
   }
 
   get displayedSuggestions(): SuggestionItem[] {
     const start = (this.currentPage - 1) * this.perPage;
     return this.filteredSuggestions.slice(start, start + this.perPage);
+  }
+
+  sortSuggestionsBy(key: NonNullable<CotizacionesSugerenciasComponent['suggestionSortKey']>): void {
+    if (this.suggestionSortKey === key) {
+      if (this.suggestionSortDir === 'asc') this.suggestionSortDir = 'desc';
+      else { this.suggestionSortKey = null; this.currentPage = 1; return; }
+    } else { this.suggestionSortKey = key; this.suggestionSortDir = 'asc'; }
+    this.currentPage = 1;
+  }
+
+  suggestionSortArrow(key: NonNullable<CotizacionesSugerenciasComponent['suggestionSortKey']>): string {
+    return this.suggestionSortKey === key ? (this.suggestionSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : '';
+  }
+
+  private sortSuggestions(items: SuggestionItem[]): SuggestionItem[] {
+    if (!this.suggestionSortKey) return items;
+    const key = this.suggestionSortKey;
+    const value = (item: SuggestionItem): unknown => {
+      const product = this.getProduct(item.productId);
+      switch (key) {
+        case 'productName': return product?.name;
+        case 'price': return product?.price;
+        case 'priceIVA': return product?.priceIVA;
+        case 'responseCount': return item.response?.length ?? 0;
+        default: return item[key];
+      }
+    };
+    const dir = this.suggestionSortDir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => this.compareSortValues(value(a), value(b)) * dir);
+  }
+
+  private compareSortValues(a: unknown, b: unknown): number {
+    if (a == null || a === '') return b == null || b === '' ? 0 : -1;
+    if (b == null || b === '') return 1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
   }
 
   get selectedCount(): number {

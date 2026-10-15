@@ -43,6 +43,8 @@ export class CotizacionesProductosComponent implements OnInit {
   perPage = 25;
   selectedIds = new Set<string>();
   deletingId: string | null = null;
+  productSortKey: keyof QuoteProductItem | null = null;
+  productSortDir: 'asc' | 'desc' = 'asc';
 
   modalOpen = false;
   modalMode: ProductModalMode = 'create';
@@ -134,7 +136,7 @@ export class CotizacionesProductosComponent implements OnInit {
   get filteredProducts(): QuoteProductItem[] {
     const q = this.normalize(this.search);
 
-    return this.products
+    const products = this.products
       .filter(item => item.type === this.activeType)
       .filter(item => !q ||
         this.normalize(item.name).includes(q) ||
@@ -142,11 +144,51 @@ export class CotizacionesProductosComponent implements OnInit {
         this.normalize(item.description).includes(q) ||
         this.normalize(item.comments).includes(q)
       );
+
+    return this.sortProducts(products);
   }
 
   get displayedProducts(): QuoteProductItem[] {
     const start = (this.currentPage - 1) * this.perPage;
     return this.filteredProducts.slice(start, start + this.perPage);
+  }
+
+  sortProductsBy(key: keyof QuoteProductItem): void {
+    if (this.productSortKey === key) {
+      if (this.productSortDir === 'asc') this.productSortDir = 'desc';
+      else {
+        this.productSortKey = null;
+        this.currentPage = 1;
+        return;
+      }
+    } else {
+      this.productSortKey = key;
+      this.productSortDir = 'asc';
+    }
+    this.currentPage = 1;
+  }
+
+  productSortArrow(key: keyof QuoteProductItem): string {
+    return this.productSortKey === key
+      ? (this.productSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+      : '';
+  }
+
+  private sortProducts(items: QuoteProductItem[]): QuoteProductItem[] {
+    if (!this.productSortKey) return items;
+    const key = this.productSortKey;
+    const dir = this.productSortDir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => this.compareSortValues(a[key], b[key]) * dir);
+  }
+
+  private compareSortValues(a: unknown, b: unknown): number {
+    if (a == null || a === '') return b == null || b === '' ? 0 : -1;
+    if (b == null || b === '') return 1;
+    if (a instanceof Date || b instanceof Date || /\d{4}-\d{2}-\d{2}/.test(String(a)) || /\d{4}-\d{2}-\d{2}/.test(String(b))) {
+      return new Date(a as string).getTime() - new Date(b as string).getTime();
+    }
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
   }
 
   get selectedCount(): number {

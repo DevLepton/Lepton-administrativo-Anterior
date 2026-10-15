@@ -282,7 +282,9 @@ export interface BillingClientItem {
 
   voucherType: 'Recibo' | 'Factura';
   issuer: string | null;
+  hireDate: string | Date | null;
   cutoffDay: number;
+  cutoffMonth: number | null;
 
   companyName: string;
   RFC: string;

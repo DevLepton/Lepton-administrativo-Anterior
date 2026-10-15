@@ -6,6 +6,19 @@ import Swal from 'sweetalert2';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
 import { ApiService, BillingClientItem, BillingClientType, ClientListItem, CreateBillingClientPayload, PaymentContactPayload, BillingClientDiscounts, BillingClientAddress, LabelItem, BankAccountItem } from '../services/api.service';
 import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
+import { MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
+
+export const MY_DATE_FORMATS = {
+  parse: {
+    dateInput: 'DD/MM/YYYY',
+  },
+  display: {
+    dateInput: 'DD/MM/YYYY',
+    monthYearLabel: 'MMMM YYYY',
+    dateA11yLabel: 'DD/MM/YYYY',
+    monthYearA11yLabel: 'MMMM YYYY',
+  },
+};
 
 interface ClientOption {
   userId: number;
@@ -26,12 +39,27 @@ interface BillingClientRow {
   isParent: boolean;
 }
 
-// Quiero cambiar el componente del selector de etiquetas en los modales de crear y actualizar clientes de cobranza por uno que me permita escribir nuevas etiquetas, que al terminar de escribirlas y darle enter, se vayan agregando en el mismo componente, así mismo, conforme se vaya escribiendo en el componente, se deben desplegar como opciones de autocompletado las etiquetas obtenidas desde la api, y si se selecciona una de ellas, que se agregue y se limpie el texto para poder ir agregando más etiquetas si así se desea. Además, dentro del componente deben poderse eliminar las etiquetas agregadas, y debajo del componente también deben aparecer, con la opción de que al darles clic, se les pueda cambiar el color. Una vez agregadas las etiquetas y darle clic en guardar, antes de cerrar el modal y ejecutar la función para registrar o actualizar el cliente, que se mande a llamar a la api para registrar las etiquetas y obtener sus _id, los cuales se deben mandar en el payload del cliente para la clave "labels"; en el caso de que no se registren correctamente las etiquetas, se debe mostrar un error y detener el proceso.
-
 @Component({
   selector: 'app-sub-clientes',
   templateUrl: './sub-clientes.component.html',
-  styleUrl: './sub-clientes.component.scss'
+  styleUrl: './sub-clientes.component.scss',
+  providers: [
+    { provide: MAT_DATE_LOCALE, useValue: 'es-MX' },
+    {
+      provide: MAT_DATE_FORMATS,
+      useValue: {
+        parse: {
+          dateInput: { day: '2-digit', month: '2-digit', year: 'numeric' }
+        },
+        display: {
+          dateInput: { day: '2-digit', month: '2-digit', year: 'numeric' },
+          monthYearLabel: { month: 'long', year: 'numeric' },
+          dateA11yLabel: { day: '2-digit', month: '2-digit', year: 'numeric' },
+          monthYearA11yLabel: { month: 'long', year: 'numeric' }
+        }
+      }
+    }
+  ]
 })
 export class SubClientesComponent implements OnInit {
   @ViewChild(MatAutocompleteTrigger) labelAutocompleteTrigger?: MatAutocompleteTrigger;
@@ -53,6 +81,8 @@ export class SubClientesComponent implements OnInit {
   userIdFilter: number | '' = '';
   currentPage = 1;
   perPage = 25;
+  billingClientSortKey: 'billingName' | 'relationship' | 'voucherType' | 'cutoffDay' | 'RFC' | 'email' | 'contactCount' | 'blacklist' | null = null;
+  billingClientSortDir: 'asc' | 'desc' = 'asc';
 
   selectedIds = new Set<string>();
   sidePanelOpen = false;
@@ -70,6 +100,13 @@ export class SubClientesComponent implements OnInit {
 
   nextCutoffDate = '';
   nextPaymentDate = '';
+
+  readonly cutoffMonths = [
+    { value: 1, label: 'Enero' }, { value: 2, label: 'Febrero' }, { value: 3, label: 'Marzo' },
+    { value: 4, label: 'Abril' }, { value: 5, label: 'Mayo' }, { value: 6, label: 'Junio' },
+    { value: 7, label: 'Julio' }, { value: 8, label: 'Agosto' }, { value: 9, label: 'Septiembre' },
+    { value: 10, label: 'Octubre' }, { value: 11, label: 'Noviembre' }, { value: 12, label: 'Diciembre' }
+  ];
 
   taxRegimes = [
     { codigo: '601', descripcion: 'General de Ley Personas Morales' },
@@ -132,7 +169,9 @@ export class SubClientesComponent implements OnInit {
 
       voucherType: ['Recibo', Validators.required],
       issuer: [null],
-      cutoffDay: [1, [Validators.required, Validators.min(1), Validators.max(31)]],
+      hireDate: [null],
+      cutoffDay: [1, [Validators.required, Validators.min(1), Validators.max(31), this.cutoffDayValidator]],
+      cutoffMonth: [null, [Validators.min(1), Validators.max(12)]],
 
       companyName: ['', Validators.required],
       RFC: ['', [Validators.required, Validators.maxLength(13)]],
@@ -165,7 +204,15 @@ export class SubClientesComponent implements OnInit {
     this.onBillingClientTypeChange();
     this.onVoucherTypeChange();
     this.form.get('cutoffDay')?.valueChanges.subscribe(() => this.updateBillingDates());
-    this.form.get('periodicity')?.valueChanges.subscribe(() => this.updateBillingDates());
+    this.form.get('cutoffMonth')?.valueChanges.subscribe(() => {
+      this.form.get('cutoffDay')?.updateValueAndValidity({ emitEvent: false });
+      this.updateBillingDates();
+    });
+    this.form.get('periodicity')?.valueChanges.subscribe((periodicity) => {
+      this.applyPeriodicityRules(periodicity);
+      this.form.get('cutoffDay')?.updateValueAndValidity({ emitEvent: false });
+      this.updateBillingDates();
+    });
     this.form.valueChanges.subscribe(() => {
       if (this.modalMode === 'edit') {
         this.updateChangeLogValidator();
@@ -177,6 +224,39 @@ export class SubClientesComponent implements OnInit {
   selectInput(event: FocusEvent): void {
     const input = event.target as HTMLInputElement;
     input.select();
+  }
+
+  getMaxCutoffDay(): number {
+    return this.getMaximumCutoffDay(this.form.get('periodicity')?.value, Number(this.form.get('cutoffMonth')?.value));
+  }
+
+  getCutoffMonthLabel(month: number | null | undefined): string {
+    return this.cutoffMonths.find(option => option.value === Number(month))?.label ?? '-';
+  }
+
+  getHireDateLabel(value: string | Date | null | undefined): string {
+    const date = this.toDateValue(value);
+    return date ? this.formatBillingDate(date) : '-';
+  }
+
+  private toDateValue(value: string | Date | null | undefined): Date | null {
+    if (!value) return null;
+    if (value instanceof Date) return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+
+    const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+    if (match) return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? null : date;
+  }
+
+  private toApiDate(value: unknown): string | null {
+    const date = value instanceof Date ? value : this.toDateValue(typeof value === 'string' ? value : null);
+    if (!date) return null;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   private updateChangeLogValidator(): void {
@@ -639,9 +719,9 @@ export class SubClientesComponent implements OnInit {
     const filtered = this.filteredBillingClients;
     const filteredIds = new Set(filtered.map(item => item._id));
 
-    const parents = this.billingClients
+    const parents = this.sortBillingClientItems(this.billingClients
       .filter(item => item.type === 'client' && (filteredIds.has(item._id) || filtered.some(child => child.type === 'subClient' && child.billingClientFather === item._id)))
-      .sort((a, b) => this.getCreatedTime(b) - this.getCreatedTime(a));
+      .sort((a, b) => this.getCreatedTime(b) - this.getCreatedTime(a)));
 
     const rows: BillingClientRow[] = [];
 
@@ -658,9 +738,9 @@ export class SubClientesComponent implements OnInit {
 
       const parentMatchesSearch = filteredIds.has(parent._id);
 
-      const children = parentMatchesSearch ? this.billingClients.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
-          .sort((a, b) => a.billingName.localeCompare(b.billingName)) : filtered.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
-          .sort((a, b) => a.billingName.localeCompare(b.billingName));
+      const children = this.sortBillingClientItems(parentMatchesSearch ? this.billingClients.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
+        .sort((a, b) => a.billingName.localeCompare(b.billingName)) : filtered.filter(item => item.type === 'subClient' && item.billingClientFather === parent._id)
+          .sort((a, b) => a.billingName.localeCompare(b.billingName)));
 
       for (const child of children) {
         rows.push({
@@ -672,6 +752,40 @@ export class SubClientesComponent implements OnInit {
     }
 
     return rows;
+  }
+
+  sortBillingClientsBy(key: NonNullable<SubClientesComponent['billingClientSortKey']>): void {
+    if (this.billingClientSortKey === key) {
+      if (this.billingClientSortDir === 'asc') this.billingClientSortDir = 'desc';
+      else { this.billingClientSortKey = null; this.currentPage = 1; return; }
+    } else { this.billingClientSortKey = key; this.billingClientSortDir = 'asc'; }
+    this.currentPage = 1;
+  }
+
+  billingClientSortArrow(key: NonNullable<SubClientesComponent['billingClientSortKey']>): string {
+    return this.billingClientSortKey === key ? (this.billingClientSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward') : '';
+  }
+
+  private sortBillingClientItems(items: BillingClientItem[]): BillingClientItem[] {
+    if (!this.billingClientSortKey) return items;
+    const key = this.billingClientSortKey;
+    const value = (item: BillingClientItem): unknown => {
+      switch (key) {
+        case 'relationship': return item.type === 'client' ? this.getClientLabel(item.userId ?? null) : this.getBillingClientName(item.billingClientFather);
+        case 'contactCount': return item.paymentContacts?.length ?? 0;
+        default: return item[key];
+      }
+    };
+    const dir = this.billingClientSortDir === 'asc' ? 1 : -1;
+    return [...items].sort((a, b) => this.compareBillingSortValues(value(a), value(b)) * dir);
+  }
+
+  private compareBillingSortValues(a: unknown, b: unknown): number {
+    if (a == null || a === '') return b == null || b === '' ? 0 : -1;
+    if (b == null || b === '') return 1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b);
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
   }
 
   trackByRow(index: number, row: BillingClientRow) {
@@ -1093,100 +1207,73 @@ export class SubClientesComponent implements OnInit {
   private updateBillingDates(): void {
     const cutoffDay = Number(this.form.get('cutoffDay')?.value);
     const periodicity = this.form.get('periodicity')?.value;
-
-    if (!cutoffDay || cutoffDay < 1 || cutoffDay > 31) {
-      this.nextCutoffDate = '-';
-      this.nextPaymentDate = '-';
-      return;
-    }
-
-    const today = new Date();
-    let cutoffDate: Date;
-
-    if (periodicity === 'annual') {
-      cutoffDate = new Date(today.getFullYear() + 1, today.getMonth(), cutoffDay);
-
-      if (cutoffDate.getMonth() !== today.getMonth()) {
-        cutoffDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
-      }
-
-      const paymentDate = new Date(cutoffDate);
-      paymentDate.setMonth(paymentDate.getMonth() - 1);
-
-      this.nextCutoffDate = this.formatBillingDate(cutoffDate);
-      this.nextPaymentDate = this.formatBillingDate(paymentDate);
-      return;
-    }
-
-    let year = today.getFullYear();
-    let month = today.getMonth();
-
-    cutoffDate = new Date(year, month, cutoffDay);
-
-    if (cutoffDate.getMonth() !== month || cutoffDate < today) {
-      month++;
-
-      if (month > 11) {
-        month = 0;
-        year++;
-      }
-
-      cutoffDate = new Date(year, month, cutoffDay);
-
-      if (cutoffDate.getMonth() !== month) {
-        cutoffDate = new Date(year, month + 1, 0);
-      }
-    }
-
-    const paymentDate = new Date(cutoffDate);
-    paymentDate.setDate(paymentDate.getDate() + 9);
-
-    this.nextCutoffDate = this.formatBillingDate(cutoffDate);
-    this.nextPaymentDate = this.formatBillingDate(paymentDate);
+    const cutoffMonth = Number(this.form.get('cutoffMonth')?.value);
+    const dates = this.calculateBillingDates(cutoffDay, periodicity, cutoffMonth);
+    this.nextCutoffDate = dates?.cutoff ?? '-';
+    this.nextPaymentDate = dates?.payment ?? '-';
   }
 
   getNextBillingDates(item: BillingClientItem): { cutoff: string; payment: string } {
     const cutoffDay = Number(item?.cutoffDay);
     const periodicity = item?.periodicity;
+    return this.calculateBillingDates(cutoffDay, periodicity, Number(item?.cutoffMonth)) ?? { cutoff: '-', payment: '-' };
+  }
 
-    if (!cutoffDay || cutoffDay < 1 || cutoffDay > 31) return { cutoff: '-', payment: '-' };
+  private calculateBillingDates(cutoffDay: number, periodicity: string, cutoffMonth: number): { cutoff: string; payment: string } | null {
+    if (periodicity === 'annual' && (cutoffMonth < 1 || cutoffMonth > 12)) return null;
+    if (!cutoffDay || cutoffDay < 1 || cutoffDay > this.getMaximumCutoffDay(periodicity, cutoffMonth)) return null;
 
     const today = new Date();
     let cutoffDate: Date;
 
     if (periodicity === 'annual') {
-      cutoffDate = new Date(today.getFullYear() + 1, today.getMonth(), cutoffDay);
-
-      if (cutoffDate.getMonth() !== today.getMonth()) cutoffDate = new Date(today.getFullYear() + 1, today.getMonth() + 1, 0);
-
+      cutoffDate = new Date(today.getFullYear() + 1, cutoffMonth - 1, cutoffDay);
       const paymentDate = new Date(cutoffDate);
       paymentDate.setMonth(paymentDate.getMonth() - 1);
-
       return { cutoff: this.formatBillingDate(cutoffDate), payment: this.formatBillingDate(paymentDate) };
     }
 
     let year = today.getFullYear();
     let month = today.getMonth();
-
     cutoffDate = new Date(year, month, cutoffDay);
-
     if (cutoffDate.getMonth() !== month || cutoffDate < today) {
       month++;
-
       if (month > 11) {
         month = 0;
         year++;
       }
-
       cutoffDate = new Date(year, month, cutoffDay);
-
       if (cutoffDate.getMonth() !== month) cutoffDate = new Date(year, month + 1, 0);
     }
 
     const paymentDate = new Date(cutoffDate);
     paymentDate.setDate(paymentDate.getDate() + 9);
-
     return { cutoff: this.formatBillingDate(cutoffDate), payment: this.formatBillingDate(paymentDate) };
+  }
+
+  private getMaximumCutoffDay(periodicity: string, cutoffMonth: number): number {
+    if (periodicity !== 'annual' || cutoffMonth < 1 || cutoffMonth > 12) return 31;
+    return new Date(new Date().getFullYear() + 1, cutoffMonth, 0).getDate();
+  }
+
+  private cutoffDayValidator = (control: AbstractControl): ValidationErrors | null => {
+    const cutoffDay = Number(control.value);
+    const periodicity = control.parent?.get('periodicity')?.value;
+    const cutoffMonth = Number(control.parent?.get('cutoffMonth')?.value);
+    const maxDay = this.getMaximumCutoffDay(periodicity, cutoffMonth);
+    return cutoffDay > maxDay ? { invalidCutoffDayForMonth: { maxDay } } : null;
+  };
+
+  private applyPeriodicityRules(periodicity: string): void {
+    const cutoffMonth = this.form.get('cutoffMonth');
+    if (!cutoffMonth) return;
+    cutoffMonth.setValidators(periodicity === 'annual'
+      ? [Validators.required, Validators.min(1), Validators.max(12)]
+      : [Validators.min(1), Validators.max(12)]);
+    if (periodicity !== 'annual' && cutoffMonth.value !== null) {
+      cutoffMonth.setValue(null, { emitEvent: false });
+    }
+    cutoffMonth.updateValueAndValidity({ emitEvent: false });
   }
 
   submit(): void {
@@ -1450,7 +1537,9 @@ export class SubClientesComponent implements OnInit {
       billingName: item?.billingName ?? '',
       voucherType: item?.voucherType ?? 'Recibo',
       issuer: item?.issuer ?? null,
+      hireDate: this.toDateValue(item?.hireDate),
       cutoffDay: item?.cutoffDay ?? 1,
+      cutoffMonth: item?.periodicity === 'annual' ? item?.cutoffMonth ?? null : null,
 
       companyName: item?.companyName ?? '',
       RFC: item?.RFC ?? '',
@@ -1475,6 +1564,9 @@ export class SubClientesComponent implements OnInit {
 
     this.applyTypeRules(item?.type ?? 'client');
     this.applyVoucherTypeRules(item?.voucherType ?? 'Recibo');
+    this.applyPeriodicityRules(item?.periodicity ?? 'monthly');
+    this.form.get('cutoffDay')?.updateValueAndValidity({ emitEvent: false });
+    this.updateBillingDates();
 
     const addresses = Array.isArray(item?.addresses) ? item.addresses : [];
 
@@ -1527,7 +1619,9 @@ export class SubClientesComponent implements OnInit {
 
       voucherType: value.voucherType,
       issuer: String(value.issuer ?? '') || null,
+      hireDate: this.toApiDate(value.hireDate),
       cutoffDay: Number(value.cutoffDay ?? 1),
+      cutoffMonth: value.periodicity === 'annual' ? Number(value.cutoffMonth) : null,
       companyName: String(value.companyName ?? '').trim(),
       RFC: isInvoice ? String(value.RFC ?? '').trim() : '',
       useInvoice: isInvoice ? String(value.useInvoice ?? '').trim() : '',
@@ -1610,7 +1704,9 @@ export class SubClientesComponent implements OnInit {
       paymentContacts: Array.isArray(item?.paymentContacts) ? item.paymentContacts : [],
       voucherType: item?.voucherType === 'Factura' ? 'Factura' : 'Recibo',
       issuer: String(item?.issuer ?? '') || null,
+      hireDate: item?.hireDate ?? null,
       cutoffDay: Number(item?.cutoffDay ?? 1),
+      cutoffMonth: item?.periodicity === 'annual' && item?.cutoffMonth != null ? Number(item.cutoffMonth) : null,
       companyName: String(item?.companyName ?? ''),
       RFC: String(item?.RFC ?? ''),
       useInvoice: String(item?.useInvoice ?? '').trim(),

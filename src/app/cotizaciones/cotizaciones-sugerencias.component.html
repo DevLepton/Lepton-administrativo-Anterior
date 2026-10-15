@@ -83,12 +83,12 @@
                     (change)="toggleSelectAllVisible($any($event.target).checked)" aria-label="Seleccionar todos" />
                 </th>
                 <th>No.</th>
-                <th>Descripción</th>
-                <th>Producto</th>
-                <th>Precio</th>
-                <th>Precio IVA</th>
-                <th>Disparador</th>
-                <th>Instrucciones</th>
+                <th (click)="sortSuggestionsBy('description')" class="th-sort">Descripción <span class="arrow material-icons">{{ suggestionSortArrow('description') }}</span></th>
+                <th (click)="sortSuggestionsBy('productName')" class="th-sort">Producto <span class="arrow material-icons">{{ suggestionSortArrow('productName') }}</span></th>
+                <th (click)="sortSuggestionsBy('price')" class="th-sort">Precio <span class="arrow material-icons">{{ suggestionSortArrow('price') }}</span></th>
+                <th (click)="sortSuggestionsBy('priceIVA')" class="th-sort">Precio IVA <span class="arrow material-icons">{{ suggestionSortArrow('priceIVA') }}</span></th>
+                <th (click)="sortSuggestionsBy('action')" class="th-sort">Disparador <span class="arrow material-icons">{{ suggestionSortArrow('action') }}</span></th>
+                <th (click)="sortSuggestionsBy('responseCount')" class="th-sort">Instrucciones <span class="arrow material-icons">{{ suggestionSortArrow('responseCount') }}</span></th>
                 <th></th>
               </tr>
             </thead>

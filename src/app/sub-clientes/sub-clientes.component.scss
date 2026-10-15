@@ -285,7 +285,7 @@ mat-paginator {
 
 .info-icon {
     font-size: 20px;
-    color: #888;
+    color: #ff000082;
     text-align: center;
     align-content: center;
 }
@@ -533,6 +533,7 @@ mat-paginator {
   display: flex;
   flex-direction: column;
   gap: 3px;
+  align-self: flex-start;
 }
 
 .billing-date span {
