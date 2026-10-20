@@ -122,6 +122,8 @@ export class CotizacionesComponent implements OnInit {
   currentPage = 1;
   perPage = 25;
   selectedIds = new Set<string>();
+  quoteSortKey: 'quoteNum' | 'userName' | 'clientName' | 'companyName' | 'total' | 'createdAt' | 'billable' | 'type' | null = null;
+  quoteSortDir: 'asc' | 'desc' = 'asc';
   previewPdfUrl: SafeResourceUrl | null = null;
   previewQuote: QuoteItem | null = null;
 
@@ -171,6 +173,7 @@ export class CotizacionesComponent implements OnInit {
   };
 
   private discountAmounts: Record<string, number> = {};
+  private editingProductDiscounts = new Set<string>();
 
   constructor(private api: ApiService, private authService: AuthService, private quoteData: CotizacionesDataService, private toast: NgToastService, private fb: FormBuilder, private auth: AuthService, private sanitizer: DomSanitizer, private pdfService: CotizacionesPdfService) {
     this.clientForm = this.fb.group({
@@ -330,7 +333,7 @@ export class CotizacionesComponent implements OnInit {
     const q = this.normalize(this.search);
     const selectedUsers = new Set(this.selectedQuoteUsers.map(user => this.normalize(user)));
 
-    return this.quotes.filter(item =>
+    const quotes = this.quotes.filter(item =>
       (
         !q ||
         this.normalize(item.quoteNum).includes(q) ||
@@ -350,6 +353,8 @@ export class CotizacionesComponent implements OnInit {
         (this.clientFilter === 'client' && !item.prospect)
       )
     );
+
+    return this.sortQuotes(quotes);
   }
 
   get allQuoteUsersSelected(): boolean {
@@ -367,6 +372,65 @@ export class CotizacionesComponent implements OnInit {
   get displayedQuotes(): QuoteItem[] {
     const start = (this.currentPage - 1) * this.perPage;
     return this.filteredQuotes.slice(start, start + this.perPage);
+  }
+
+  sortQuotesBy(key: NonNullable<CotizacionesComponent['quoteSortKey']>): void {
+    if (this.quoteSortKey === key) {
+      if (this.quoteSortDir === 'asc') this.quoteSortDir = 'desc';
+      else {
+        this.quoteSortKey = null;
+        this.currentPage = 1;
+        return;
+      }
+    } else {
+      this.quoteSortKey = key;
+      this.quoteSortDir = 'asc';
+    }
+    this.currentPage = 1;
+  }
+
+  quoteSortArrow(key: NonNullable<CotizacionesComponent['quoteSortKey']>): string {
+    return this.quoteSortKey === key
+      ? (this.quoteSortDir === 'asc' ? 'arrow_upward' : 'arrow_downward')
+      : '';
+  }
+
+  private sortQuotes(items: QuoteItem[]): QuoteItem[] {
+    if (!this.quoteSortKey) return items;
+    const key = this.quoteSortKey;
+    const dir = this.quoteSortDir === 'asc' ? 1 : -1;
+
+    if (key === 'quoteNum') {
+      return [...items].sort((a, b) => {
+        const aFolio = this.getQuoteFolioSequence(a.quoteNum);
+        const bFolio = this.getQuoteFolioSequence(b.quoteNum);
+
+        if (aFolio !== null && bFolio !== null && aFolio !== bFolio) return (aFolio - bFolio) * dir;
+        return this.compareQuoteSortValues(a.quoteNum, b.quoteNum) * dir;
+      });
+    }
+
+    const value = (item: QuoteItem): unknown => key === 'type'
+      ? (item.prospect ? 'Prospecto' : 'Cliente')
+      : item[key];
+    return [...items].sort((a, b) => this.compareQuoteSortValues(value(a), value(b)) * dir);
+  }
+
+  private getQuoteFolioSequence(quoteNum: string): number | null {
+    const match = String(quoteNum ?? '').match(/(\d{4})$/);
+    return match ? Number(match[1]) : null;
+  }
+
+  private compareQuoteSortValues(a: unknown, b: unknown): number {
+    if (a == null || a === '') return b == null || b === '' ? 0 : -1;
+    if (b == null || b === '') return 1;
+    if (typeof a === 'number' && typeof b === 'number') return a - b;
+    if (typeof a === 'boolean' && typeof b === 'boolean') return Number(a) - Number(b);
+    const aDate = new Date(a as string).getTime();
+    const bDate = new Date(b as string).getTime();
+    if (!Number.isNaN(aDate) && !Number.isNaN(bDate) &&
+      (a instanceof Date || b instanceof Date || /\d{4}-\d{2}-\d{2}/.test(String(a)) || /\d{4}-\d{2}-\d{2}/.test(String(b)))) return aDate - bDate;
+    return String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' });
   }
 
   get filteredBillingClients(): BillingClientItem[] {
@@ -430,7 +494,7 @@ export class CotizacionesComponent implements OnInit {
   get paymentNextMonthly(): number {
     const total = this.quoteProducts
       .filter(item => item.type === 'Plan')
-      .reduce((sum, item) => sum + (item.priceIVA * item.amount), 0);
+      .reduce((sum, item) => sum + item.total, 0);
 
     return this.roundMoney(total);
   }
@@ -1129,7 +1193,7 @@ export class CotizacionesComponent implements OnInit {
   }
 
   updateProductDiscountPercent(item: QuoteBuilderProduct, value: number | null): void {
-    const percent = Math.min(100, Math.max(0, Number(value || 0)));
+    const percent = this.normalizeDiscountPercent(value);
     const priceIVA = Number(item.priceIVA || 0);
 
     item.discount = percent;
@@ -1138,6 +1202,23 @@ export class CotizacionesComponent implements OnInit {
 
     this.recalculateProduct(item);
     this.saveDraft();
+  }
+
+  getProductDiscountPercentDisplay(item: QuoteBuilderProduct): string | number {
+    const percent = this.normalizeDiscountPercent(item.discount);
+    return this.editingProductDiscounts.has(item.productId) ? percent : percent.toFixed(2);
+  }
+
+  startProductDiscountEdit(item: QuoteBuilderProduct, event: FocusEvent): void {
+    this.editingProductDiscounts.add(item.productId);
+    const input = event.target as HTMLInputElement;
+    setTimeout(() => {
+      if (document.activeElement === input) input.select();
+    });
+  }
+
+  finishProductDiscountEdit(item: QuoteBuilderProduct): void {
+    this.editingProductDiscounts.delete(item.productId);
   }
 
   // updateProductDiscountAmount(item: QuoteBuilderProduct, value: number | null): void {
@@ -1377,6 +1458,11 @@ export class CotizacionesComponent implements OnInit {
   selectInput(event: FocusEvent): void {
     const input = event.target as HTMLInputElement;
     input.select();
+  }
+
+  private normalizeDiscountPercent(value: number | null | undefined): number {
+    const percent = Math.min(100, Math.max(0, Number(value || 0)));
+    return Number(percent.toFixed(2));
   }
 
   private buildQuotePayload(): Omit<QuoteItem, 'userName' | '_id' | 'quoteNum' | 'createdAt'> {

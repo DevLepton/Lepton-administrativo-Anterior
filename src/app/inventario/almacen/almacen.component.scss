@@ -798,6 +798,12 @@
   color: var(--color-primary);
 }
 
+/* ENTREGADO */
+.status-pill.delivered {
+  background: #fef3c7;
+  color: var(--color-warning);
+}
+
 /* LISTO */
 .status-pill.ready {
   background: #dcfce4;
@@ -822,6 +828,11 @@ b.cfg {
 /* INSTALADO */
 b.inst {
   color: var(--color-primary);
+}
+
+/* ENTREGADO */
+b.delivered {
+  color: var(--color-warning);
 }
 
 /* LISTO */

@@ -171,13 +171,13 @@
                     </thead>
 
                     <tbody *ngIf="!gpsLoading; else gpsLoadingTpl">
-                        <tr *ngFor="let g of displayedGps; let idx = index" (click)="toggleGpsRowByClick(g)"
+                        <tr *ngFor="let g of displayedGps; let idx = index" (click)="toggleGpsRowByClick(g)" (dblclick)="editarGps(g)"
                             [class.row-selected]="isGpsSelected(g.id)" style="cursor:pointer;">
 
                             <!-- ✅ celda checkbox clickable -->
                             <td class="td-check" (click)="toggleGpsRowByClick(g); $event.stopPropagation()">
                                 <input type="checkbox" [checked]="isGpsSelected(g.id)"
-                                    (change)="toggleGpsRowSelection(g, $any($event.target).checked)"
+                                    (change)="toggleGpsRowSelection(g, $any($event.target).checked)" 
                                     (click)="$event.stopPropagation()" aria-label="Seleccionar GPS" />
                             </td>
 

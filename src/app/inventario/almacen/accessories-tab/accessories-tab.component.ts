@@ -580,6 +580,7 @@ export class AccessoriesTabComponent implements OnChanges {
     if (s.includes('configuración')) return 'cfg';
     if (s.includes('instalado')) return 'inst';
     if (s.includes('listo')) return 'ready';
+    if (s.includes('entregado')) return 'delivered';
 
     return 'default';
   }

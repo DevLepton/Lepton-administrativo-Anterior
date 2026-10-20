@@ -78,8 +78,23 @@ export class CotizacionesPdfService {
             discounts,
             IVA,
             total,
-            paymentNextMonthly: quote.paymentNextMonthly != null ? Number(quote.paymentNextMonthly) : undefined
+            paymentNextMonthly: this.getPaymentNextMonthly(quote)
         };
+    }
+
+    private getPaymentNextMonthly(quote: QuoteItem): number | undefined {
+        const plans = quote.products.filter(product => product.type === 'Plan');
+        if (!plans.length) return undefined;
+
+        return this.roundMoney(plans.reduce((sum, product) => {
+            const amount = Math.max(1, Number(product.amount || 1));
+            const gross = Number(product.priceIVA || 0) * amount;
+            const discount = product.discountType === '%'
+                ? gross * (Math.min(Math.max(Number(product.discount || 0), 0), 100) / 100)
+                : Math.min(Math.max(Number(product.discount || 0), 0), gross);
+
+            return sum + Math.max(0, gross - discount);
+        }, 0));
     }
 
     drawQuoteHeader(doc: jsPDF, quote: QuoteItem, page: number, logo: HTMLImageElement): void {

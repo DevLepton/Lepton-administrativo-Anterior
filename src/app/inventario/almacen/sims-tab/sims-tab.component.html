@@ -172,7 +172,7 @@
                     </thead>
 
                     <tbody *ngIf="!simsLoading; else simsLoadingTpl">
-                        <tr *ngFor="let sim of displayedSims; let idx = index" (click)="toggleRowByClick(sim)"
+                        <tr *ngFor="let sim of displayedSims; let idx = index" (click)="toggleRowByClick(sim)" (dblclick)="editarSim(sim)"
                             [class.row-selected]="isSelected(sim.id)" style="cursor:pointer;">
                             <td class="td-check" (click)="toggleRowByClick(sim); $event.stopPropagation()">
 

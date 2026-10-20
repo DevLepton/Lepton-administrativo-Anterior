@@ -47,6 +47,7 @@ export class EditAccessoryModalComponent {
   private initialSnapshot: any = null;
   private changesSub?: Subscription;
 
+  isAdminUser = false;
   isSupportUser = false;
 
   constructor(private authService: AuthService, private fb: FormBuilder) {
@@ -81,6 +82,7 @@ export class EditAccessoryModalComponent {
 
     const role = this.authService.getUserRole();
 
+    this.isAdminUser = role === 'admin';
     this.isSupportUser = role === 'soporte';
   }
 

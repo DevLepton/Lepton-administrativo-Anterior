@@ -185,7 +185,7 @@
           </thead>
 
           <tbody *ngIf="!accessoriesLoading; else accessoriesLoadingTpl">
-            <tr *ngFor="let a of displayedAccessories; let idx = index" (click)="toggleAccessoryRowByClick(a)"
+            <tr *ngFor="let a of displayedAccessories; let idx = index" (click)="toggleAccessoryRowByClick(a)" (dblclick)="editarAccesorio(a)"
               [class.row-selected]="isAccessorySelected(a.id)" style="cursor:pointer;">
 
               <td class="td-check" (click)="toggleAccessoryRowByClick(a); $event.stopPropagation()">
@@ -209,7 +209,8 @@
               inv:  a.status === 'En inventario',
               cfg:  a.status === 'En configuración',
               inst: a.status === 'Instalado',
-              ready: a.status === 'Listo para usar'
+              ready: a.status === 'Listo para usar',
+              delivered: a.status === 'Entregado'
             }">
                   {{ a.status }}
                 </span>

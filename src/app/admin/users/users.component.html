@@ -25,7 +25,7 @@
                 <!-- <p><strong>Nombre:</strong> {{ user.userName }}</p> -->
                 <p><strong>Correo:</strong> {{ user.email }}</p>
                 <p><strong>ID:</strong> {{ user.userId }}</p>
-                <p><strong>Rol:</strong> {{ user.role === 'cx' ? 'CUSTOMER EXPERIENCE' : user.role.toUpperCase() }}</p>
+                <p><strong>Rol:</strong> {{ user.role === 'cx' ? 'CUSTOMER EXPERIENCE' : user.role === 'rh' ? 'RECURSOS HUMANOS' : user.role.toUpperCase() }}</p>
             </div>
 
             <!-- Acciones -->

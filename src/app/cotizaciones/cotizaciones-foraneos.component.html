@@ -674,32 +674,32 @@
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de instalación</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="installationPrice" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="installationPrice" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de revisión</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="inspectionFee" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="inspectionFee" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de retiro</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="withdrawalPrice" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="withdrawalPrice" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de vuelta en falso</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="priceFalseReversal" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="priceFalseReversal" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de viáticos</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="travelExpensesPrice" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="travelExpensesPrice" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="small-field">
           <mat-label>Precio de traslado</mat-label>
-          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="transferPrice" />
+          <input matInput currencyMask [currencyMask]="currencyOptions" min="0" formControlName="transferPrice" (focus)="selectInput($event)" />
         </mat-form-field>
 
         <mat-form-field appearance="outline" class="big-field">

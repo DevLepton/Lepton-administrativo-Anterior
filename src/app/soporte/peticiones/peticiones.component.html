@@ -145,6 +145,7 @@
 
             <tbody *ngIf="!requestsLoading; else requestsLoadingTpl">
               <tr *ngFor="let r of displayedRequests; let idx = index" (click)="toggleRequestRowByClick(r)"
+                (dblclick)="(isAdminUser || isInventoryUser) && ((r.estatus === 'Pendiente' && r.fechaRespuesta) || r.estatus === 'Atendida') ? editarRespuesta(r) : (isAdminUser || isInventoryUser) && r.estatus === 'Pendiente' && !r.fechaRespuesta ? responderPeticion(r) : null"
                 [class.row-selected]="isRequestSelected(r.id)" style="cursor:pointer;">
                 <td class="td-check" (click)="toggleRequestRowByClick(r); $event.stopPropagation()">
                   <input type="checkbox" [checked]="isRequestSelected(r.id)"

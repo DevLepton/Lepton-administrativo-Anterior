@@ -106,7 +106,7 @@ export interface FullClientsResponse {
 }
 
 /* ====================== Tipos Devices ====================== */
-export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | 'Listo para usar';
+export type DeviceStatus = 'En inventario' | 'En configuración' | 'Instalado' | 'Listo para usar' | 'Entregado';
 
 export type UpdateSimPayload = Partial<{
   id: string;            // _id

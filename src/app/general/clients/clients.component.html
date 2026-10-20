@@ -129,8 +129,8 @@
 
             </mat-checkbox>
 
-            <mat-icon matTooltipClass="multiline-tooltip" *ngIf="showMissingAlert && (isAdminUser || isSupportUser)" color="warn"
-                [matTooltip]="missingActiveTooltip" matTooltipClass="multiline-tooltip">
+            <mat-icon matTooltipClass="multiline-tooltip" *ngIf="showMissingAlert && (isAdminUser || isSupportUser)"
+                color="warn" [matTooltip]="missingActiveTooltip" matTooltipClass="multiline-tooltip">
                 warning
             </mat-icon>
 
@@ -487,7 +487,8 @@
                                             <button type="button" class="custom-button" mat-button
                                                 (click)="stop($event); sortClientTrackers(c, 'ultima Conexion UTC')">
                                                 UTC
-                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion UTC') }}</mat-icon>
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion UTC')
+                                                    }}</mat-icon>
                                             </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"
@@ -503,7 +504,8 @@
                                             <button type="button" class="custom-button" mat-button
                                                 (click)="stop($event); sortClientTrackers(c, 'ultima Conexion Local')">
                                                 Última Conexión
-                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion Local') }}</mat-icon>
+                                                <mat-icon>{{ getTrackerSortIcon(c.id, 'ultima Conexion Local')
+                                                    }}</mat-icon>
                                             </button>
                                         </th>
                                         <td mat-cell *matCellDef="let t"

@@ -32,13 +32,13 @@ const routes: Routes = [
         path: 'perfil',
         component: UserProfileComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'] }
+        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx', 'rh'] }
       },
       {
         path: 'configuracion',
         component: SystemSettingsComponent,
         canActivate: [RoleGuard],
-        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx'] }
+        data: { roles: ['admin', 'inventario', 'soporte', 'finanzas', 'cx', 'rh'] }
       },
 
       ...dynamicRoutes,

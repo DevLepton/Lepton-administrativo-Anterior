@@ -89,14 +89,14 @@
             </th>
 
             <th>No.</th>
-            <th>Cotización</th>
-            <th>Usuario</th>
-            <th>Cliente</th>
-            <th>Empresa</th>
-            <th>Total</th>
-            <th>Fecha</th>
-            <th>Facturable</th>
-            <th>Tipo</th>
+            <th (click)="sortQuotesBy('quoteNum')" class="th-sort">Cotización <span class="arrow material-icons">{{ quoteSortArrow('quoteNum') }}</span></th>
+            <th (click)="sortQuotesBy('userName')" class="th-sort">Usuario <span class="arrow material-icons">{{ quoteSortArrow('userName') }}</span></th>
+            <th (click)="sortQuotesBy('clientName')" class="th-sort">Cliente <span class="arrow material-icons">{{ quoteSortArrow('clientName') }}</span></th>
+            <th (click)="sortQuotesBy('companyName')" class="th-sort">Empresa <span class="arrow material-icons">{{ quoteSortArrow('companyName') }}</span></th>
+            <th (click)="sortQuotesBy('total')" class="th-sort">Total <span class="arrow material-icons">{{ quoteSortArrow('total') }}</span></th>
+            <th (click)="sortQuotesBy('createdAt')" class="th-sort">Fecha <span class="arrow material-icons">{{ quoteSortArrow('createdAt') }}</span></th>
+            <th (click)="sortQuotesBy('billable')" class="th-sort">Facturable <span class="arrow material-icons">{{ quoteSortArrow('billable') }}</span></th>
+            <th (click)="sortQuotesBy('type')" class="th-sort">Tipo <span class="arrow material-icons">{{ quoteSortArrow('type') }}</span></th>
             <th>Acciones</th>
           </tr>
         </thead>
@@ -425,8 +425,9 @@
                 <mat-label>Descuento</mat-label>
                 <span matTextSuffix>%&nbsp;</span>
                 <input matInput type="number" min="0" max="100" step="0.01"
-                  [ngModel]="item.discount | number:'1.2-2':'en-US'"
-                  (ngModelChange)="updateProductDiscountPercent(item, $event)" (focus)="selectInput($event)">
+                  [ngModel]="getProductDiscountPercentDisplay(item)"
+                  (ngModelChange)="updateProductDiscountPercent(item, $event)"
+                  (focus)="startProductDiscountEdit(item, $event)" (blur)="finishProductDiscountEdit(item)">
               </mat-form-field>
 
               <mat-form-field appearance="outline" class="discount" subscriptSizing="dynamic">
@@ -465,7 +466,7 @@
           <div class="grand-total"><span>Total final</span><b>{{ total | currency:'MXN':'symbol-narrow':'1.2-2':'en-US'
               }} MXN</b></div>
           <div *ngIf="hasPlan" class="monthly">
-            <span>Proxima mensualidad</span>
+            <span>Próxima mensualidad</span>
             <b>{{ paymentNextMonthly | currency:'MXN':'symbol-narrow':'1.2-2':'en-US' }} MXN</b>
           </div>
         </div>

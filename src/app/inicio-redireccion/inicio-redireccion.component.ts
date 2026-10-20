@@ -23,6 +23,8 @@ export class InicioRedireccionComponent implements OnInit {
       this.router.navigate(['/clientes']);
     } else if (role === 'cx') {
       this.router.navigate(['/clientes']);
+    } else if (role === 'rh') {
+      this.router.navigate(['/cotizaciones']);
     } else {
       this.router.navigate(['/login']);
     }

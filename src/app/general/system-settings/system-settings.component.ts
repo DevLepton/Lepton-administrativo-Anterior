@@ -20,7 +20,7 @@ interface SectionVersion {
   type: 'Sistema' | 'Sección' | 'Subsección';
 }
 
-const SYSTEM_VERSION = '3.0.4';
+const SYSTEM_VERSION = '3.0.6';
 
 @Component({
   selector: 'app-system-settings',
@@ -50,15 +50,15 @@ export class SystemSettingsComponent {
   readonly sectionVersionMap: Record<string, string> = {
     '/configuracion': '1.1.0',
     '/perfil': '1.0.0',
-    '/usuarios': '1.0.0',
-    '/peticiones': '1.3.2',
+    '/usuarios': '1.0.1',
+    '/peticiones': '1.3.3',
     '/clientes': '9.3.1',
-    '/inventario': '1.5.1',
-    '/clientes-cobranza': '1.2.1',
-    '/cotizaciones': '1.1.2',
-    '/cotizaciones/productos': '1.3.0',
-    '/cotizaciones/foraneos': '1.1.1',
-    '/cotizaciones/sugerencias': '1.0.1',
+    '/inventario': '1.5.2',
+    '/clientes-cobranza': '1.2.2',
+    '/cotizaciones': '1.1.3',
+    '/cotizaciones/productos': '1.3.1',
+    '/cotizaciones/foraneos': '1.1.2',
+    '/cotizaciones/sugerencias': '1.0.2',
     '/eventos': '1.0.1'
   };
 

@@ -54,6 +54,11 @@
       </div>
 
       <div class="actions-top">
+        <mat-icon *ngIf="showMissingBillingAlert" class="missing-billing-alert" color="warn"
+          [matTooltip]="missingBillingTooltip" matTooltipClass="multiline-tooltip">
+          warning
+        </mat-icon>
+
         <button class="new-button" matTooltip="Nuevo Sub Cliente" (click)="openCreateModal()">
           <span class="material-icons">add</span>
         </button>
@@ -97,20 +102,28 @@
                 </th>
                 <th>No.</th>
                 <!-- <th>Tipo</th> -->
-                <th (click)="sortBillingClientsBy('billingName')" class="th-sort">Nombre cobranza <span class="arrow material-icons">{{ billingClientSortArrow('billingName') }}</span></th>
-                <th (click)="sortBillingClientsBy('relationship')" class="th-sort">Relación <span class="arrow material-icons">{{ billingClientSortArrow('relationship') }}</span></th>
-                <th (click)="sortBillingClientsBy('voucherType')" class="th-sort">Comprobante <span class="arrow material-icons">{{ billingClientSortArrow('voucherType') }}</span></th>
-                <th (click)="sortBillingClientsBy('cutoffDay')" class="th-sort">Día de corte <span class="arrow material-icons">{{ billingClientSortArrow('cutoffDay') }}</span></th>
-                <th (click)="sortBillingClientsBy('RFC')" class="th-sort">RFC <span class="arrow material-icons">{{ billingClientSortArrow('RFC') }}</span></th>
-                <th (click)="sortBillingClientsBy('email')" class="th-sort">Correo <span class="arrow material-icons">{{ billingClientSortArrow('email') }}</span></th>
-                <th (click)="sortBillingClientsBy('contactCount')" class="th-sort">Contactos <span class="arrow material-icons">{{ billingClientSortArrow('contactCount') }}</span></th>
-                <th (click)="sortBillingClientsBy('blacklist')" class="th-sort">Lista negra <span class="arrow material-icons">{{ billingClientSortArrow('blacklist') }}</span></th>
+                <th (click)="sortBillingClientsBy('billingName')" class="th-sort">Nombre cobranza <span
+                    class="arrow material-icons">{{ billingClientSortArrow('billingName') }}</span></th>
+                <th (click)="sortBillingClientsBy('relationship')" class="th-sort">Relación <span
+                    class="arrow material-icons">{{ billingClientSortArrow('relationship') }}</span></th>
+                <th (click)="sortBillingClientsBy('voucherType')" class="th-sort">Comprobante <span
+                    class="arrow material-icons">{{ billingClientSortArrow('voucherType') }}</span></th>
+                <th (click)="sortBillingClientsBy('cutoffDay')" class="th-sort">Día de corte <span
+                    class="arrow material-icons">{{ billingClientSortArrow('cutoffDay') }}</span></th>
+                <th (click)="sortBillingClientsBy('RFC')" class="th-sort">RFC <span class="arrow material-icons">{{
+                    billingClientSortArrow('RFC') }}</span></th>
+                <th (click)="sortBillingClientsBy('email')" class="th-sort">Correo <span class="arrow material-icons">{{
+                    billingClientSortArrow('email') }}</span></th>
+                <th (click)="sortBillingClientsBy('contactCount')" class="th-sort">Contactos <span
+                    class="arrow material-icons">{{ billingClientSortArrow('contactCount') }}</span></th>
+                <th (click)="sortBillingClientsBy('blacklist')" class="th-sort">Lista negra <span
+                    class="arrow material-icons">{{ billingClientSortArrow('blacklist') }}</span></th>
                 <th></th>
               </tr>
             </thead>
 
             <tbody *ngIf="!loading; else loadingTpl">
-              <tr *ngFor="let row of displayedBillingClients; let idx = index; trackBy: trackByRow"
+              <tr *ngFor="let row of displayedBillingClients; let idx = index; trackBy: trackByRow" (dblclick)="openEditModal(row.item)"
                 (click)="toggleRowByClick(row.item)" [class.row-selected]="isSelected(row.item._id)"
                 style="cursor:pointer;" [class.child-row]="!row.isParent">
                 <td class="td-check" (click)="toggleRowByClick(row.item); $event.stopPropagation()">
@@ -150,7 +163,8 @@
                   </div>
                 </td>
                 <td>
-                  <span class="status-badge" [style]="{ 'background-color': row.item.voucherType === 'Factura' ? 'var(--color-success)' : 'var(--color-primary)' }">
+                  <span class="status-badge"
+                    [style]="{ 'background-color': row.item.voucherType === 'Factura' ? 'var(--color-success)' : 'var(--color-primary)' }">
                     {{ row.item.voucherType }}
                   </span>
                 </td>
@@ -242,7 +256,8 @@
             <div><b>Correo:</b> {{ item.email || '-' }}</div>
             <div><b>Fecha de contratación:</b> {{ getHireDateLabel(item.hireDate) }}</div>
             <div><b>Día de corte:</b> {{ item.cutoffDay || '-' }}</div>
-            <div *ngIf="item.periodicity === 'annual'"><b>Mes de corte:</b> {{ getCutoffMonthLabel(item.cutoffMonth) }}</div>
+            <div *ngIf="item.periodicity === 'annual'"><b>Mes de corte:</b> {{ getCutoffMonthLabel(item.cutoffMonth) }}
+            </div>
             <div><b>Próxima fecha de corte:</b> {{ nextBillingDates.cutoff }}</div>
             <div><b>Próxima fecha de pago:</b> {{ nextBillingDates.payment }}</div>
           </div>
@@ -339,7 +354,9 @@
 
     <div style="display: flex; gap: 0.5rem; align-items: center; margin-bottom: 18px;">
       <h2 class="step-header-h2">{{ title }}</h2>
-      <mat-icon *ngIf="modalMode === 'edit' && hasChanges" matTooltip="Cualquier cambio debe ser justificado en el paso de comentarios antes de guardar." matTooltipPosition="right" class="info-icon">info</mat-icon>
+      <mat-icon *ngIf="modalMode === 'edit' && hasChanges"
+        matTooltip="Cualquier cambio debe ser justificado en el paso de comentarios antes de guardar."
+        matTooltipPosition="right" class="info-icon">info</mat-icon>
     </div>
 
     <form [formGroup]="form" (ngSubmit)="submit()">
@@ -386,16 +403,22 @@
 
               <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'subClient'">
                 <mat-label>Cliente padre</mat-label>
-                <mat-select formControlName="billingClientFather">
+                <input matInput formControlName="billingClientFather" [matAutocomplete]="parentBillingClientAuto"
+                  autocomplete="off" />
+                <mat-autocomplete #parentBillingClientAuto="matAutocomplete"
+                  [displayWith]="displayParentBillingClientOption" autoActiveFirstOption>
                   <mat-option *ngIf="parentBillingClientOptions.length === 0" disabled>
                     Sin clientes padre disponibles
                   </mat-option>
-                  <mat-option *ngFor="let client of parentBillingClientOptions" [value]="client._id">
+                  <mat-option *ngFor="let client of filteredParentBillingClientOptions" [value]="client._id">
                     {{ client.billingName }}
                   </mat-option>
-                </mat-select>
+                </mat-autocomplete>
                 <mat-error *ngIf="form.get('billingClientFather')?.hasError('required')">Campo obligatorio para
                   subclientes</mat-error>
+                <mat-error *ngIf="form.get('billingClientFather')?.hasError('invalidParentBillingClient')">
+                  Selecciona un cliente padre de la lista
+                </mat-error>
               </mat-form-field>
 
               <mat-form-field appearance="outline" *ngIf="form.get('type')?.value === 'client'">
@@ -452,7 +475,8 @@
 
               <mat-form-field appearance="outline" class="small-field">
                 <mat-label>Fecha de contratación</mat-label>
-                <input matInput [matDatepicker]="hireDatePicker" formControlName="hireDate" (click)="hireDatePicker.open()" />
+                <input matInput [matDatepicker]="hireDatePicker" formControlName="hireDate"
+                  (click)="hireDatePicker.open()" />
                 <mat-datepicker-toggle matSuffix [for]="hireDatePicker"></mat-datepicker-toggle>
                 <mat-datepicker #hireDatePicker></mat-datepicker>
               </mat-form-field>
@@ -474,12 +498,14 @@
                 </mat-error>
               </mat-form-field>
 
-              <mat-form-field *ngIf="form.get('periodicity')?.value === 'annual'" appearance="outline" class="small-field">
+              <mat-form-field *ngIf="form.get('periodicity')?.value === 'annual'" appearance="outline"
+                class="small-field">
                 <mat-label>Mes de corte</mat-label>
                 <mat-select formControlName="cutoffMonth">
                   <mat-option *ngFor="let month of cutoffMonths" [value]="month.value">{{ month.label }}</mat-option>
                 </mat-select>
-                <mat-error *ngIf="form.get('cutoffMonth')?.hasError('required')">El mes de corte es obligatorio</mat-error>
+                <mat-error *ngIf="form.get('cutoffMonth')?.hasError('required')">El mes de corte es
+                  obligatorio</mat-error>
               </mat-form-field>
 
               <div class="billing-date small-field">
@@ -896,7 +922,8 @@
               <div class="change-history medium-field" *ngIf="modalMode === 'edit'">
                 <div class="change-history__header">
                   <h3>Historial de cambios</h3>
-                  <span>{{ editingBillingClient?.changeLog?.length || 0 }} registro{{ (editingBillingClient?.changeLog?.length ?? 0) === 1 ? '' : 's' }}</span>
+                  <span>{{ editingBillingClient?.changeLog?.length || 0 }} registro{{
+                    (editingBillingClient?.changeLog?.length ?? 0) === 1 ? '' : 's' }}</span>
                 </div>
 
                 <div class="change-history__list" *ngIf="editingBillingClient?.changeLog?.length; else noChangeLogs">

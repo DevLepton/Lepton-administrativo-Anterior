@@ -16,9 +16,6 @@ import { ChangeDetectorRef } from '@angular/core';
 import { NgToastService } from 'ng-angular-popup';
 import { ConfirmModalService } from '../../services/confirm-modal/confirm-modal-service';
 
-// import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-import * as XLSX from 'xlsx-js-style';
 import { AuthService } from '../../services/auth.service';
 import { ExportExcelService } from '../../services/export-excel.service';
 
@@ -77,6 +74,8 @@ type TrackerSortState = {
   ]
 })
 export class ClientsComponent implements OnInit {
+
+  private readonly sidebarCollapseBreakpoint = 1100;
 
   @ViewChild('clientsContainer') clientsContainer!: ElementRef;
   @ViewChildren('clientItem') clientItems!: QueryList<ElementRef>;
@@ -258,6 +257,8 @@ export class ClientsComponent implements OnInit {
   ) { }
 
   ngOnInit(): void {
+    this.updateSidebarForScreenWidth();
+
     const role = this.authService.getUserRole();
 
     this.isSupportUser = role === 'soporte';
@@ -272,6 +273,22 @@ export class ClientsComponent implements OnInit {
   toggleSidebar() {
     this.sidebarCollapsed = !this.sidebarCollapsed;
     this.cdr.markForCheck();
+  }
+
+  @HostListener('window:resize')
+  onWindowResize(): void {
+    this.updateSidebarForScreenWidth();
+  }
+
+  private updateSidebarForScreenWidth(): void {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    if (window.innerWidth <= this.sidebarCollapseBreakpoint && !this.sidebarCollapsed) {
+      this.sidebarCollapsed = true;
+      this.cdr.markForCheck();
+    }
   }
 
   savePreferences() {
@@ -1022,7 +1039,7 @@ export class ClientsComponent implements OnInit {
       totalSuspended += suspendedkpi;
       totalHidden += hiddenkpi;
     }
-
+    
     // 🔥 asignar resultados
     this.filteredClientsList = result;
     this.totalClientes = result.length;

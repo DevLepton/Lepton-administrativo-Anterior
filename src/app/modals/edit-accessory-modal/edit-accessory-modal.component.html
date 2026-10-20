@@ -63,9 +63,10 @@
         <mat-label>Estatus</mat-label>
         <mat-select formControlName="status">
           <mat-option value="En inventario">En inventario</mat-option>
-          <mat-option *ngIf="isSupportUser" value="En configuración">En configuración</mat-option>
+          <mat-option *ngIf="isAdminUser || isSupportUser" value="En configuración">En configuración</mat-option>
           <mat-option value="Instalado">Instalado</mat-option>
-          <mat-option *ngIf="isSupportUser" value="Listo para usar">Listo para usar</mat-option>
+          <mat-option *ngIf="isAdminUser || isSupportUser" value="Listo para usar">Listo para usar</mat-option>
+          <mat-option value="Entregado">Entregado a instalador</mat-option>
         </mat-select>
         <mat-error *ngIf="form.get('status')?.hasError('required')">Estatus es requerido</mat-error>
       </mat-form-field>

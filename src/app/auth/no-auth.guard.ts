@@ -36,6 +36,10 @@ export class NoAuthGuard implements CanActivate {
         this.router.navigate(['/clientes']);
         break;
 
+      case 'rh':
+        this.router.navigate(['/cotizaciones']);
+        break;
+
       default:
         this.authService.logout();
         this.router.navigate(['/login']);

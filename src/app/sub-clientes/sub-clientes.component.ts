@@ -4,7 +4,7 @@ import { PageEvent } from '@angular/material/paginator';
 import { NgToastService } from 'ng-angular-popup';
 import Swal from 'sweetalert2';
 import { catchError, forkJoin, map, Observable, of } from 'rxjs';
-import { ApiService, BillingClientItem, BillingClientType, ClientListItem, CreateBillingClientPayload, PaymentContactPayload, BillingClientDiscounts, BillingClientAddress, LabelItem, BankAccountItem } from '../services/api.service';
+import { ApiService, BillingClientItem, BillingClientType, ClientListItem, ClienteUI, CreateBillingClientPayload, PaymentContactPayload, BillingClientDiscounts, BillingClientAddress, LabelItem, BankAccountItem } from '../services/api.service';
 import { MatAutocompleteTrigger } from '@angular/material/autocomplete';
 import { MAT_DATE_FORMATS, MAT_DATE_LOCALE } from '@angular/material/core';
 
@@ -70,6 +70,8 @@ export class SubClientesComponent implements OnInit {
   clientByUserId = new Map<number, ClientOption>();
   activeClients: { [key: string]: string } = {};
   excludedAccounts: number[] = [];
+  private clientsWithDevices: ClienteUI[] = [];
+  missingBillingClients: ClientOption[] = [];
 
   loading = false;
   clientsLoading = false;
@@ -676,6 +678,19 @@ export class SubClientesComponent implements OnInit {
       .sort((a, b) => a.billingName.localeCompare(b.billingName));
   }
 
+  get filteredParentBillingClientOptions(): BillingClientItem[] {
+    const value = this.form.get('billingClientFather')?.value;
+    const q = this.parentBillingClientOptions.some(client => client._id === value)
+      ? ''
+      : this.normalize(value);
+
+    if (!q) return this.parentBillingClientOptions;
+
+    return this.parentBillingClientOptions.filter(client =>
+      this.normalize(client.billingName).includes(q)
+    );
+  }
+
   get subBillingClientOptions(): BillingClientItem[] {
     const currentChildren = new Set((this.form.get('subBillingClients')?.value ?? []) as string[]);
 
@@ -771,7 +786,7 @@ export class SubClientesComponent implements OnInit {
     const key = this.billingClientSortKey;
     const value = (item: BillingClientItem): unknown => {
       switch (key) {
-        case 'relationship': return item.type === 'client' ? this.getClientLabel(item.userId ?? null) : this.getBillingClientName(item.billingClientFather);
+        case 'relationship': return item.type === 'client' ? this.getClientName(item.userId ?? null) : this.getBillingClientName(item.billingClientFather);
         case 'contactCount': return item.paymentContacts?.length ?? 0;
         default: return item[key];
       }
@@ -845,6 +860,7 @@ export class SubClientesComponent implements OnInit {
               .map((item: any) => this.mapBillingClient(item))
               .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
 
+            this.updateMissingBillingClients();
             // this.updateUniqueLinkedClients();
 
             this.currentPage = 1;
@@ -926,12 +942,15 @@ export class SubClientesComponent implements OnInit {
             : [];
         }
 
+        this.updateMissingBillingClients();
         this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
       },
       complete: () => {
         this.clientsLoading = false;
       }
     });
+
+    this.loadClientsForBillingAlert(forceRefresh);
   }
 
   loadBillingClients(forceRefresh = false): void {
@@ -963,6 +982,7 @@ export class SubClientesComponent implements OnInit {
             .map((item: any) => this.mapBillingClient(item))
             .sort((a: BillingClientItem, b: BillingClientItem) => this.getCreatedTime(b) - this.getCreatedTime(a));
 
+          this.updateMissingBillingClients();
           this.currentPage = 1;
           this.clearSelection();
           this.form.get('userId')?.updateValueAndValidity({ emitEvent: false });
@@ -982,6 +1002,69 @@ export class SubClientesComponent implements OnInit {
       this.loadBillingClients(true);
       this.loadLabels(true);
     }
+  }
+
+  private loadClientsForBillingAlert(forceRefresh = false): void {
+    this.api.getFullClientsDataStream(false, false, forceRefresh).subscribe({
+      next: event => {
+        if (event.type !== 'done') return;
+
+        this.clientsWithDevices = Array.isArray(event.data.clients) ? event.data.clients : [];
+        this.updateMissingBillingClients();
+      },
+      error: error => {
+        console.error('Error al cargar los clientes para validar cobranza:', error);
+        this.clientsWithDevices = [];
+        this.updateMissingBillingClients();
+      }
+    });
+  }
+
+  private updateMissingBillingClients(): void {
+    const activeUserIds = new Set(Object.keys(this.activeClients).map(id => Number(id)).filter(Number.isFinite));
+    const excludedUserIds = new Set(this.excludedAccounts);
+    const registeredUserIds = new Set(
+      this.billingClients
+        .filter(item => item.type === 'client')
+        .map(item => Number(item.userId))
+        .filter((userId): userId is number => Number.isFinite(userId))
+    );
+
+    const seenUserIds = new Set<number>();
+
+    this.missingBillingClients = this.clientsWithDevices
+      .filter(client => {
+        const userId = Number(client.id);
+        const hasDevices = Array.isArray(client.trackers) && client.trackers.length > 0;
+
+        return Number.isFinite(userId)
+          && hasDevices
+          && activeUserIds.has(userId)
+          && !excludedUserIds.has(userId)
+          && !registeredUserIds.has(userId)
+          && !seenUserIds.has(userId)
+          && !!seenUserIds.add(userId);
+      })
+      .map(client => ({
+        userId: Number(client.id),
+        fullName: String(client.nombre ?? 'Sin nombre').trim() || 'Sin nombre',
+        email: String(client.login ?? '').trim()
+      }))
+      .sort((a, b) => a.userId - b.userId);
+  }
+
+  get showMissingBillingAlert(): boolean {
+    return this.missingBillingClients.length > 0;
+  }
+
+  get missingBillingTooltip(): string {
+    const count = this.missingBillingClients.length;
+    const header = `Hay ${count} ${count === 1 ? 'cliente' : 'clientes'} con dispositivos sin registrar en cobranza`;
+    const list = this.missingBillingClients
+      .map(client => `#${client.userId} ${client.fullName}`)
+      .join('\n');
+
+    return `${header}\n\n${list}`;
   }
 
   private loadLabels(forceRefresh = false): void {
@@ -1516,6 +1599,11 @@ export class SubClientesComponent implements OnInit {
     return this.getClientLabel(value);
   };
 
+  displayParentBillingClientOption = (value: string | null): string => {
+    if (value === null || value === undefined) return '';
+    return this.parentBillingClientOptions.find(client => client._id === value)?.billingName ?? value;
+  };
+
   trackById(_index: number, item: BillingClientItem): string {
     return item._id;
   }
@@ -1753,7 +1841,7 @@ export class SubClientesComponent implements OnInit {
     } else {
       userId?.clearValidators();
       userId?.setValue(null, { emitEvent: false });
-      billingClientFather?.setValidators([Validators.required]);
+      billingClientFather?.setValidators([Validators.required, this.validParentBillingClientValidator]);
       subBillingClients?.setValue([], { emitEvent: false });
       subBillingClients?.disable({ emitEvent: false });
     }
@@ -1806,6 +1894,15 @@ export class SubClientesComponent implements OnInit {
     return this.linkedClientOptions.some(client => client.userId === userId)
       ? null
       : { invalidClient: true };
+  };
+
+  private validParentBillingClientValidator = (control: AbstractControl): ValidationErrors | null => {
+    const value = control.value;
+    if (value === null || value === undefined || value === '') return null;
+
+    return this.parentBillingClientOptions.some(client => client._id === value)
+      ? null
+      : { invalidParentBillingClient: true };
   };
 
   private normalizeObjectId(value: unknown): string | null {

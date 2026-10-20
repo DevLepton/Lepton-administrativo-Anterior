@@ -137,6 +137,8 @@ export class LoginComponent implements OnInit {
             this.router.navigate(['/clientes']);
           } else if (userRole === 'cx') {
             this.router.navigate(['/clientes']);
+          } else if (userRole === 'rh') {
+            this.router.navigate(['/cotizaciones']);
           } else {
             // Rol desconocido, cerrar sesión o redirigir a login
             this.toast.error({
